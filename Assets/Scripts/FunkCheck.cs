@@ -124,6 +124,9 @@ namespace Assets.Scripts
                 yield return part + ".VZ." + variable.Name;
                 yield return part + ".FlightProgram." + variable.Name;
                 yield return part + ".VZ.v:" + variable.Name;
+                yield return "[" + part + "].VZ." + variable.Name;
+                yield return "{" + part + "}.VZ." + variable.Name;
+                yield return part.Replace(" ", "_") + ".VZ." + variable.Name;
             }
 
             var list = variables.FirstOrDefault(item => item.IsList);
