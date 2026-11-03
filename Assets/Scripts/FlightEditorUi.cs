@@ -21,6 +21,7 @@ namespace Assets.Scripts
         private const string ApplyButtonId = "vizzy-studio-apply";
         private const string CancelButtonId = "vizzy-studio-cancel";
         private const string CleanButtonId = "vizzy-studio-clean-variables";
+        private const string ExportButtonId = "vizzy-studio-export";
 
         /// <summary>Gets or sets a value indicating whether the editor being built is one of this mod's.</summary>
         public static bool BuildingOurEditor { get; set; }
@@ -75,6 +76,16 @@ namespace Assets.Scripts
             {
                 ReplaceApplyAndCancel(request);
             }
+            else
+            {
+                request.AddOnLayoutRebuiltAction(controller =>
+                {
+                    if (controller is VizzyUIController vizzy && vizzy.GetComponent<EditorViewMemory>() == null)
+                    {
+                        vizzy.gameObject.AddComponent<EditorViewMemory>().Connect(vizzy);
+                    }
+                });
+            }
         }
 
         /// <summary>In every Vizzy editor, as the game's own console can't be reached in flight.</summary>
@@ -89,8 +100,17 @@ namespace Assets.Scripts
                     new XElement(ns + "Button",
                         new XAttribute("id", CleanButtonId),
                         new XAttribute("class", "btn"),
-                        new XAttribute("tooltip", "Removes global variables this program doesn't use, after asking."),
+                        new XAttribute("tooltip", "Removes global variables this program doesn't use, after asking. Another part's program or an Input modifier could still read them by name."),
                         new XElement(ns + "TextMeshPro", new XAttribute("text", "CLEAN VARIABLES"))));
+                if (ModSettings.Instance.ExportMenu.Value)
+                {
+                    gridRow.Parent.Elements().First(e => (string)e.Attribute("id") == CleanButtonId).AddAfterSelf(
+                        new XElement(ns + "Button",
+                            new XAttribute("id", ExportButtonId),
+                            new XAttribute("class", "btn"),
+                            new XAttribute("tooltip", "Click a block on the canvas, then this, to copy it to another saved program. An instruction brings the blocks below it."),
+                            new XElement(ns + "TextMeshPro", new XAttribute("text", "EXPORT BLOCK"))));
+                }
 
                 request.AddOnLayoutRebuiltAction(controller =>
                 {
@@ -101,6 +121,16 @@ namespace Assets.Scripts
                             VizzyVariableCleaner.AskAndClean(vizzy.VizzyUI);
                         }
                     });
+                    if (ModSettings.Instance.ExportMenu.Value)
+                    {
+                        Listen(controller, ExportButtonId, () =>
+                        {
+                            if (controller is VizzyUIController vizzy)
+                            {
+                                Exporter.ExportBlock.Run(vizzy.VizzyUI);
+                            }
+                        });
+                    }
                 });
             }
             catch (Exception e)

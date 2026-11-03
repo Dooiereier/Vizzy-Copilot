@@ -8,7 +8,7 @@ using UnityEngine.EventSystems;
 namespace Assets.Scripts.Exporter
 {
     /// <summary>
-    /// Hooks right-clicks on Vizzy blocks so we can pop the "Export to..." menu.
+    /// Hooks clicks on Vizzy blocks to remember which one Export Block should use.
     ///
     /// This patches manually at runtime instead of via [HarmonyPatch] attributes, because
     /// we're not 100% sure which class actually declares OnPointerClick for a plain
@@ -59,27 +59,25 @@ namespace Assets.Scripts.Exporter
                 }
 
                 harmony.Patch(method, postfix: new HarmonyMethod(typeof(ContextMenuPatcher), nameof(OnPointerClickPostfix)));
-                Debug.Log($"[VizzyStudio] Hooked right-click via {targetType.Name}.OnPointerClick.");
+                Debug.Log($"[VizzyStudio] Hooked block clicks via {targetType.Name}.OnPointerClick.");
                 return 1;
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[VizzyStudio] Couldn't hook right-click on {targetType.Name}: {ex.Message}");
+                Debug.LogWarning($"[VizzyStudio] Couldn't hook block clicks on {targetType.Name}: {ex.Message}");
                 return 0;
             }
         }
 
         private static void OnPointerClickPostfix(object __instance, PointerEventData eventData)
         {
-            if (eventData.button != PointerEventData.InputButton.Right
+            if (eventData.button != PointerEventData.InputButton.Left
                 || (eventData.position - eventData.pressPosition).magnitude > MaxClickMovement)
                 return;
 
-            // The game opens its rename dialog for a For loop's variable on any click.
-            if (__instance is BlockElementScript block && !(block.Parent?.Node is ModApi.Craft.Program.Instructions.ForInstruction)
-                && ModSettings.Instance.ExportMenu.Value)
+            if (__instance is BlockElementScript block && ModSettings.Instance.ExportMenu.Value)
             {
-                ExportMenu.ShowFor(block, eventData.position);
+                ExportBlock.Select(block);
             }
         }
     }

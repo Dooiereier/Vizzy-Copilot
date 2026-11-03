@@ -102,8 +102,10 @@ namespace Assets.Scripts
                 flyout.Hide();
             }
 
+            EditorLog.Debug("Flight buttons connected.");
             toggle.AddOnClickEvent(() =>
             {
+                EditorLog.Info("Vizzy button clicked, flyout " + (flyout.gameObject.activeSelf ? "open" : "closed") + ".");
                 if (flyout.gameObject.activeSelf)
                 {
                     Hide();
@@ -116,11 +118,13 @@ namespace Assets.Scripts
             });
             edit.AddOnClickEvent(() =>
             {
+                EditorLog.Info("Edit Vizzy clicked.");
                 Hide();
                 FlightEditorController.Current?.EditSelected();
             });
             restart.AddOnClickEvent(() =>
             {
+                EditorLog.Info("Restart Vizzy clicked.");
                 Hide();
                 FlightEditorController.Current?.RestartSelected();
             });

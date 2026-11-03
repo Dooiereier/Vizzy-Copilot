@@ -30,6 +30,9 @@ namespace Assets.Scripts
         public List<FunkName> OrbitData { get; } = new List<FunkName>();
 
         public List<FunkName> Variables { get; } = new List<FunkName>();
+
+        /// <summary>Variables known to hold a vector. A plain name would read only their length.</summary>
+        public HashSet<string> VectorVariables { get; } = new HashSet<string>();
     }
 
     /// <summary>One entry of the list.</summary>
@@ -169,7 +172,8 @@ namespace Assets.Scripts
             }
 
             var results = Match(word, catalog.TopLevel, string.Empty, 0, false)
-                .Concat(Match(word, catalog.Variables, string.Empty, 0, false))
+                .Concat(Match(word, catalog.Variables.Where(name => !catalog.VectorVariables.Contains(name.Name)), string.Empty, 0, false))
+                .Concat(Match(word, catalog.Variables.Where(name => catalog.VectorVariables.Contains(name.Name)), "v:", 0, false))
                 .Concat(Match(word, new[] { new FunkName("FD."), new FunkName("OD."), new FunkName("v:") }, string.Empty, 0, false));
             if (word.Length >= 2)
             {

@@ -31,6 +31,10 @@ namespace Assets.Scripts
         private string _lastText;
         private int _lastCaret = -1;
         private bool _dismissed;
+        private TMP_InputField _refocusing;
+        private string _refocusText;
+        private int _refocusCaret;
+        private bool _refocusSelectAll;
         private KeyCode _heldKey = KeyCode.None;
 
         /// <summary>Gets the auto-fill of the current flight scene.</summary>
@@ -88,6 +92,7 @@ namespace Assets.Scripts
                 catalog.Variables.Add(new FunkName(name));
             }
 
+            catalog.VectorVariables.UnionWith(FunkNames.VectorVariables(editor));
             return catalog;
         }
 
@@ -135,6 +140,12 @@ namespace Assets.Scripts
 
             if (field == null)
             {
+                return;
+            }
+
+            if (field == _refocusing)
+            {
+                FinishRefocus();
                 return;
             }
 
@@ -196,6 +207,51 @@ namespace Assets.Scripts
             }
         }
 
+        /// <summary>A click on a row. The press has already taken focus from the field, so it's given back.</summary>
+        private void OnRowPressed(int index)
+        {
+            if (_field == null || _completion == null || index >= _completion.Suggestions.Count)
+            {
+                return;
+            }
+
+            var field = _field;
+            _selected = index;
+            Accept();
+            _refocusing = field;
+            _refocusText = field.text;
+            _refocusCaret = field.stringPosition;
+            _refocusSelectAll = field.onFocusSelectAll;
+            field.onFocusSelectAll = false;
+            EventSystem.current.SetSelectedGameObject(field.gameObject);
+            field.ActivateInputField();
+        }
+
+        private void OnRowHovered(int index)
+        {
+            if (_completion != null && index < _completion.Suggestions.Count && index != _selected)
+            {
+                _selected = index;
+                ShowList();
+            }
+        }
+
+        /// <summary>Taken as written once it has focus again, with the cursor after the name.</summary>
+        private void FinishRefocus()
+        {
+            var field = _refocusing;
+            _refocusing = null;
+            field.onFocusSelectAll = _refocusSelectAll;
+            if (field.text == _refocusText)
+            {
+                field.stringPosition = _refocusCaret;
+                field.selectionStringAnchorPosition = _refocusCaret;
+                field.selectionStringFocusPosition = _refocusCaret;
+                _lastText = field.text;
+                _lastCaret = _refocusCaret;
+            }
+        }
+
         private void Accept()
         {
             var suggestion = _completion.Suggestions[_selected];
@@ -226,7 +282,7 @@ namespace Assets.Scripts
             if (_list == null || _listField != _field)
             {
                 _list?.Destroy();
-                _list = new FunkList(_field);
+                _list = new FunkList(_field, OnRowPressed, OnRowHovered);
                 _listField = _field;
             }
 

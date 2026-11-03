@@ -27,6 +27,7 @@ namespace Assets.Scripts.VizzyOrganizer
         private const string RowsId = "vizzy-studio-jump-rows";
         private const string TemplateId = "vizzy-studio-jump-row";
         private const float IndentPerDepth = 16f;
+        private const string Help = "Jump To: moves the view to tagged blocks. Tag them with a comment starting with //, such as //Landing, or //Landing/Legs to nest it.";
 
         private static readonly Color SelectedRow = new Color(0.16f, 0.42f, 0.72f, 1f);
 
@@ -49,15 +50,15 @@ namespace Assets.Scripts.VizzyOrganizer
             XNamespace ns = XmlLayoutConstants.XmlNamespace;
             var panels = request.XmlDocument.Descendants(ns + "Panel").ToList();
             var menuButton = panels.First(panel => (string)panel.Attribute("id") == "menu-button");
-            menuButton.AddAfterSelf(
+            menuButton.Parent.Add(
                 new XElement(ns + "Panel",
                     new XAttribute("id", ButtonId),
                     new XAttribute("name", "JumpTo"),
                     new XAttribute("class", "toggle-button audio-btn-click"),
-                    new XAttribute("tooltip", "Jump To"),
+                    new XAttribute("tooltip", Help),
                     new XElement(ns + "Image",
                         new XAttribute("class", "toggle-button-icon"),
-                        new XAttribute("sprite", "VizzyStudio/Sprites/IconVariables"))));
+                        new XAttribute("sprite", "VizzyStudio/Sprites/IconJumpTo"))));
 
             panels.First(panel => (string)panel.Attribute("id") == "menu").AddAfterSelf(
                 new XElement(ns + "Panel",
@@ -68,10 +69,11 @@ namespace Assets.Scripts.VizzyOrganizer
                     new XAttribute("active", "false"),
                     new XElement(ns + "Panel",
                         new XAttribute("class", "flyout-header"),
-                        new XElement(ns + "TextMeshPro", new XAttribute("text", "JUMP TO")),
+                        new XElement(ns + "TextMeshPro", new XAttribute("text", "JUMP TO"), new XAttribute("tooltip", Help)),
                         new XElement(ns + "Image",
                             new XAttribute("id", CloseId),
-                            new XAttribute("class", "flyout-close-button audio-btn-back"))),
+                            new XAttribute("class", "flyout-close-button audio-btn-back"),
+                            new XAttribute("raycastTarget", "true"))),
                     new XElement(ns + "VerticalScrollView",
                         new XAttribute("class", "no-image"),
                         new XAttribute("offsetMax", "0 -30"),
@@ -124,6 +126,12 @@ namespace Assets.Scripts.VizzyOrganizer
         /// <summary>A stock flyout opening closes this one, as they share the same space.</summary>
         private void Update()
         {
+            // The game adds its category buttons after this one is built.
+            if (_button != null && _button.transform.GetSiblingIndex() != _button.transform.parent.childCount - 1)
+            {
+                _button.transform.SetAsLastSibling();
+            }
+
             if (_flyout != null && _flyout.gameObject.activeSelf && _controller.SelectedCategoryButton != null)
             {
                 HideFlyout();

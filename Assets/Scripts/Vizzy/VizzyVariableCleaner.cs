@@ -49,16 +49,14 @@ namespace Assets.Scripts.Vizzy
                 return;
             }
 
-            var names = string.Join(", ", unused.Take(MaxNamesListed));
+            var names = string.Join("\n", unused.Take(MaxNamesListed));
             if (unused.Count > MaxNamesListed)
             {
-                names += " and " + (unused.Count - MaxNamesListed) + " more";
+                names += "\nand " + (unused.Count - MaxNamesListed) + " more";
             }
 
             var dialog = Game.Instance.UserInterface.CreateMessageDialog(ModApi.Ui.MessageDialogType.OkayCancel, null, true);
-            dialog.ExtraWide = true;
-            dialog.MessageText = "Remove " + unused.Count + " unused variable(s)? " + names
-                + ". Another part's program or an Input modifier could still read them by name. Undo brings them back.";
+            dialog.MessageText = "Remove " + (unused.Count == 1 ? "this unused variable?" : "these " + unused.Count + " unused variables?") + "\n\n" + names;
             dialog.OkayClicked += _ =>
             {
                 dialog.Close();

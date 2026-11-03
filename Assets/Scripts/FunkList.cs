@@ -1,11 +1,13 @@
 namespace Assets.Scripts
 {
+    using System;
     using System.Collections.Generic;
     using TMPro;
     using UnityEngine;
+    using UnityEngine.EventSystems;
     using UnityEngine.UI;
 
-    /// <summary>The list under a Funk field. Shows only; it takes no clicks, so the field keeps its focus.</summary>
+    /// <summary>The list under a Funk field. A row's press accepts it and its hover selects it.</summary>
     public sealed class FunkList
     {
         private const int VisibleRows = 8;
@@ -20,11 +22,12 @@ namespace Assets.Scripts
         private readonly RectTransform _rect;
         private readonly List<Image> _rowImages = new List<Image>();
         private readonly List<TextMeshProUGUI> _rowTexts = new List<TextMeshProUGUI>();
+        private int _first;
 
-        public FunkList(TMP_InputField field)
+        public FunkList(TMP_InputField field, Action<int> onPressed, Action<int> onHovered)
         {
             var rootCanvas = field.GetComponentInParent<Canvas>().rootCanvas;
-            _root = new GameObject("VizzyStudio.FunkList", typeof(RectTransform), typeof(Canvas), typeof(Image));
+            _root = new GameObject("VizzyStudio.FunkList", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster), typeof(Image));
             _rect = (RectTransform)_root.transform;
             _rect.SetParent(rootCanvas.transform, false);
             _rect.anchorMin = _rect.anchorMax = new Vector2(0.5f, 0.5f);
@@ -50,7 +53,10 @@ namespace Assets.Scripts
                 rowRect.sizeDelta = new Vector2(0f, RowHeight);
                 rowRect.anchoredPosition = new Vector2(0f, -i * RowHeight);
                 var image = row.GetComponent<Image>();
-                image.raycastTarget = false;
+                var rowIndex = i;
+                var input = row.AddComponent<FunkListRow>();
+                input.Pressed = () => onPressed(_first + rowIndex);
+                input.Hovered = () => onHovered(_first + rowIndex);
                 _rowImages.Add(image);
 
                 var textObject = new GameObject("Text", typeof(RectTransform));
@@ -75,7 +81,11 @@ namespace Assets.Scripts
         public void Show(TMP_InputField field, IList<FunkSuggestion> suggestions, int selected)
         {
             var count = Mathf.Min(VisibleRows, suggestions.Count);
-            var first = Mathf.Clamp(selected - (VisibleRows / 2), 0, Mathf.Max(0, suggestions.Count - VisibleRows));
+
+            // Scrolls only when the selection leaves the view, so rows don't move under the mouse.
+            var first = Mathf.Clamp(_first, 0, suggestions.Count - count);
+            first = selected < first ? selected : selected >= first + count ? selected - count + 1 : first;
+            _first = first;
             for (var i = 0; i < VisibleRows; i++)
             {
                 var visible = i < count;
@@ -100,7 +110,7 @@ namespace Assets.Scripts
 
         public void Destroy()
         {
-            Object.Destroy(_root);
+            UnityEngine.Object.Destroy(_root);
         }
 
         /// <summary>Under the field, or above it when there's no room below.</summary>
@@ -116,6 +126,17 @@ namespace Assets.Scripts
             var y = bottomLeft.y - height < bounds.yMin ? topLeft.y + height : bottomLeft.y;
             var x = Mathf.Min(bottomLeft.x, bounds.xMax - Width);
             _rect.localPosition = new Vector3(x, y, 0f);
+        }
+
+        private sealed class FunkListRow : MonoBehaviour, IPointerDownHandler, IPointerEnterHandler
+        {
+            public Action Pressed { get; set; }
+
+            public Action Hovered { get; set; }
+
+            public void OnPointerDown(PointerEventData eventData) => Pressed?.Invoke();
+
+            public void OnPointerEnter(PointerEventData eventData) => Hovered?.Invoke();
         }
     }
 }

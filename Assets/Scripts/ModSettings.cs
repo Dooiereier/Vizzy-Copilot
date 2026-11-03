@@ -128,8 +128,8 @@ namespace Assets.Scripts
                 .SetDescription("Shows a Vizzy button on the flight nav panel, with Restart Vizzy and Edit Vizzy. Applies from the next flight.")
                 .SetDefault(true);
 
-            this.ExportMenu = this.CreateBool("Export Menu", "ExportMenu")
-                .SetDescription("Right-click a Vizzy block to export it, with the variables and custom blocks it needs, to another saved program.")
+            this.ExportMenu = this.CreateBool("Export Block", "ExportMenu")
+                .SetDescription("Adds an Export Block button to the Vizzy menu, which copies the clicked block, with the variables and custom blocks it needs, to another saved program.")
                 .SetDefault(true);
 
             this.FunkSyntaxHighlight = this.CreateBool("Funk Syntax Highlight", "FunkSyntaxHighlight")

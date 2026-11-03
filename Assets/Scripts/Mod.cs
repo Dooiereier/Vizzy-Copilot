@@ -119,7 +119,7 @@ namespace Assets.Scripts
             catch (Exception e)
             {
                 failed++;
-                Debug.LogWarning("[VizzyStudio] The export menu is off: " + e);
+                Debug.LogWarning("[VizzyStudio] Export Block is off: " + e);
             }
 
             Debug.Log("[VizzyStudio] Patches: " + applied + " applied, " + failed + " failed.");

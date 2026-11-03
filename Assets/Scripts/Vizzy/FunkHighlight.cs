@@ -49,6 +49,7 @@ namespace Assets.Scripts.Vizzy
         private static readonly Color32 ColorKeyword = FromHex("#569CD6");  // keyword: blue
         private static readonly Color32 ColorVariable = FromHex("#9CDCFE"); // variable: light blue
         private static readonly Color32 ColorPart = FromHex("#808080");     // part selector: gray
+        private static readonly Color32 ColorFlightData = FromHex("#FFC83D"); // FD. and OD. data: amber
         private static readonly Color32 ColorDataSlot = FromHex("#4EC9B0"); // data slot: teal
         private static readonly Color32 ColorGroup = FromHex("#C586C0");    // bracket: purple
         private static readonly Color32 ColorVector = FromHex("#4EC9B0");   // v: vector prefix: teal
@@ -1103,6 +1104,11 @@ namespace Assets.Scripts.Vizzy
             if (name.StartsWith("v:", StringComparison.Ordinal))
             {
                 return ColorVector;
+            }
+            if (name.StartsWith("FD.", StringComparison.Ordinal) || name.StartsWith("FlightData.", StringComparison.Ordinal)
+                || name.StartsWith("OD.", StringComparison.Ordinal) || name.StartsWith("OrbitData.", StringComparison.Ordinal))
+            {
+                return ColorFlightData;
             }
             if (name.IndexOf('.') >= 0 || name.IndexOf('$') >= 0)
             {

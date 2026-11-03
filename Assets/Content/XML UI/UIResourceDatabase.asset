@@ -18,6 +18,8 @@ MonoBehaviour:
   - Content/XML UI
   AutomaticallyRemoveEntries: 1
   entries:
+  - path: VizzyStudio/Sprites/IconJumpTo
+    resource: {fileID: 21300000, guid: 22babcddbd424bfa8c80f70af29dce71, type: 3}
   - path: VizzyStudio/Sprites/IconResetStaging
     resource: {fileID: 21300000, guid: 1c0e21f9e83fb4c44b60ac9eede2688a, type: 3}
   - path: VizzyStudio/Sprites/IconVariables

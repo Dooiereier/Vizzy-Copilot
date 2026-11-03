@@ -146,10 +146,9 @@ MFD Runtime Editor is planned later; it may not bring its own copy of Harmony.
 
 Both by Dooiereier. Replace the separate mods, and the mod warns if they're also loaded.
 
-- **Export** (`Exporter/`): right-click a block for an inspector panel with Export To, then the game's Load
+- **Export** (`Exporter/`): click a block to select it, then Export Block in the Vizzy menu opens the game's Load
   Program list (`LoadProgramViewModel`). It writes to the target program's file on disk, with the variables and
-  custom blocks it needs. The right-click needs a patch on `OnPointerClick`, as there's no public click event.
-  Export Menu turns it off.
+  custom blocks it needs. Selecting needs a patch on `OnPointerClick`, as there's no public click event.
 - **Jump To** (`VizzyOrganizer/`): a left-bar button and stock flyout built in the editor's XML, listing
   `//Path/To` tag comments. Selecting a row pans the canvas. Tags are plain comments, so crafts don't need the mod.
 

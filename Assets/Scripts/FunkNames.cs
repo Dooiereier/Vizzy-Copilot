@@ -90,6 +90,83 @@ namespace Assets.Scripts
             return names;
         }
 
+        private static readonly HashSet<string> VectorOperators = new HashSet<string> { "norm", "cross", "clamp", "min", "max", "project", "scale" };
+
+        private static readonly HashSet<string> ArithmeticOperators = new HashSet<string> { "+", "-", "*", "/" };
+
+        private static readonly HashSet<string> VectorProperties = new HashSet<string>
+        {
+            "Nav.Position", "Nav.CraftDirection", "Nav.CraftUp", "Nav.North",
+            "Vel.SurfaceVelocity", "Vel.OrbitVelocity", "Vel.TargetVelocity", "Vel.Gravity", "Vel.Drag", "Vel.Acceleration", "Vel.AngularVelocity",
+        };
+
+        private static readonly FieldInfo CraftPropertyField = typeof(CraftPropertyExpression).GetField("_property", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        /// <summary>Variables the program sets to something that's certainly a vector, including through other variables.</summary>
+        public static HashSet<string> VectorVariables(VizzyUIScript editor)
+        {
+            var sets = new List<(string name, ProgramNode value)>();
+            void Collect(ProgramNode node)
+            {
+                if (node is SetVariableInstruction && node.Expressions != null && node.Expressions.Count > 1)
+                {
+                    var name = node.Expressions[0] is VariableExpression variable ? variable.VariableName : TypedVariableName(node);
+                    if (!string.IsNullOrEmpty(name))
+                    {
+                        sets.Add((name, node.Expressions[1]));
+                    }
+                }
+            }
+
+            foreach (var block in editor.ProgramTransform.GetComponentsInChildren<BlockElementScript>(true))
+            {
+                Collect(block.Node);
+            }
+
+            foreach (var root in AllRoots(editor.FlightProgram))
+            {
+                Walk(root, Collect);
+            }
+
+            var vectors = new HashSet<string>(StringComparer.Ordinal);
+            for (var changed = true; changed;)
+            {
+                changed = false;
+                foreach (var (name, value) in sets)
+                {
+                    changed |= IsVector(value, vectors) && vectors.Add(name);
+                }
+            }
+
+            return vectors;
+        }
+
+        private static bool IsVector(ProgramNode node, HashSet<string> vectors)
+        {
+            switch (node)
+            {
+                case VectorExpression _:
+                    return true;
+                case VectorOperatorExpression operation:
+                    return VectorOperators.Contains(operation.Operator);
+                case VariableExpression variable:
+                    return variable.VariableName != null && vectors.Contains(variable.VariableName);
+                case BinaryOperatorExpression binary:
+                    return ArithmeticOperators.Contains(binary.Operator)
+                        && (IsVector(binary.ExpressionA, vectors) || IsVector(binary.ExpressionB, vectors));
+                case ConditionalExpression conditional:
+                    return conditional.Expressions != null && conditional.Expressions.Count > 2
+                        && (IsVector(conditional.Expressions[1], vectors) || IsVector(conditional.Expressions[2], vectors));
+                case CraftPropertyExpression _:
+                    return CraftPropertyField?.GetValue(node) is string property && VectorProperties.Contains(property);
+                case EvaluationExpression funk:
+                    return funk.GetExpression(0) is ConstantExpression text && text.ExpressionResult.TextValue != null
+                        && System.Text.RegularExpressions.Regex.IsMatch(text.ExpressionResult.TextValue, @"^\s*v:[A-Za-z_$][A-Za-z0-9_$]*\s*$");
+                default:
+                    return false;
+            }
+        }
+
         /// <summary>The roots of everything a program runs.</summary>
         public static IEnumerable<ProgramNode> AllRoots(FlightProgram program)
         {

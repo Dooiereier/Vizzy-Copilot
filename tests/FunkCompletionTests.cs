@@ -59,5 +59,15 @@ public static class FunkCompletionTests
 
         var bracket = FunkCompletion.Find("PI(1)", 2, catalog, null, null);
         check("no second bracket", bracket.Suggestions.First().Insert == "PID");
+
+        var vectors = new FunkCatalog();
+        vectors.Variables.Add(new FunkName("LaunchNormal"));
+        vectors.Variables.Add(new FunkName("LaunchAlt"));
+        vectors.VectorVariables.Add("LaunchNormal");
+        var vectorInserts = FunkCompletion.Find("laun", 4, vectors, null, null).Suggestions.Select(s => s.Insert).ToList();
+        check("a vector variable comes with v:", vectorInserts.Contains("v:LaunchNormal") && !vectorInserts.Contains("LaunchNormal"));
+        check("a number variable doesn't", vectorInserts.Contains("LaunchAlt"));
+        var typedPrefix = FunkCompletion.Find("v:laun", 6, vectors, null, null);
+        check("no second v:", typedPrefix.Apply("v:laun", typedPrefix.Suggestions.First(s => s.Insert.EndsWith("LaunchNormal")), out _) == "v:LaunchNormal");
     }
 }
