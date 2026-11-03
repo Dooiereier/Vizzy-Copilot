@@ -30,6 +30,7 @@ namespace Assets.Scripts
 
         private void Update()
         {
+            FlightButtons.ConnectIfNeeded();
             if (!_restoreChecked)
             {
                 RestoreLatestEdits();

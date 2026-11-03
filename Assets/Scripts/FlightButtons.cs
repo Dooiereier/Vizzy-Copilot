@@ -3,6 +3,7 @@ namespace Assets.Scripts
     using System;
     using System.Linq;
     using System.Xml.Linq;
+    using Assets.Scripts.Flight.UI;
     using ModApi.Ui;
     using UI.Xml;
     using UnityEngine;
@@ -18,6 +19,9 @@ namespace Assets.Scripts
         private const string EditId = "vizzy-studio-edit";
         private const string RestartId = "vizzy-studio-restart";
         private const string ToggledClass = "panel-button-icon-toggled";
+        private const int FramesBetweenSearches = 30;
+
+        private static XmlElement _connectedToggle;
 
         public static void Register()
         {
@@ -70,8 +74,6 @@ namespace Assets.Scripts
                         new XAttribute("class", "nav-sphere-row"),
                         FlyoutButton(ns, RestartId, "Restart Vizzy", "Ui/Sprites/Flight/IconRetry"),
                         FlyoutButton(ns, EditId, "Edit Vizzy", "Ui/Sprites/Design/IconButtonEdit"))));
-
-                request.AddOnLayoutRebuiltAction(Connect);
             }
             catch (Exception e)
             {
@@ -79,9 +81,26 @@ namespace Assets.Scripts
             }
         }
 
-        private static void Connect(IXmlLayoutController controller)
+        /// <summary>
+        /// Each frame in flight. NavPanelController overrides LayoutRebuilt without calling the base,
+        /// so a request's rebuilt action never runs for this layout.
+        /// </summary>
+        public static void ConnectIfNeeded()
         {
-            var layout = (XmlLayout)controller.XmlLayout;
+            if (_connectedToggle != null || Time.frameCount % FramesBetweenSearches != 0 || !ModSettings.Instance.ShowFlightButtons.Value)
+            {
+                return;
+            }
+
+            var controller = UnityEngine.Object.FindObjectOfType<NavPanelController>();
+            if (controller != null)
+            {
+                Connect((XmlLayout)((IXmlLayoutController)controller).XmlLayout);
+            }
+        }
+
+        private static void Connect(XmlLayout layout)
+        {
             var toggle = layout.GetElementById(ToggleId);
             var icon = layout.GetElementById(ToggleIconId);
             var flyout = layout.GetElementById(FlyoutId);
@@ -90,8 +109,13 @@ namespace Assets.Scripts
             if (toggle == null || icon == null || flyout == null || edit == null || restart == null)
             {
                 EditorLog.Error("Couldn't find the flight buttons.");
+
+                // Only says so once for this layout.
+                _connectedToggle = toggle ?? layout.XmlElement;
                 return;
             }
+
+            _connectedToggle = toggle;
 
             flyout.gameObject.AddComponent<FlyoutPlacement>().Connect(
                 (RectTransform)toggle.transform, layout.GetElementById(StockFlyoutId));
@@ -105,7 +129,7 @@ namespace Assets.Scripts
             EditorLog.Debug("Flight buttons connected.");
             toggle.AddOnClickEvent(() =>
             {
-                EditorLog.Info("Vizzy button clicked, flyout " + (flyout.gameObject.activeSelf ? "open" : "closed") + ".");
+                EditorLog.Debug("Vizzy button clicked, flyout " + (flyout.gameObject.activeSelf ? "open" : "closed") + ".");
                 if (flyout.gameObject.activeSelf)
                 {
                     Hide();
@@ -118,13 +142,13 @@ namespace Assets.Scripts
             });
             edit.AddOnClickEvent(() =>
             {
-                EditorLog.Info("Edit Vizzy clicked.");
+                EditorLog.Debug("Edit Vizzy clicked.");
                 Hide();
                 FlightEditorController.Current?.EditSelected();
             });
             restart.AddOnClickEvent(() =>
             {
-                EditorLog.Info("Restart Vizzy clicked.");
+                EditorLog.Debug("Restart Vizzy clicked.");
                 Hide();
                 FlightEditorController.Current?.RestartSelected();
             });
