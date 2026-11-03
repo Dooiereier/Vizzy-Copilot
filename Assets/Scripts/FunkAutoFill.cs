@@ -1,6 +1,7 @@
 namespace Assets.Scripts
 {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
@@ -78,16 +79,19 @@ namespace Assets.Scripts
         private static FunkCatalog BuildCatalog(EditorSession session)
         {
             var catalog = new FunkCatalog();
+            // Non-public in the game's Context, and reading them keeps this list matching the game's.
             var context = new Context(true);
-            foreach (var function in context.Functions)
+            foreach (DictionaryEntry function in ContextMember(context, "Functions"))
             {
-                var parameters = function.Value.Item1.GetParameters().Select(parameter => parameter.Name);
-                catalog.TopLevel.Add(new FunkName(function.Key, function.Key + "(" + string.Join(", ", parameters) + ")"));
+                var method = (MethodInfo)function.Value.GetType().GetField("Item1").GetValue(function.Value);
+                var parameters = method.GetParameters().Select(parameter => parameter.Name);
+                var name = (string)function.Key;
+                catalog.TopLevel.Add(new FunkName(name, name + "(" + string.Join(", ", parameters) + ")"));
             }
 
-            foreach (var constant in context.Constants.Keys)
+            foreach (DictionaryEntry constant in ContextMember(context, "Constants"))
             {
-                catalog.TopLevel.Add(new FunkName(constant));
+                catalog.TopLevel.Add(new FunkName((string)constant.Key));
             }
 
             // The stateful functions and Vizzy's list functions have no parameter names to read.
@@ -119,6 +123,13 @@ namespace Assets.Scripts
             }
 
             return catalog;
+        }
+
+        private static IDictionary ContextMember(Context context, string name)
+        {
+            return (IDictionary)typeof(Context)
+                .GetProperty(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                .GetValue(context);
         }
 
         private static IEnumerable<FunkName> ValueProperties(Type type)
