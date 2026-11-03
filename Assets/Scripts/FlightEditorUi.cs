@@ -4,6 +4,8 @@ namespace Assets.Scripts
     using System.Linq;
     using System.Xml.Linq;
     using Assets.Scripts.Flight.UI;
+    using Assets.Scripts.Vizzy;
+    using Assets.Scripts.Vizzy.UI;
     using ModApi.Ui;
     using UI.Xml;
     using UnityEngine.UI;
@@ -18,6 +20,7 @@ namespace Assets.Scripts
         private const string MenuButtonId = "vizzy-studio-menu-button";
         private const string ApplyButtonId = "vizzy-studio-apply";
         private const string CancelButtonId = "vizzy-studio-cancel";
+        private const string CleanButtonId = "vizzy-studio-clean-variables";
 
         /// <summary>Gets or sets a value indicating whether the editor being built is one of this mod's.</summary>
         public static bool BuildingOurEditor { get; set; }
@@ -58,11 +61,45 @@ namespace Assets.Scripts
 
         private static void OnBuildVizzyUi(BuildUserInterfaceXmlRequest request)
         {
-            if (!BuildingOurEditor)
+            AddCleanVariablesButton(request);
+            if (BuildingOurEditor)
             {
-                return;
+                ReplaceApplyAndCancel(request);
             }
+        }
 
+        /// <summary>In every Vizzy editor, as the game's own console can't be reached in flight.</summary>
+        private static void AddCleanVariablesButton(BuildUserInterfaceXmlRequest request)
+        {
+            try
+            {
+                XNamespace ns = XmlLayoutConstants.XmlNamespace;
+                FindButton(request, "OnButtonSaveClicked();").AddAfterSelf(
+                    new XElement(ns + "Button",
+                        new XAttribute("id", CleanButtonId),
+                        new XAttribute("class", "btn"),
+                        new XAttribute("tooltip", "Removes global variables this program doesn't use, after asking."),
+                        new XElement(ns + "TextMeshPro", new XAttribute("text", "Clean Variables"))));
+
+                request.AddOnLayoutRebuiltAction(controller =>
+                {
+                    Listen(controller, CleanButtonId, () =>
+                    {
+                        if (controller is VizzyUIController vizzy)
+                        {
+                            VizzyVariableCleaner.AskAndClean(vizzy.VizzyUI);
+                        }
+                    });
+                });
+            }
+            catch (Exception e)
+            {
+                EditorLog.Warning("Couldn't add the Clean Variables button: " + e);
+            }
+        }
+
+        private static void ReplaceApplyAndCancel(BuildUserInterfaceXmlRequest request)
+        {
             try
             {
                 // Both found first: a missing button then leaves both stock.

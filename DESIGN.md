@@ -14,7 +14,8 @@ carries on from where it was, so you can repeat quickload, edit, fly to tune thi
 - **Harmony is required**, from the Juno Harmony mod, and never inside the mod file. Without it the mod logs
   an error, shows one message and stays off. Patches: auto-fill keys, coloring on each Funk field, and the
   Matrix category in the toolbox; each has no public alternative, and each applies on its own.
-- **In the designer**, only auto-fill, coloring and the Matrix category differ from stock.
+- **In the designer**, only auto-fill, coloring, the Matrix category and the Clean Variables button differ
+  from stock.
 - **Other mods stay unaffected.** Only an editor this mod opens gets its Apply and Cancel replaced,
   so another mod that opens the stock editor in flight keeps the stock buttons.
 
@@ -130,10 +131,10 @@ as `+a` and `((a)`.
 **Startup:** checks and patches run at the first `SceneLoaded`, because a mod's `OnModLoaded` runs as soon as
 that mod loads, before later mods. `_loadPriority` is above Juno Harmony's.
 
-- **Variable cleaner** (`VizzyVariableCleaner`): the console command `CleanUnusedVariables` removes global
-  variables the open program doesn't use, as one Undo step. Names in Funk text count as used, and it removes
-  nothing if a Funk block's text is built by other blocks. It can't see another part reading a variable
-  through `Part.VZ.Name`.
+- **Variable cleaner** (`VizzyVariableCleaner`): the Clean Variables button in every Vizzy editor, and the
+  console command `CleanUnusedVariables`, list the global variables the open program doesn't use and remove
+  them after asking, as one Undo step. Names in Funk text count as used, and it removes nothing if a Funk block's
+  text is built by other blocks. It can't see another part reading a variable through `Part.VZ.Name`.
 
 Vizzy Exporter and MFD Runtime Editor are planned later; neither may bring its own copy of Harmony.
 
