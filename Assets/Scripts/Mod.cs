@@ -17,14 +17,14 @@ namespace Assets.Scripts
         protected override void OnModInitialized()
         {
             Game.Instance.SceneManager.SceneLoaded += OnSceneLoaded;
-            Debug.Log("[VizzyFlightEditor] Started (prototype).");
+            Debug.Log("[VizzyFlightEditor] Started.");
         }
 
         private void OnSceneLoaded(object sender, SceneEventArgs e)
         {
             if (Game.InFlightScene)
             {
-                new GameObject("VizzyFlightEditor.Prototype").AddComponent<FlightEditorPrototype>();
+                new GameObject("VizzyFlightEditor.Controller").AddComponent<FlightEditorController>();
             }
             else
             {
