@@ -23,6 +23,7 @@ namespace Assets.Scripts
         private void Awake()
         {
             Current = this;
+            FlightPause.Reset();
             RestoreLatestEdits();
         }
 
@@ -110,6 +111,12 @@ namespace Assets.Scripts
             }
 
             var scene = Game.Instance.FlightScene;
+            if (scene.TimeManager.CurrentMode.WarpMode)
+            {
+                scene.FlightSceneUI.ShowMessage("Leave time warp before editing a Vizzy program.");
+                return;
+            }
+
             var programs = CraftPrograms.Editable(scene.CraftNode.CraftScript);
             if (programs.Count == 0)
             {
@@ -121,20 +128,17 @@ namespace Assets.Scripts
             }
             else
             {
-                ProgramPicker.Show(programs, data => RunGuarded("Couldn't open the editor: ", () => OpenProgram(data)));
+                FlightPause.Hold();
+                ProgramPicker.Show(programs, data => RunGuarded("Couldn't open the editor: ", () => OpenProgram(data)), FlightPause.Release);
             }
         }
 
         private void OpenProgram(FlightProgramData data)
         {
-            var scene = Game.Instance.FlightScene;
-            if (scene.TimeManager.CurrentMode.WarpMode)
+            if (data.Script == null)
             {
-                scene.FlightSceneUI.ShowMessage("Leave time warp before editing a Vizzy program.");
-            }
-            else if (data.Script == null)
-            {
-                scene.FlightSceneUI.ShowMessage("The part with this Vizzy program is gone.");
+                FlightPause.Release();
+                Game.Instance.FlightScene.FlightSceneUI.ShowMessage("The part with this Vizzy program is gone.");
             }
             else
             {

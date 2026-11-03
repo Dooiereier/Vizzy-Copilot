@@ -18,7 +18,6 @@ namespace Assets.Scripts
         private readonly FlightProgramData _data;
         private readonly string _key;
         private VizzyUIScript _editor;
-        private bool _wasPaused;
         private bool _wasUiVisible;
         private string _closingMessage;
         private bool _restoreViewPending;
@@ -111,8 +110,7 @@ namespace Assets.Scripts
         {
             var ui = Game.Instance.UserInterface;
             var scene = Game.Instance.FlightScene;
-            _wasPaused = scene.TimeManager.Paused;
-            scene.TimeManager.RequestPauseChange(true, false);
+            FlightPause.Hold();
             _wasUiVisible = scene.FlightSceneUI.Visible;
             scene.FlightSceneUI.Visible = false;
 
@@ -193,10 +191,7 @@ namespace Assets.Scripts
                 }
 
                 scene.FlightSceneUI.Visible = _wasUiVisible;
-                if (!_wasPaused)
-                {
-                    scene.TimeManager.RequestPauseChange(false, false);
-                }
+                FlightPause.Release();
 
                 if (_closingMessage != null)
                 {

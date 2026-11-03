@@ -49,7 +49,7 @@ loop or in `PID(...)` in a Funk expression inside one.
 
 - `Mod`: startup and scene hooks. `ModSettings`, `EditorLog`: settings and logging.
 - `FlightEditorController`: per-flight component: keys, requests, restoring edits after a load.
-- `EditorSession`: one open editor: pause, flight UI, canvas position, closing.
+- `EditorSession`: one open editor: flight UI, canvas position, closing. `FlightPause`: the pause.
 - `FlightEditorUi`: XML changes to the flight menu and the Vizzy editor.
 - `ProgramPicker`: choice panel for crafts with several programs.
 - `CraftPrograms`: which programs a craft has. `ProgramSwapper`: puts a program in place.
@@ -57,8 +57,9 @@ loop or in `PID(...)` in a Funk expression inside one.
 
 ## Lifecycle
 
-- **Pause:** the game pauses when the editor opens and returns to its previous state on close.
-  Programs don't update while paused.
+- **Pause:** the game pauses as soon as the key or menu button is used, including while the picker is
+  open, and returns to its previous state when the picker or editor closes. Programs don't update
+  while paused.
 - **Time warp:** opening is refused, with a message. This also covers physics on rails.
 - **Quicksave:** stores the edited program and positions, through the game's own code.
 - **Quickload:** the edit goes back in right after the load. A save without running threads is a new
