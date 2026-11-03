@@ -37,6 +37,7 @@ namespace Assets.Scripts.VizzyOrganizer
         private VizzyUIController _controller;
         private XmlElement _button;
         private XmlElement _flyout;
+        private RectTransform _close;
         private Transform _rows;
         private GameObject _template;
         private VizzyFolderIndex _index = new VizzyFolderIndex();
@@ -73,7 +74,7 @@ namespace Assets.Scripts.VizzyOrganizer
                         new XElement(ns + "Image",
                             new XAttribute("id", CloseId),
                             new XAttribute("class", "flyout-close-button audio-btn-back"),
-                            new XAttribute("raycastTarget", "true"))),
+                            new XAttribute("onClick", "OnClosePanelClicked();"))),
                     new XElement(ns + "VerticalScrollView",
                         new XAttribute("class", "no-image"),
                         new XAttribute("offsetMax", "0 -30"),
@@ -120,7 +121,13 @@ namespace Assets.Scripts.VizzyOrganizer
             _template = layout.GetElementById(TemplateId).gameObject;
             _button = layout.GetElementById(ButtonId);
             _button.AddOnClickEvent(Toggle);
-            layout.GetElementById(CloseId).AddOnClickEvent(HideFlyout);
+            var close = layout.GetElementById(CloseId);
+            _close = (RectTransform)close.transform;
+            close.AddOnClickEvent(() =>
+            {
+                EditorLog.Debug("Jump To close: click event.");
+                HideFlyout();
+            });
         }
 
         /// <summary>A stock flyout opening closes this one, as they share the same space.</summary>
@@ -132,10 +139,28 @@ namespace Assets.Scripts.VizzyOrganizer
                 _button.transform.SetAsLastSibling();
             }
 
-            if (_flyout != null && _flyout.gameObject.activeSelf && _controller.SelectedCategoryButton != null)
+            if (_flyout == null || !_flyout.gameObject.activeSelf)
+            {
+                return;
+            }
+
+            if (_controller.SelectedCategoryButton != null)
             {
                 HideFlyout();
             }
+            else if (Input.GetMouseButtonUp(0) && IsOverClose())
+            {
+                // Whatever the UI's events do with this click.
+                EditorLog.Debug("Jump To close: mouse over the X.");
+                HideFlyout();
+            }
+        }
+
+        private bool IsOverClose()
+        {
+            var canvas = _close.GetComponentInParent<Canvas>().rootCanvas;
+            var camera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
+            return RectTransformUtility.RectangleContainsScreenPoint(_close, Input.mousePosition, camera);
         }
 
         private void Toggle()
@@ -155,7 +180,7 @@ namespace Assets.Scripts.VizzyOrganizer
         private void HideFlyout()
         {
             _button.RemoveClass("toggle-button-toggled");
-            _flyout.Hide();
+            _flyout.Hide(false, null, false);
         }
 
         /// <summary>Rebuilds the tree from the program as the editor has it now.</summary>
