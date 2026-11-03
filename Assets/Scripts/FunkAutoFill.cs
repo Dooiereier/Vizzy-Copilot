@@ -81,10 +81,11 @@ namespace Assets.Scripts
             catalog.FlightData.AddRange(FunkNames.FlightData);
             catalog.OrbitData.AddRange(FunkNames.OrbitData);
 
-            // As the editor has them now, including ones just created.
-            foreach (var variable in editor.FlightProgram.GlobalVariables.Variables.Where(variable => !variable.IsList))
+            // As the editor has them now, including names typed straight into a block.
+            var lists = editor.FlightProgram.GlobalVariables.Variables.Where(variable => variable.IsList).Select(variable => variable.Name);
+            foreach (var name in FunkNames.ProgramVariables(editor).Except(lists))
             {
-                catalog.Variables.Add(new FunkName(variable.Name));
+                catalog.Variables.Add(new FunkName(name));
             }
 
             return catalog;

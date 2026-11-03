@@ -207,7 +207,7 @@ namespace Assets.Scripts.Vizzy
         }
 
         /// <summary>
-        /// Collects the names defined in the current program: global variables and locals in the tree,
+        /// Collects the variable names of the current program, as FunkNames.ProgramVariables finds them,
         /// with a 0.5 s cache. Returns null with no program available, which skips variable checks to avoid false errors.
         /// </summary>
         private static HashSet<string> GetVariableNames(TextInputElementScript block)
@@ -242,18 +242,10 @@ namespace Assets.Scripts.Vizzy
             var names = new HashSet<string>(StringComparer.Ordinal);
             try
             {
-                if (fp.GlobalVariables != null)
+                if (block.VizzyUI is VizzyUIScript editor)
                 {
-                    foreach (Variable v in fp.GlobalVariables.Variables)
-                    {
-                        names.Add(v.Name);
-                    }
+                    names = FunkNames.ProgramVariables(editor);
                 }
-                CollectVariableDefinitions(fp.RootExpressions, names);
-                CollectVariableDefinitions(fp.RootInstructions, names);
-                CollectVariableDefinitions(fp.CustomExpressions, names);
-                CollectVariableDefinitions(fp.CustomInstructions, names);
-                CollectLocalVariables(fp, names);
             }
             catch (Exception e)
             {
@@ -263,44 +255,6 @@ namespace Assets.Scripts.Vizzy
             _varCacheNames = names;
             _varCacheTime = Time.time;
             return names;
-        }
-
-        /// <summary>Funk also resolves locals at run time: For variables and custom block parameters.</summary>
-        private static void CollectLocalVariables(FlightProgram program, HashSet<string> names)
-        {
-            foreach (var instruction in program.RootInstructions)
-            {
-                ProgramNode.ExecuteActionOnTree<ForInstruction>(instruction, loop => names.Add(loop.VariableName));
-            }
-
-            foreach (var custom in program.CustomInstructions)
-            {
-                foreach (var local in custom.LocalVariables)
-                {
-                    names.Add(local.Name);
-                }
-            }
-
-            foreach (var custom in program.CustomExpressions)
-            {
-                foreach (var local in custom.LocalVariables)
-                {
-                    names.Add(local.Name);
-                }
-            }
-        }
-
-        private static void CollectVariableDefinitions(IEnumerable<ProgramNode> nodes, HashSet<string> names)
-        {
-            if (nodes == null)
-            {
-                return;
-            }
-            foreach (ProgramNode node in nodes)
-            {
-                ProgramNode.ExecuteActionOnTree<VariableExpression>(node,
-                    v => { if (v.IsDefinition || v.IsLocal) { names.Add(v.VariableName); } });
-            }
         }
 
         private static bool IsHighlightEnabled()

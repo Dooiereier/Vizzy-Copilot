@@ -6,7 +6,12 @@ namespace Assets.Scripts
     using System.Linq;
     using System.Reflection;
     using Assets.Scripts.Craft.FlightData;
+    using Assets.Scripts.Vizzy.UI;
+    using Assets.Scripts.Vizzy.UI.Elements;
     using ModApi.Craft;
+    using ModApi.Craft.Program;
+    using ModApi.Craft.Program.Expressions;
+    using ModApi.Craft.Program.Instructions;
     using ModApi.Expressions;
     using UnityEngine;
 
@@ -46,6 +51,60 @@ namespace Assets.Scripts
         public static List<FunkName> FlightData => _flightData ?? (_flightData = ValueProperties(typeof(CraftFlightData)));
 
         public static List<FunkName> OrbitData => _orbitData ?? (_orbitData = ValueProperties(typeof(CraftOrbitData)));
+
+        /// <summary>
+        /// Every variable name the open program has: its list, and any name typed straight into a block, which
+        /// the game creates when the block runs without listing it. Reads the editor's live blocks, because its
+        /// program tree only catches up at the next undo step. Also For variables and custom block parameters.
+        /// </summary>
+        public static HashSet<string> ProgramVariables(VizzyUIScript editor)
+        {
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            var program = editor.FlightProgram;
+            foreach (var variable in program.GlobalVariables.Variables)
+            {
+                names.Add(variable.Name);
+            }
+
+            foreach (var block in editor.ProgramTransform.GetComponentsInChildren<BlockElementScript>(true))
+            {
+                AddVariableOf(block.Node, names);
+            }
+
+            var roots = program.RootInstructions.Cast<ProgramNode>()
+                .Concat(program.RootExpressions)
+                .Concat(program.CustomInstructions)
+                .Concat(program.CustomExpressions);
+            foreach (var root in roots)
+            {
+                ProgramNode.ExecuteActionOnTree<ProgramNode>(root, node => AddVariableOf(node, names));
+            }
+
+            foreach (var custom in program.CustomInstructions)
+            {
+                names.UnionWith(custom.LocalVariables.Select(local => local.Name));
+            }
+
+            foreach (var custom in program.CustomExpressions)
+            {
+                names.UnionWith(custom.LocalVariables.Select(local => local.Name));
+            }
+
+            names.Remove(string.Empty);
+            return names;
+        }
+
+        private static void AddVariableOf(ProgramNode node, HashSet<string> names)
+        {
+            if (node is VariableExpression variable && variable.VariableName != null)
+            {
+                names.Add(variable.VariableName);
+            }
+            else if (node is ForInstruction loop && loop.VariableName != null)
+            {
+                names.Add(loop.VariableName);
+            }
+        }
 
         /// <summary>Non-public in the game's Context; reading them keeps these lists matching the game's.</summary>
         public static IDictionary ContextMember(Context context, string name)

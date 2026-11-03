@@ -25,6 +25,8 @@ namespace Assets.Scripts.Vizzy
                 return;
             }
 
+            // The program tree only catches up with the blocks at an undo step, so make one first.
+            editor.CreateUndoStep(null);
             var unused = GetUnusedVariableNames(editor.FlightProgram, out var funkUnreadable);
             if (funkUnreadable)
             {
@@ -34,13 +36,9 @@ namespace Assets.Scripts.Vizzy
                 return;
             }
 
-            if (unused.Count > 0)
+            foreach (var name in unused)
             {
-                editor.CreateUndoStep(null);
-                foreach (var name in unused)
-                {
-                    editor.DeleteVariable(name);
-                }
+                editor.DeleteVariable(name);
             }
 
             editor.ShowMessage(unused.Count + " unused variable(s) removed.");
