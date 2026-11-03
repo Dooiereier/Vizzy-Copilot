@@ -50,7 +50,7 @@ namespace Assets.Scripts
 
             this.TestAutoFillKeys = this.CreateBool("Test Auto-Fill Keys", "TestAutoFillKeys")
                 .SetDescription("Temporary check of key handling in a Funk field: Up and Down keep the cursor in place, Enter inserts TEST.")
-                .SetDefault(true);
+                .SetDefault(false);
         }
     }
 }

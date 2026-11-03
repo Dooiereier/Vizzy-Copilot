@@ -36,10 +36,12 @@ namespace Assets.Scripts
 
             if (_restoreMessage != null)
             {
-                Game.Instance.FlightScene.FlightSceneUI.ShowMessage(_restoreMessage);
+                var message = _restoreMessage;
                 _restoreMessage = null;
+                RunGuarded("Couldn't show a message: ", () => Game.Instance.FlightScene.FlightSceneUI.ShowMessage(message));
             }
 
+            FlightPause.Enforce();
             this.Session?.Update();
 
             if (_openRequestFrame >= 0 && Time.frameCount > _openRequestFrame)
@@ -50,7 +52,8 @@ namespace Assets.Scripts
 
             var settings = ModSettings.Instance;
             var shift = UnityEngine.Input.GetKey(KeyCode.LeftShift) || UnityEngine.Input.GetKey(KeyCode.RightShift);
-            if ((shift || !settings.RequireShift.Value) && UnityEngine.Input.GetKeyDown(settings.KeyCode))
+            if ((shift || !settings.RequireShift.Value) && UnityEngine.Input.GetKeyDown(settings.KeyCode)
+                && !Game.Instance.UserInterface.IgnoreKeyboardInputs)
             {
                 var alt = UnityEngine.Input.GetKey(KeyCode.LeftAlt) || UnityEngine.Input.GetKey(KeyCode.RightAlt);
                 if (this.Session?.IsOpen == true)
@@ -88,8 +91,9 @@ namespace Assets.Scripts
 
         private void OnDestroy()
         {
-            ProgramPicker.Close();
-            this.Session?.Close();
+            RunGuarded("Couldn't close the picker: ", ProgramPicker.Close);
+            RunGuarded("Couldn't close the editor: ", () => this.Session?.Close());
+            FlightPause.Reset();
             if (Current == this)
             {
                 Current = null;
@@ -196,6 +200,17 @@ namespace Assets.Scripts
         private void RevertToLoadedProgram()
         {
             var scene = Game.Instance.FlightScene;
+            if (Game.Instance.UserInterface.AnyDialogsOpen)
+            {
+                return;
+            }
+
+            if (scene.TimeManager.CurrentMode.WarpMode)
+            {
+                scene.FlightSceneUI.ShowMessage("Leave time warp before changing a Vizzy program.");
+                return;
+            }
+
             var reverted = 0;
             string message = null;
             foreach (var data in CraftPrograms.Editable(scene.CraftNode.CraftScript))
@@ -204,16 +219,18 @@ namespace Assets.Scripts
                 var loaded = LatestEdits.LoadedProgram(key);
                 if (loaded != null)
                 {
-                    ProgramSwapper.Swap(data, new XElement(loaded), out var swapMessage);
-                    LatestEdits.Forget(key);
+                    if (ProgramSwapper.Swap(data, new XElement(loaded), out var swapMessage))
+                    {
+                        LatestEdits.Forget(key);
+                        reverted++;
+                    }
+
                     message = message ?? swapMessage;
-                    reverted++;
                 }
             }
 
-            scene.FlightSceneUI.ShowMessage(reverted == 0
-                ? "No kept Vizzy edit to undo: load a quicksave first."
-                : message ?? "Back to the quicksave's Vizzy program.");
+            scene.FlightSceneUI.ShowMessage(message
+                ?? (reverted == 0 ? "No kept Vizzy edit to undo: load a quicksave first." : "Back to the quicksave's Vizzy program."));
         }
     }
 }

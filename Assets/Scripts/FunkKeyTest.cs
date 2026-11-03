@@ -21,9 +21,15 @@ namespace Assets.Scripts
         private bool _reselect;
         private int _caretAfterReselect = -1;
 
+        /// <summary>Only with the setting on, and only in an editor this mod opened.</summary>
+        private static bool IsActive()
+        {
+            return ModSettings.Instance.TestAutoFillKeys.Value && FlightEditorController.Current?.Session?.IsOpen == true;
+        }
+
         private void Update()
         {
-            if (_field == null || !ModSettings.Instance.TestAutoFillKeys.Value)
+            if (_field == null || !IsActive())
             {
                 return;
             }
@@ -46,8 +52,9 @@ namespace Assets.Scripts
 
         private void LateUpdate()
         {
-            if (!ModSettings.Instance.TestAutoFillKeys.Value)
+            if (!IsActive())
             {
+                _field = null;
                 return;
             }
 

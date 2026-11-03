@@ -34,14 +34,15 @@ namespace Assets.Scripts
         {
             var result = new Result { Process = new XElement(process) };
             var oldBlocks = new Dictionary<int, Block>();
+            var newBlocks = new Dictionary<int, Block>();
             var oldStacks = ReadStacks(oldProgram, oldBlocks);
-            var newStacks = ReadStacks(newProgram, new Dictionary<int, Block>());
+            var newStacks = ReadStacks(newProgram, newBlocks);
 
             MatchBlocks(oldStacks, newStacks, result.Ids);
 
             foreach (var thread in result.Process.Elements("Thread").ToList())
             {
-                RemapThread(thread, oldBlocks, result);
+                RemapThread(thread, oldBlocks, newBlocks, result);
             }
 
             AddNewVariables(newProgram, result);
@@ -201,7 +202,7 @@ namespace Assets.Scripts
             return oldStack[0].Own == newStack[0].Own && Score(oldStack, newStack) >= oldStack.Count * WeightSameType / 2;
         }
 
-        private static void RemapThread(XElement thread, Dictionary<int, Block> oldBlocks, Result result)
+        private static void RemapThread(XElement thread, Dictionary<int, Block> oldBlocks, Dictionary<int, Block> newBlocks, Result result)
         {
             var next = (int?)thread.Attribute("nextInstruction");
             if (next == null)
@@ -212,16 +213,16 @@ namespace Assets.Scripts
             // A thread with no next block is finished at once, so where a block and everything after
             // it are gone, leave its frame as the game would at the end of that chain.
             var frames = thread.Element("CallStack")?.Elements("StackFrame").ToList() ?? new List<XElement>();
-            var target = Resolve(next, oldBlocks, result.Ids);
-            while (target == null && frames.Count > 0)
+            var survivor = Survivor(next, oldBlocks, result.Ids);
+            while (survivor == null && frames.Count > 0)
             {
                 var top = frames[frames.Count - 1];
                 frames.RemoveAt(frames.Count - 1);
-                target = Resolve((int?)top.Attribute("returnId"), oldBlocks, result.Ids);
+                survivor = Survivor((int?)top.Attribute("returnId"), oldBlocks, result.Ids);
                 top.Remove();
             }
 
-            if (target == null)
+            if (survivor == null)
             {
                 thread.Remove();
                 result.ThreadsEnded++;
@@ -229,22 +230,85 @@ namespace Assets.Scripts
                 return;
             }
 
+            var target = result.Ids[survivor.Id];
             if (target != next)
             {
                 result.Notes.Add($"Thread moved from block {next} to block {target}.");
             }
 
             thread.SetAttributeValue("nextInstruction", target);
-            foreach (var frame in frames)
+            var ownerFrames = RebuildOwnerFrames(thread, frames, survivor, newBlocks[target], result);
+            foreach (var frame in frames.Take(frames.Count - ownerFrames))
             {
                 // No return block is fine: the game then carries on leaving frames.
-                frame.SetAttributeValue("returnId", Resolve((int?)frame.Attribute("returnId"), oldBlocks, result.Ids));
+                frame.SetAttributeValue("returnId", Survivor((int?)frame.Attribute("returnId"), oldBlocks, result.Ids) is Block block ? result.Ids[block.Id] : (int?)null);
                 RemapStates(frame, result.Ids);
             }
         }
 
-        /// <summary>The new id of a block or, if it was deleted, of the next surviving block in its chain.</summary>
-        private static int? Resolve(int? oldId, Dictionary<int, Block> oldBlocks, Dictionary<int, int> ids)
+        /// <summary>
+        /// The top frames belong to the loops and ifs around the thread's block. Gives the new block the
+        /// frames of its own surroundings, keeping a frame's variables and states where its owner
+        /// survived. Returns how many frames now belong to those owners.
+        /// </summary>
+        private static int RebuildOwnerFrames(XElement thread, List<XElement> frames, Block oldBlock, Block newBlock, Result result)
+        {
+            var oldOwners = Owners(oldBlock);
+            var newOwners = Owners(newBlock);
+            var callers = Math.Max(1, frames.Count - oldOwners.Count);
+            var ownerFrames = frames.Skip(callers).ToList();
+            oldOwners = oldOwners.Skip(oldOwners.Count - ownerFrames.Count).ToList();
+
+            foreach (var frame in ownerFrames)
+            {
+                frame.Remove();
+            }
+
+            frames.RemoveRange(callers, ownerFrames.Count);
+            var callStack = thread.Element("CallStack");
+            var kept = 0;
+            foreach (var owner in newOwners)
+            {
+                var index = oldOwners.FindIndex(old => result.Ids.TryGetValue(old.Id, out var id) && id == owner.Id);
+                XElement frame;
+                if (index >= 0)
+                {
+                    frame = ownerFrames[index];
+                    RemapStates(frame, result.Ids);
+                    kept++;
+                }
+                else
+                {
+                    frame = new XElement("StackFrame", new XElement("Variables"));
+                }
+
+                frame.SetAttributeValue("returnId", owner.ReturnBlockId());
+                callStack.Add(frame);
+                frames.Add(frame);
+            }
+
+            if (kept != oldOwners.Count || kept != newOwners.Count)
+            {
+                result.Notes.Add($"Thread's surrounding loops or ifs changed: {oldOwners.Count} before, {newOwners.Count} after.");
+            }
+
+            return newOwners.Count;
+        }
+
+        /// <summary>The loops and ifs around a block in its stack, outermost first.</summary>
+        private static List<Block> Owners(Block block)
+        {
+            var owners = new List<Block>();
+            for (var owner = block.Parent; owner != null; owner = owner.Parent)
+            {
+                owners.Insert(0, owner);
+            }
+
+            return owners;
+        }
+
+        /// <summary>A block or, if it was deleted, the next surviving block in its chain.</summary>
+        private static Block Survivor(int? oldId, Dictionary<int, Block> oldBlocks, Dictionary<int, int> ids)
         {
             if (oldId == null || !oldBlocks.TryGetValue(oldId.Value, out var block))
             {
@@ -253,9 +317,9 @@ namespace Assets.Scripts
 
             for (var i = block.Index; i < block.Chain.Count; i++)
             {
-                if (ids.TryGetValue(block.Chain[i].Id, out var newId))
+                if (ids.ContainsKey(block.Chain[i].Id))
                 {
-                    return newId;
+                    return block.Chain[i];
                 }
             }
 
@@ -300,17 +364,17 @@ namespace Assets.Scripts
         private static List<List<Block>> ReadStacks(XElement program, Dictionary<int, Block> blocks)
         {
             return program.Elements("Instructions")
-                .Select(stack => ReadChain(stack, blocks))
+                .Select(stack => ReadChain(stack, blocks, null))
                 .Where(chain => chain.Count > 0)
                 .ToList();
         }
 
-        private static List<Block> ReadChain(XElement instructions, Dictionary<int, Block> blocks)
+        private static List<Block> ReadChain(XElement instructions, Dictionary<int, Block> blocks, Block parent)
         {
             var chain = new List<Block>();
             foreach (var element in instructions.Elements())
             {
-                var block = new Block(element, chain, chain.Count, blocks);
+                var block = new Block(element, chain, chain.Count, blocks, parent);
                 chain.Add(block);
                 blocks[block.Id] = block;
             }
@@ -335,9 +399,10 @@ namespace Assets.Scripts
 
         private sealed class Block
         {
-            public Block(XElement element, List<Block> chain, int index, Dictionary<int, Block> blocks)
+            public Block(XElement element, List<Block> chain, int index, Dictionary<int, Block> blocks, Block parent)
             {
                 Chain = chain;
+                Parent = parent;
                 Index = index;
                 Id = (int)element.Attribute("id");
                 Name = element.Name.LocalName;
@@ -351,7 +416,7 @@ namespace Assets.Scripts
                     Y = y;
                 }
 
-                Children = element.Elements("Instructions").Select(child => ReadChain(child, blocks)).ToList();
+                Children = element.Elements("Instructions").Select(child => ReadChain(child, blocks, this)).ToList();
 
                 var own = new XElement(element);
                 own.Elements("Instructions").Remove();
@@ -365,6 +430,8 @@ namespace Assets.Scripts
                 ChildrenKey = string.Join("\n---\n", Children.Select(ChainKey));
                 Full = Own + "\n{" + ChildrenKey + "}";
             }
+
+            public Block Parent { get; }
 
             public List<Block> Chain { get; }
 
@@ -387,6 +454,23 @@ namespace Assets.Scripts
             public double X { get; }
 
             public double Y { get; }
+
+            /// <summary>Where the game continues after this block's body: loops come back, ifs move on past their else-ifs.</summary>
+            public int? ReturnBlockId()
+            {
+                if (Name != "If" && Name != "ElseIf")
+                {
+                    return Id;
+                }
+
+                var next = Index + 1;
+                while (next < Chain.Count && (Chain[next].Name == "ElseIf" || Chain[next].Name == "Comment"))
+                {
+                    next++;
+                }
+
+                return next < Chain.Count ? Chain[next].Id : (int?)null;
+            }
         }
     }
 }

@@ -65,10 +65,13 @@ namespace Assets.Scripts
 
             try
             {
-                FindButton(request, "OnButtonApplyClicked();").SetAttributeValue("id", ApplyButtonId);
-                FindButton(request, "OnButtonApplyClicked();").SetAttributeValue("onClick", null);
-                FindButton(request, "OnButtonCancelClicked();").SetAttributeValue("id", CancelButtonId);
-                FindButton(request, "OnButtonCancelClicked();").SetAttributeValue("onClick", null);
+                // Both found first: a missing button then leaves both stock.
+                var apply = FindButton(request, "OnButtonApplyClicked();");
+                var cancel = FindButton(request, "OnButtonCancelClicked();");
+                apply.SetAttributeValue("id", ApplyButtonId);
+                apply.SetAttributeValue("onClick", null);
+                cancel.SetAttributeValue("id", CancelButtonId);
+                cancel.SetAttributeValue("onClick", null);
 
                 request.AddOnLayoutRebuiltAction(controller =>
                 {

@@ -42,14 +42,25 @@ surviving block in its chain, leaving frames as the game would at a chain's end.
 nothing after it survives, and a flight message says so. Saved variable values stay; variables the
 edit added are created with the program's values.
 
-Known limit: edited one-off blocks that already ran don't run again, so gains need setting inside a
-loop or in `PID(...)` in a Funk expression inside one.
+The frames of the loops and ifs around a thread's block are rebuilt from the new program, so wrapping
+or unwrapping blocks keeps the thread's nesting right. Loops return to themselves; ifs return to the
+block after their else-ifs.
+
+Known limits:
+
+- Edited one-off blocks that already ran don't run again, so gains need setting inside a loop or in
+  `PID(...)` in a Funk expression inside one.
+- A new `For` wrapped around a running thread has no loop variable until its next pass.
+- Renaming a variable while it's in use loses its running value.
+- Each Apply recompiles Funk expressions, so `PID`, `smooth`, `sum` and `rate` restart their memory.
+- Events queued but not yet started at the moment of Apply are dropped.
+- A beep sounding at Apply is silenced.
 
 ## Files
 
 - `Mod`: startup and scene hooks. `ModSettings`, `EditorLog`: settings and logging.
 - `FlightEditorController`: per-flight component: keys, requests, restoring edits after a load.
-- `EditorSession`: one open editor: flight UI, canvas position, closing. `FlightPause`: the pause.
+- `EditorSession`: one open editor: flight UI, canvas position, closing. `FlightPause`: pause and keys.
 - `FlightEditorUi`: XML changes to the flight menu and the Vizzy editor.
 - `ProgramPicker`: choice panel for crafts with several programs.
 - `CraftPrograms`: which programs a craft has. `ProgramSwapper`: puts a program in place.
@@ -63,12 +74,16 @@ loop or in `PID(...)` in a Funk expression inside one.
 - **Time warp:** opening is refused, with a message. This also covers physics on rails.
 - **Quicksave:** stores the edited program and positions, through the game's own code.
 - **Quickload:** the edit goes back in right after the load. A save without running threads is a new
-  launch and keeps its own program.
+  launch (including Retry and Relaunch): it keeps its own program and ends that part's edit history.
 - **Scene change:** the editor closes. `LatestEdits` clears on leaving flight; canvas positions stay
   until the game quits. Nothing else is kept across scenes.
-- **Craft switch, EVA, docking:** the editor pauses the game. Docking is handled by the stock
-  `OnMovedToNewCraft`.
-- **Part destruction:** if the part is gone on Apply, the edit is dropped with a message.
+- **Input:** the game's keys still fire while paused, so `FlightPause` turns them off (except Undo and
+  Redo) while choosing or editing. Esc is read raw, so `EditorSession` re-hides the flight UI each frame
+  and `FlightPause` re-asserts the pause.
+- **Craft switch, EVA, docking:** blocked with the other keys while editing. Docking is handled by the
+  stock `OnMovedToNewCraft`. Edits are keyed by part id, which outlives a separation or docking.
+- **Failed Apply:** the editor stays open with a message, so the work isn't lost. That includes a part
+  that's gone.
 - **Several programs:** a picker lists them, one editor at a time. Each keeps its own latest edit and
   canvas position. Other programs keep running.
 - **Execution order:** Apply runs from a UI event while paused, so not alongside a program update.

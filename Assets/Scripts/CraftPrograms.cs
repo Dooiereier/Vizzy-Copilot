@@ -24,14 +24,15 @@ namespace Assets.Scripts
         {
             var active = craft.ActiveCommandPod?.Part?.GetModifier<FlightProgramData>();
             return All(craft)
-                .Where(data => data.Script != null)
+                .Where(data => data.Script != null && !data.HideEditButton)
                 .OrderBy(data => data == active ? 0 : 1)
                 .ToList();
         }
 
         public static string Key(FlightProgramData data)
         {
-            return Game.Instance.FlightScene.CraftNode.NodeId + "/" + data.Part.Id;
+            // Not the craft node: a part keeps its id when a separation or docking changes the node.
+            return data.Part.Id.ToString();
         }
     }
 }

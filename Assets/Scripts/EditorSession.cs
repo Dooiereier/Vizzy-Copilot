@@ -20,6 +20,8 @@ namespace Assets.Scripts
         private VizzyUIScript _editor;
         private bool _wasUiVisible;
         private string _closingMessage;
+        private string _applyFailure;
+        private bool _applied;
         private bool _restoreViewPending;
         private ProgramContainerScript _viewContainer;
 
@@ -41,7 +43,19 @@ namespace Assets.Scripts
         /// <summary>Puts the canvas back where it was last time for this part, once its UI exists.</summary>
         public void Update()
         {
-            if (!_restoreViewPending || !IsOpen)
+            if (!IsOpen)
+            {
+                return;
+            }
+
+            // Esc shows the flight UI whatever else is open, and the next Esc would then open its menu.
+            var flightUi = Game.Instance.FlightScene.FlightSceneUI;
+            if (flightUi.Visible)
+            {
+                flightUi.Visible = false;
+            }
+
+            if (!_restoreViewPending)
             {
                 return;
             }
@@ -71,18 +85,28 @@ namespace Assets.Scripts
             }
         }
 
+        /// <summary>Stays open if the edit couldn't be applied, so the work isn't lost.</summary>
         public void ApplyAndClose()
         {
+            _applied = false;
+            _applyFailure = null;
             try
             {
                 _editor.ApplyChangesToCraft();
             }
             catch (Exception e)
             {
-                EditorLog.Error("Couldn't apply with the shortcut: " + e);
+                EditorLog.Error("Couldn't apply the edit: " + e);
             }
 
-            _editor.Close();
+            if (_applied)
+            {
+                _editor.Close();
+            }
+            else
+            {
+                _editor.ShowMessage(_applyFailure ?? "Couldn't apply the Vizzy edit: see Player.log.");
+            }
         }
 
         /// <summary>The editor's Cancel: asks first, in the stock dialog.</summary>
@@ -147,20 +171,29 @@ namespace Assets.Scripts
             {
                 if (_data.Script == null)
                 {
-                    _closingMessage = "The part with this Vizzy program is gone: the edit wasn't applied.";
+                    _applyFailure = "The part with this Vizzy program is gone: the edit wasn't applied.";
                     return;
                 }
 
                 var before = _data.FlightProgramXml;
-                if (ProgramSwapper.Swap(_data, newProgram, out _closingMessage))
+                if (XNode.DeepEquals(before, newProgram))
                 {
+                    _applied = true;
+                }
+                else if (ProgramSwapper.Swap(_data, newProgram, out var message))
+                {
+                    _applied = true;
+                    _closingMessage = message;
                     LatestEdits.Remember(_key, before, newProgram);
+                }
+                else
+                {
+                    _applyFailure = message;
                 }
             }
             catch (Exception e)
             {
                 EditorLog.Error("Apply failed: " + e);
-                _closingMessage = "Couldn't apply the Vizzy edit: see Player.log.";
             }
         }
 

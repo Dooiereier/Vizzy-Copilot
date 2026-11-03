@@ -7,7 +7,7 @@ namespace Assets.Scripts
     /// <summary>
     /// Remembers the latest program applied to each part for the rest of this flight, so a quickload
     /// restores the craft and thread positions but keeps the latest edit. Memory only: leaving the
-    /// flight forgets everything, and only quicksaving writes an edit into a save.
+    /// flight or a new launch forgets it. Saving a state stores whatever program is then running.
     /// </summary>
     public static class LatestEdits
     {
@@ -29,14 +29,29 @@ namespace Assets.Scripts
 
         /// <summary>
         /// The program to put back after a load, or null to keep what was loaded. Saved threads show
-        /// this is a resumed flight rather than a new launch, and the loaded program has to be one
-        /// from this part's edit history.
+        /// this is a resumed flight; without them it's a new launch, which ends this part's edit
+        /// history. The loaded program has to be one from that history.
         /// </summary>
         public static XElement ProgramToRestore(string part, XElement loaded, XElement loadedProcess)
         {
-            if (loadedProcess == null || !Entries.TryGetValue(part, out var entry)
-                || XNode.DeepEquals(loaded, entry.Latest)
-                || !entry.Known.Any(program => XNode.DeepEquals(program, loaded)))
+            if (loadedProcess == null)
+            {
+                Entries.Remove(part);
+                return null;
+            }
+
+            if (!Entries.TryGetValue(part, out var entry))
+            {
+                return null;
+            }
+
+            if (XNode.DeepEquals(loaded, entry.Latest))
+            {
+                entry.Loaded = null;
+                return null;
+            }
+
+            if (!entry.Known.Any(program => XNode.DeepEquals(program, loaded)))
             {
                 return null;
             }

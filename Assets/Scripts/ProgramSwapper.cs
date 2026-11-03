@@ -21,6 +21,13 @@ namespace Assets.Scripts
             var remapped = oldProcess == null ? null : ThreadRemapper.Remap(oldProgram, newProgram, oldProcess);
             message = LogRemap(remapped);
 
+            // A beep's looping sound is only stopped by the craft service that StartProgram replaces.
+            var beep = script.GetComponent<UnityEngine.AudioSource>();
+            if (beep != null)
+            {
+                beep.volume = 0f;
+            }
+
             data.FlightProgramXml = newProgram;
             data.ProcessXml = remapped == null ? null : new XElement(remapped.Process);
             script.StartProgram();
@@ -38,9 +45,9 @@ namespace Assets.Scripts
             // Serializing straight after restoring shows whether every thread came back as remapped.
             script.UpdateXml();
             LogThreads("After", data.ProcessXml, newProgram);
-            if (remapped != null)
+            if (remapped != null && !XNode.DeepEquals(remapped.Process, data.ProcessXml))
             {
-                EditorLog.Debug("Resume check: running state " + (XNode.DeepEquals(remapped.Process, data.ProcessXml) ? "as expected" : "DIFFERENT"));
+                EditorLog.Warning("Resume check: the running state isn't what was restored. A game update may have changed its format.");
             }
 
             return true;

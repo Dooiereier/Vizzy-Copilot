@@ -29,6 +29,11 @@ public static class ThreadRemapperTests
         NewVariableIsAddedAndSavedValuesStay();
         FinishedThreadIsLeftAlone();
         RealProgramsSurviveReorderedStacks();
+        WrappingInALoopAddsItsFrame();
+        UnwrappingFromALoopRemovesItsFrame();
+        BlockAfterCurrentIfRuns();
+        RetryEndsTheEditHistory();
+        LoadedProgramFollowsEachLoad();
         QuickloadKeepsLatestEdit();
         NewLaunchKeepsItsOwnProgram();
         UnrelatedProgramIsLeftAlone();
@@ -233,6 +238,56 @@ public static class ThreadRemapperTests
         Console.WriteLine($"Real programs: {programs}, {blocks} blocks, {clock.ElapsedMilliseconds} ms.");
     }
 
+    private static void WrappingInALoopAddsItsFrame()
+    {
+        var before = Program(Stack(1, Event(0, "One"), Wait(1, "a"), Wait(2, "b"), Wait(3, "c")));
+        var after = Program(Stack(1, Event(0, "One"), Loop(1, "x", Wait(2, "a"), Wait(3, "b")), Wait(4, "c")));
+        var result = ThreadRemapper.Remap(before, after, Process(Thread(2, Frame())));
+        CheckNext("follows into the loop", result, 0, 3);
+        CheckFrames("loop frame added", result, 0, 2);
+        var top = result.Process.Element("Thread").Element("CallStack").Elements("StackFrame").Last();
+        Check("loop frame returns to the loop", (int?)top.Attribute("returnId") == 1 && top.Element("Variables") != null);
+    }
+
+    private static void UnwrappingFromALoopRemovesItsFrame()
+    {
+        var before = Program(Stack(1, Event(0, "One"), Loop(1, "x", Wait(2, "a"), Wait(3, "b")), Wait(4, "c")));
+        var after = Program(Stack(1, Event(0, "One"), Wait(1, "a"), Wait(2, "b"), Wait(3, "c")));
+        var result = ThreadRemapper.Remap(before, after, Process(Thread(2, Frame(), Frame(returnId: 1))));
+        CheckNext("follows out of the loop", result, 0, 1);
+        CheckFrames("loop frame removed", result, 0, 1);
+    }
+
+    private static void BlockAfterCurrentIfRuns()
+    {
+        var before = Program(Stack(1, Event(0, "One"), Branch(1, "x", Wait(2, "a")), Wait(3, "c")));
+        var after = Program(Stack(1, Event(0, "One"), Branch(1, "x", Wait(2, "a")), Wait(3, "new"), Wait(4, "c")));
+        var result = ThreadRemapper.Remap(before, after, Process(Thread(2, Frame(), Frame(returnId: 3, states: "2=1.5"))));
+        var top = result.Process.Element("Thread").Element("CallStack").Elements("StackFrame").Last();
+        Check("if frame returns to the new block", (int?)top.Attribute("returnId") == 3);
+        Check("if frame keeps its states", (string)top.Attribute("states") == "2=1.5");
+    }
+
+    private static void RetryEndsTheEditHistory()
+    {
+        LatestEdits.Clear();
+        var saved = Program(Stack(1, Event(0, "One"), Wait(1, "saved")));
+        LatestEdits.Remember("part", saved, Program(Stack(1, Event(0, "One"), Wait(1, "edit"))));
+        LatestEdits.ProgramToRestore("part", saved, null);
+        Check("a quickload after a new launch keeps its program", LatestEdits.ProgramToRestore("part", saved, Process()) == null);
+    }
+
+    private static void LoadedProgramFollowsEachLoad()
+    {
+        LatestEdits.Clear();
+        var saved = Program(Stack(1, Event(0, "One"), Wait(1, "saved")));
+        var edit = Program(Stack(1, Event(0, "One"), Wait(1, "edit")));
+        LatestEdits.Remember("part", saved, edit);
+        LatestEdits.ProgramToRestore("part", saved, Process());
+        LatestEdits.ProgramToRestore("part", edit, Process());
+        Check("a save already holding the edit has nothing to go back to", LatestEdits.LoadedProgram("part") == null);
+    }
+
     private static void QuickloadKeepsLatestEdit()
     {
         LatestEdits.Clear();
@@ -321,6 +376,11 @@ public static class ThreadRemapperTests
     private static XElement Loop(int id, string text, params XElement[] body)
     {
         return new XElement("While", new XAttribute("id", id), new XElement("Constant", new XAttribute("text", text)), new XElement("Instructions", body));
+    }
+
+    private static XElement Branch(int id, string text, params XElement[] body)
+    {
+        return new XElement("If", new XAttribute("id", id), new XElement("Constant", new XAttribute("text", text)), new XElement("Instructions", body));
     }
 
     private static XElement Process(params XElement[] threads)
