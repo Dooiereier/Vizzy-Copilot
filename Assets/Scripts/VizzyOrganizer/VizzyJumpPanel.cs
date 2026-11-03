@@ -41,7 +41,7 @@ namespace Assets.Scripts.VizzyOrganizer
         private GameObject _template;
         private VizzyFolderIndex _index = new VizzyFolderIndex();
 
-        // null = everything. Otherwise the ids owned by the selected row.
+        // null = the Center row. Otherwise the ids owned by the selected row.
         private HashSet<int> _selectedIds;
 
         /// <summary>Adds the button and flyout to the editor's XML, then connects them once it's built.</summary>
@@ -198,7 +198,7 @@ namespace Assets.Scripts.VizzyOrganizer
             _rowImages.Clear();
             _rowColors.Clear();
             _rowPaths.Clear();
-            AddRow("All", 0, null, null);
+            AddRow("Center", 0, null, null);
             foreach (var folder in _index.Root.Children.Values.OrderBy(folder => folder.Name))
             {
                 AddFolderRows(folder, 1, ColorForName(folder.Name));
@@ -276,10 +276,6 @@ namespace Assets.Scripts.VizzyOrganizer
             }
         }
 
-        // The viewport's own pan position before we ever focused a folder - restored when
-        // going back to "All", so the camera doesn't stay wherever it was left panned to.
-        private Vector2? _originalViewportPosition;
-
         // 0 = bottom of the viewport, 1 = top. 0.9 puts the target near the very top, leaving
         // most of the screen below it for the chain content that extends downward from there.
         private const float TargetVerticalFraction = 0.9f;
@@ -296,7 +292,7 @@ namespace Assets.Scripts.VizzyOrganizer
 
             if (_selectedIds == null)
             {
-                PanToBoundsCenter(new List<Vector3>());
+                PanToCenter();
                 return;
             }
 
@@ -327,11 +323,23 @@ namespace Assets.Scripts.VizzyOrganizer
             PanToBoundsCenter(chainHeadWorldPositions);
         }
 
+        // Puts the canvas's origin in the middle of the viewport.
+        private void PanToCenter()
+        {
+            var viewportTransform = _controller.VizzyUI?.ProgramTransform;
+            var viewportRect = _controller.ProgramContainer?.transform as RectTransform;
+            if (viewportTransform == null || viewportRect == null)
+                return;
+
+            var deltaWorld = viewportRect.TransformPoint(viewportRect.rect.center) - viewportTransform.TransformPoint(Vector3.zero);
+            var parent = viewportTransform.parent;
+            viewportTransform.anchoredPosition += (Vector2)(parent != null ? parent.InverseTransformVector(deltaWorld) : deltaWorld);
+        }
+
         // Pans the viewport to the mean position of each matching chain's own top block - each
         // chain counts once regardless of how many instructions it has, so this lands wherever
         // the relevant chains are clustered, rather than the bounding box's min/max midpoint
         // (which ignores clustering entirely and only depends on the two most extreme points).
-        // Restores the original pan when back on "All".
         private void PanToBoundsCenter(List<Vector3> visiblePositions)
         {
             var viewportTransform = _controller.VizzyUI?.ProgramTransform;
@@ -339,16 +347,8 @@ namespace Assets.Scripts.VizzyOrganizer
             if (viewportTransform == null || programContainer == null)
                 return;
 
-            if (_selectedIds == null || visiblePositions.Count == 0)
-            {
-                if (_originalViewportPosition.HasValue)
-                    viewportTransform.anchoredPosition = _originalViewportPosition.Value;
-                _originalViewportPosition = null;
+            if (visiblePositions.Count == 0)
                 return;
-            }
-
-            if (!_originalViewportPosition.HasValue)
-                _originalViewportPosition = viewportTransform.anchoredPosition;
 
             var sum = Vector3.zero;
             foreach (var pos in visiblePositions)
