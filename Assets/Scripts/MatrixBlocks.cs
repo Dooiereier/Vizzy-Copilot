@@ -120,7 +120,7 @@ namespace Assets.Scripts
                     categoriesElement.Add(category);
                 }
 
-                // Nodes（默认输入：单位矩阵 ListOp 常量 / 数字常量 0）
+                // Nodes. Default inputs: an identity matrix ListOp constant, and the number constant 0.
                 category.Add(
                     Node(ns, "Matrix3x3Mul", Identity(ns), Identity(ns)),
                     Node(ns, "Matrix3x3GetElement", Identity(ns), Number(ns, 0), Number(ns, 0)),
@@ -154,7 +154,7 @@ namespace Assets.Scripts
 
         private static XElement Identity(XNamespace ns)
         {
-            // style="list-create" 是游戏原版 ListOp 节点的样式，缺了它工具箱渲染会 NRE
+            // "list-create" is the stock ListOp style; without it the toolbox hits a null reference when rendering.
             return new XElement(ns + "ListOp",
                 new XAttribute("style", "list-create"),
                 new XAttribute("op", "create"),

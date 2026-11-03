@@ -14,23 +14,23 @@ using UnityEngine.UI;
 namespace Assets.Scripts.Vizzy
 {
     /// <summary>
-    /// Funk 表达式语法高亮（TMP 逐字符顶点色方案）。
+    /// Funk expression syntax highlighting, by setting TMP vertex colors per character.
     ///
-    /// 原理：不往文本里插入任何富文本标记，直接修改 TMP_Text 的 mesh 顶点色
-    /// （textInfo.meshInfo[i].colors32）。textComponent.text 始终是纯文本，
-    /// caret 定位（用 characterInfo）与 selection 高亮（独立 VertexHelper 几何体）
-    /// 完全不受影响；数据层 input.text / ExpressionResult.TextValue 永远是纯文本。
+    /// Inserts no rich text markup: it changes the TMP_Text mesh vertex colors
+    /// (textInfo.meshInfo[i].colors32) directly. textComponent.text stays plain text,
+    /// so caret placement (from characterInfo) and selection highlighting (separate geometry)
+    /// are unaffected, and input.text and ExpressionResult.TextValue are always plain text.
     ///
-    /// 注入时机：订阅 TMP_Text.OnPreRenderText 事件。该事件在 GenerateTextMesh 内部、
-    /// 上传 mesh 数据（m_mesh.colors32 = meshInfo[0].colors32）之前触发，因此此刻
-    /// 修改 meshInfo.colors32 会被随后上传，颜色一定生效（输入、显示、拖动重排都覆盖）。
+    /// Timing: subscribes to TMP_Text.OnPreRenderText. It fires inside GenerateTextMesh, before the mesh
+    /// data is uploaded (m_mesh.colors32 = meshInfo[0].colors32), so changes to meshInfo.colors32 here
+    /// are uploaded next and always take effect, for typing, display and drag reordering alike.
     ///
-    /// 映射：块 Start 时（[HarmonyPatch] Start Postfix）把 textComponent.GetInstanceID()
-    /// 注册进字典并订阅事件，不依赖 GetComponentInParent 层级反查。
+    /// Mapping: when a block starts (Harmony postfix on Start), textComponent.GetInstanceID() goes in a
+    /// dictionary and the event is subscribed, without searching up the hierarchy with GetComponentInParent.
     /// </summary>
     public static class FunkHighlight
     {
-        // ---- 词法规则：与 ModApi.Expressions.Parser.TokenDefs 一致（保留 \G 锚定）----
+        // ---- Lexical rules: the same as ModApi.Expressions.Parser.TokenDefs, keeping the \G anchors ----
         private static readonly Regex WhitespacePat = new Regex(@"\G\s*");
         private static readonly Regex StringPat = new Regex(@"\G""((?:[^\\""]|\\.)*)""");
         private static readonly Regex DataSlotPat = new Regex(@"\G\[[^\]]+\]");
@@ -42,17 +42,17 @@ namespace Assets.Scripts.Vizzy
 
         
         private static readonly Color32 DefaultColor = new Color32(255, 255, 255, 255);
-        private static readonly Color32 ColorNumber = FromHex("#B5CEA8");   // 数字 绿
-        private static readonly Color32 ColorString = FromHex("#CE9178");   // 字符串 橙
-        private static readonly Color32 ColorOperator = FromHex("#D4D4D4"); // 操作符 白灰
-        private static readonly Color32 ColorFunction = FromHex("#DCDCAA"); // 函数 黄
-        private static readonly Color32 ColorKeyword = FromHex("#569CD6");  // 关键字 蓝
-        private static readonly Color32 ColorVariable = FromHex("#9CDCFE"); // 变量 浅蓝
-        private static readonly Color32 ColorPart = FromHex("#808080");     // PartSelector 灰
-        private static readonly Color32 ColorDataSlot = FromHex("#4EC9B0"); // 数据槽 青
-        private static readonly Color32 ColorGroup = FromHex("#C586C0");    // 括号 紫
-        private static readonly Color32 ColorVector = FromHex("#4EC9B0");   // v: 向量前缀 青
-        private static readonly Color32 ColorError = FromHex("#FF4D4D");    // 语法错误 红
+        private static readonly Color32 ColorNumber = FromHex("#B5CEA8");   // number: green
+        private static readonly Color32 ColorString = FromHex("#CE9178");   // string: orange
+        private static readonly Color32 ColorOperator = FromHex("#D4D4D4"); // operator: light gray
+        private static readonly Color32 ColorFunction = FromHex("#DCDCAA"); // function: yellow
+        private static readonly Color32 ColorKeyword = FromHex("#569CD6");  // keyword: blue
+        private static readonly Color32 ColorVariable = FromHex("#9CDCFE"); // variable: light blue
+        private static readonly Color32 ColorPart = FromHex("#808080");     // part selector: gray
+        private static readonly Color32 ColorDataSlot = FromHex("#4EC9B0"); // data slot: teal
+        private static readonly Color32 ColorGroup = FromHex("#C586C0");    // bracket: purple
+        private static readonly Color32 ColorVector = FromHex("#4EC9B0");   // v: vector prefix: teal
+        private static readonly Color32 ColorError = FromHex("#FF4D4D");    // syntax error: red
 
         private static bool _namesFailed;
 
@@ -60,55 +60,53 @@ namespace Assets.Scripts.Vizzy
 
         private static readonly HashSet<string> Keywords = NamesOf(() => FunkNames.Constants);
 
-        // Controls 裸属性（CraftControls 属性，游戏 ResolveVariable 里直接 GetProperty(text) 注册）。
+        // Bare control names: the game's ResolveVariable looks these up with GetProperty(text).
         private static readonly HashSet<string> ControlsProperties = NamesOf(() => FunkNames.Controls);
 
-        // 函数参数个数表（从游戏 Context.GetDefaults / Mathd / CraftService 提取，键统一小写）。
-        // 只对表内已知函数做参数个数校验；sum/rate/PID/smooth 等特殊函数与自定义函数不校验。
+        // Argument counts per function, from Context.GetDefaults, Mathd and CraftService. Keys are lowercase.
+        // Only functions listed here get an argument count check; sum, rate, PID, smooth and custom functions don't.
         private static readonly Dictionary<string, int> FunctionArgCounts = new Dictionary<string, int>(StringComparer.Ordinal)
         {
-            // Math / Mathd 标量函数
+            // Math and Mathd scalar functions
             { "abs", 1 }, { "acos", 1 }, { "asin", 1 }, { "atan", 1 }, { "atan2", 2 },
             { "cos", 1 }, { "sin", 1 }, { "tan", 1 }, { "log", 2 }, { "ln", 1 }, { "log10", 1 },
             { "max", 2 }, { "min", 2 }, { "pow", 2 }, { "sqrt", 1 }, { "exp", 1 }, { "ceil", 1 }, { "floor", 1 },
             { "clamp", 3 }, { "clamp01", 1 }, { "deltaangle", 2 }, { "inverselerp", 3 },
             { "lerp", 3 }, { "lerpangle", 3 }, { "lerpunclamped", 3 }, { "pingpong", 2 },
             { "repeat", 2 }, { "round", 1 }, { "sign", 1 }, { "smoothstep", 3 },
-            // 向量构造/提取
+            // Vector construction and extraction
             { "vec", 3 }, { "x", 1 }, { "y", 1 }, { "z", 1 },
-            // Vector3d 静态函数
+            // Vector3d static functions
             { "angle", 2 }, { "clampmagnitude", 2 }, { "cross", 2 }, { "distance", 2 }, { "dot", 2 },
             { "exclude", 2 }, { "isnan", 1 }, { "lerp3", 3 }, { "magnitude", 1 }, { "max3", 2 },
             { "min3", 2 }, { "movetowards", 3 }, { "normalize", 1 }, { "project", 2 }, { "projectonplane", 2 },
             { "reflect", 2 }, { "scale", 2 }, { "signedangle", 3 }, { "slerp", 3 }, { "sqrmagnitude", 1 },
-            // 列表检索器
+            // List readers
             { "listnum", 2 }, { "listvec", 2 }, { "listbool", 2 }, { "liststr", 2 }, { "listlen", 1 }
         };
 
-        // FlightData 全部属性名（JNO XML Guide 社区指南 + 游戏 ICraftFlightData 提取）。
-        // Funk 表达式里 FlightData.X / FD.X 的属性名必须在此表中。
+        // Names usable as FlightData.X or FD.X.
         private static readonly HashSet<string> FlightDataProperties = NamesOf(() => FunkNames.FlightData);
 
-        // OrbitData 全部属性名（JNO XML Guide 社区指南 + 游戏 ICraftOrbitData 提取）。
-        // 支持OrbitData.X 全称，以及 FlightData.Orbit.X 子对象链。
+        // Names usable as OrbitData.X or OD.X.
         private static readonly HashSet<string> OrbitDataProperties = NamesOf(() => FunkNames.OrbitData);
 
-        // textComponent.GetInstanceID() -> 所属 TMP_InputField
+        // textComponent.GetInstanceID() -> its TMP_InputField
         private static readonly Dictionary<int, TMP_InputField> _textToInput = new Dictionary<int, TMP_InputField>();
 
-        // textComponent.GetInstanceID() -> 错误波浪线 overlay（textComponent 的子物体）
+        // textComponent.GetInstanceID() -> its error underline overlay, a child of textComponent
         private static readonly Dictionary<int, TextMeshProUGUI> _errorOverlays = new Dictionary<int, TextMeshProUGUI>();
 
         private static readonly HashSet<string> _loggedOnce = new HashSet<string>(StringComparer.Ordinal);
 
-        // 变量名校验缓存：当前飞行程序实例 + 0.5s 时间戳（避免每帧遍历程序树）
+        // Variable name cache: the current program and a 0.5 s timestamp, to avoid walking the tree every frame
         private static FlightProgram _varCacheFp;
         private static HashSet<string> _varCacheNames;
         private static float _varCacheTime;
 
         /// <summary>
-        /// 把 Funk 输入框的 textComponent 注册进字典并订阅 OnPreRenderText（块 Start 时调用）。
-        /// 只处理真正的 Funk 表达式块；注释块等其他 TextInputElementScript 不订阅、不处理。
+        /// Registers a Funk field's textComponent and subscribes to OnPreRenderText, when a block starts.
+        /// Only real Funk expression blocks; comment blocks and other TextInputElementScripts are left alone.
         /// </summary>
         /// <summary>If the game's names can't be read, coloring turns off rather than mark everything red.</summary>
         private static HashSet<string> NamesOf(Func<IEnumerable<FunkName>> names)
@@ -151,7 +149,7 @@ namespace Assets.Scripts.Vizzy
             {
                 return;
             }
-            // 诊断日志：打印每个文本输入块（含注释块）的类型信息，用于定位误处理
+            // Diagnostic: the type details of each text input block, comments included, to trace misidentified blocks.
             try
             {
                 string parentNode = block.Parent != null && block.Parent.Node != null
@@ -170,7 +168,7 @@ namespace Assets.Scripts.Vizzy
             }
             if (!IsFunkExpressionBlock(block))
             {
-                return; // 非 Funk 块（注释等）：不订阅、不受影响
+                return; // Not a Funk block (a comment, for example): no subscription, no effect
             }
             TMP_Text tc = input.textComponent;
             if (tc == null)
@@ -178,15 +176,15 @@ namespace Assets.Scripts.Vizzy
                 return;
             }
             _textToInput[tc.GetInstanceID()] = input;
-            // 防重复订阅（块可能多次 Start / 重建）
+            // Avoid subscribing twice: a block can start or rebuild more than once
             tc.OnPreRenderText -= OnBeforeMeshUpload;
             tc.OnPreRenderText += OnBeforeMeshUpload;
         }
 
         /// <summary>
-        /// 判断该块是否为 Funk 表达式块：Token 是 Input 槽且没有校验、节点是 ConstantExpression
-        /// （Funk 自由表达式）。注释块（CommentInstruction）等指令内的文本输入不是
-        /// ConstantExpression，会被精确排除，不受高亮/报错影响。
+        /// Whether this block is a Funk expression block: an Input token with no validation, on a
+        /// ConstantExpression. Text inputs in other instructions, such as CommentInstruction, aren't
+        /// ConstantExpressions, so highlighting and errors don't touch them.
         /// </summary>
         public static bool IsFunkExpressionBlock(TextInputElementScript block)
         {
@@ -201,16 +199,16 @@ namespace Assets.Scripts.Vizzy
             {
                 return false;
             }
-            // 真正的 Funk 表达式槽：父节点是 EvaluationExpression（游戏在
-            // EvaluationExpression.Evaluate 里用 GetInputExpression 编译该槽文本）。
-            // display/log/广播/partId 等指令的字符串输入、注释块（CommentInstruction）
-            // 等父节点都不是 EvaluationExpression，会被精确排除。
+            // A real Funk slot has EvaluationExpression as its parent (EvaluationExpression.Evaluate compiles
+            // this slot's text with GetInputExpression).
+            // String inputs of display, log, broadcast and part id instructions, and comment blocks,
+            // have other parents, so they're excluded.
             return block.Parent != null && block.Parent.Node is EvaluationExpression;
         }
 
         /// <summary>
-        /// 收集当前飞行程序已定义的变量名（全局变量 + 程序树里所有 IsDefinition 的变量），
-        /// 带 0.5s 缓存；拿不到飞行程序时返回 null（跳过变量校验，不误报）。
+        /// Collects the names defined in the current program: global variables and locals in the tree,
+        /// with a 0.5 s cache. Returns null with no program available, which skips variable checks to avoid false errors.
         /// </summary>
         private static HashSet<string> GetVariableNames(TextInputElementScript block)
         {
@@ -310,9 +308,9 @@ namespace Assets.Scripts.Vizzy
             return !_namesFailed && ModSettings.Instance.FunkSyntaxHighlight.Value;
         }
 
-        // ---- 渲染入口：OnPreRenderText 事件（TMP 上传 mesh 数据之前触发）----
+        // ---- Render entry: OnPreRenderText, which fires before TMP uploads the mesh data ----
 
-        /// <summary>TMP 即将把 meshInfo 上传到 m_mesh 时回调：此刻改 colors32 会被上传，颜色一定生效。</summary>
+        /// <summary>Called just before TMP uploads meshInfo to m_mesh: changes to colors32 here always take effect.</summary>
         public static void OnBeforeMeshUpload(TMP_TextInfo textInfo)
         {
             try
@@ -325,7 +323,7 @@ namespace Assets.Scripts.Vizzy
                 TMP_InputField input = null;
                 if (!_textToInput.TryGetValue(textComponent.GetInstanceID(), out input) || input == null)
                 {
-                    return; // 未注册（非 Funk 输入框的文本，正常跳过）
+                    return; // Not registered: text outside a Funk field, skipped as normal
                 }
                 TextInputElementScript block = input.GetComponent<TextInputElementScript>();
                 if (!IsFunkExpressionBlock(block))
@@ -347,7 +345,7 @@ namespace Assets.Scripts.Vizzy
             }
         }
 
-        /// <summary>对 textComponent 的 meshInfo.colors32 按 token 逐字符填色（不标脏、不重建）。</summary>
+        /// <summary>Colors textComponent's meshInfo.colors32 per character by token, without dirtying or rebuilding.</summary>
         private static void ApplyMeshColors(TMP_InputField input, TMP_Text textComponent, HashSet<string> variableNames)
         {
             TMP_TextInfo textInfo = textComponent.textInfo;
@@ -365,15 +363,15 @@ namespace Assets.Scripts.Vizzy
             }
             Color32[] perChar = TokenizeToColors(text, errStart, errEnd);
 
-            // 错误区间可见字符的屏幕区间（用于红色波浪线 overlay）
+            // Screen range of the visible characters in the error span, for the red underline overlay
             bool errFound = false;
             float errX0 = 0f, errX1 = 0f, errY = 0f;
 
             for (int i = 0; i < textInfo.characterCount; i++)
             {
                 TMP_CharacterInfo ch = textInfo.characterInfo[i];
-                // 跳过不可见字符（空格、\u200B、换行等）：TMP 不为它们分配顶点，
-                // vertexIndex 会与相邻可见字符共享，后写的不可见字符会覆盖可见字符颜色。
+                // Skip invisible characters (spaces, \u200B, newlines): TMP gives them no vertices, so their
+                // vertexIndex is shared with a neighbour, and writing them would overwrite its color.
                 if (!ch.isVisible)
                 {
                     continue;
@@ -395,7 +393,7 @@ namespace Assets.Scripts.Vizzy
                 colors32[vi + 2] = c;
                 colors32[vi + 3] = c;
 
-                // 收集错误区间坐标（基于源字符串索引）
+                // Collect the error span's coordinates, from indexes in the source string
                 if (hasError && ch.index >= errStart && ch.index < errEnd)
                 {
                     if (!errFound)
@@ -404,7 +402,7 @@ namespace Assets.Scripts.Vizzy
                         errY = ch.baseLine;
                         errFound = true;
                     }
-                    // 跨行保护：错误区间跨多行时只统计第一个错误行的水平范围（波浪线只画该行）
+                    // Across lines: only measure the first error line, as the underline is only drawn there
                     if (Mathf.Abs(ch.baseLine - errY) < textComponent.fontSize * 0.5f)
                     {
                         errX1 = ch.xAdvance;
@@ -412,13 +410,13 @@ namespace Assets.Scripts.Vizzy
                 }
             }
 
-            // 错误波浪线 overlay：错误区间下方显示红色 ~ 波浪线
+            // Error underline overlay: a red ~ line under the error span
             if (hasError && errFound)
             {
                 TextMeshProUGUI overlay = GetErrorOverlay(textComponent);
                 RectTransform rt = overlay.rectTransform;
                 float width = Mathf.Max(4f, errX1 - errX0);
-                // 波浪线宽度不超过 textComponent 可见宽度，避免 ~ 溢出到相邻内容
+                // Keep the underline within textComponent's visible width, so ~ doesn't spill onto neighbouring content
                 float maxW = textComponent.rectTransform.rect.width;
                 if (width > maxW)
                 {
@@ -443,9 +441,9 @@ namespace Assets.Scripts.Vizzy
             }
         }
 
-        // ---- 错误波浪线 overlay ----
+        // ---- Error underline overlay ----
 
-        /// <summary>取（或创建）textComponent 下的红色波浪线 overlay（不参与布局、不挡点击）。</summary>
+        /// <summary>Gets or creates textComponent's red underline overlay, which takes no part in layout or clicks.</summary>
         private static TextMeshProUGUI GetErrorOverlay(TMP_Text textComponent)
         {
             int id = textComponent.GetInstanceID();
@@ -463,17 +461,17 @@ namespace Assets.Scripts.Vizzy
             overlay.raycastTarget = false;
             overlay.richText = false;
             overlay.alignment = TextAlignmentOptions.Left;
-            // 关键：禁止波浪线文本换行（~ 默认跟随全局 word wrap，超宽会折成多行 -> 与文本重叠）
+            // No wrapping: ~ follows the global word wrap by default, and an overlong line would fold over the text
             overlay.enableWordWrapping = false;
             overlay.text = "";
             overlay.enabled = false;
-            // 不参与 LayoutGroup 布局
+            // Takes no part in LayoutGroup layout
             var le = overlay.gameObject.AddComponent<LayoutElement>();
             le.ignoreLayout = true;
             RectTransform rt = overlay.rectTransform;
             rt.pivot = new Vector2(0f, 0f);
-            // anchor 对齐到 textComponent 的 pivot：TMP 字符坐标（origin/baseLine）是相对
-            // textComponent pivot 的，overlay 的 localPosition 相对 anchor，取 pivot 即对齐。
+            // Anchor at textComponent's pivot: TMP character coordinates (origin, baseLine) are relative to that
+            // pivot, and the overlay's localPosition is relative to its anchor, so this lines them up.
             Vector2 pv = textComponent.rectTransform.pivot;
             rt.anchorMin = rt.anchorMax = pv;
             rt.localPosition = Vector3.zero;
@@ -491,7 +489,7 @@ namespace Assets.Scripts.Vizzy
             }
         }
 
-        // ---- 分词 ----
+        // ---- Tokenizing ----
 
         private static Color32[] TokenizeToColors(string text, int errStart, int errEnd)
         {
@@ -527,7 +525,7 @@ namespace Assets.Scripts.Vizzy
 
                 pos++;
             }
-            // 错误区间覆盖为红色（在 token 色之上，保证错误显眼）
+            // Error span in red, over the token colors, so errors stand out
             if (errStart >= 0 && errStart < text.Length)
             {
                 int end = errEnd < text.Length ? errEnd : text.Length;
@@ -537,13 +535,13 @@ namespace Assets.Scripts.Vizzy
         }
 
         /// <summary>
-        /// 语法错误检测：与 ModApi.Expressions.Parser 相同的词法规则与顺序。
-        /// 分两层：词法层（无法识别的字符）+ token 流校验层（缺操作符、连续操作符、
-        /// 逗号/括号位置错误、未闭合括号、表达式不完整等），错误位置精确到字符。
+        /// Syntax error detection, with the same lexical rules and order as ModApi.Expressions.Parser.
+        /// Two layers: lexical (unrecognised characters), then token stream checks (missing operators, repeated
+        /// operators, misplaced commas or brackets, unclosed brackets, incomplete expressions), with exact positions.
         /// </summary>
         private static bool IsActionGroupName(string name)
         {
-            // 游戏 ResolveVariable：text.StartsWith("AG") 且剩余部分可解析为 int（AG1/AG2/...）。
+            // The game's ResolveVariable: text.StartsWith("AG") and the rest parses as an int (AG1, AG2, ...).
             if (name.Length < 3 || name[0] != 'A' || name[1] != 'G')
             {
                 return false;
@@ -558,7 +556,7 @@ namespace Assets.Scripts.Vizzy
             return true;
         }
 
-        /// <summary>tokens[i] 是否可作为表达式开头（值 / 左括号 / 一元 +/-）。</summary>
+        /// <summary>Whether tokens[i] can start an expression: a value, an opening bracket, or unary + or -.</summary>
         private static bool IsExpressionStart(List<FunkToken> tokens, int i)
         {
             if (i >= tokens.Count)
@@ -587,7 +585,7 @@ namespace Assets.Scripts.Vizzy
                 return false;
             }
 
-            // ---- 第 1 层：词法扫描 + 收集 token ----
+            // ---- Layer 1: lexical scan, collecting tokens ----
             var tokens = new List<FunkToken>();
             int pos = 0;
             int depth = 0;
@@ -637,19 +635,19 @@ namespace Assets.Scripts.Vizzy
                     pos += m.Length;
                     continue;
                 }
-                // 词法错误：无法识别的字符
+                // Lexical error: unrecognised character
                 errStart = pos;
                 errEnd = pos + 1;
                 message = "Invalid character '" + text[pos] + "'";
                 return true;
             }
-            // ---- 第 2 层：token 流校验 ----
+            // ---- Layer 2: token stream checks ----
             TokKind prevKind = TokKind.None;
             bool prevIsName = false;
-            int ternaryPending = 0;   // 未配对的 '?' 数（缺 ':' 的假分支）
-            int lastTernaryPos = 0;   // 最近一个未配对 '?' 的位置（用于提示）
-            // callParen[depth]：记录第 depth 层左括号是否为函数调用括号（前一个 token 是 name）。
-            // 逗号只允许出现在函数调用的参数括号内，(a, b) 这类分组括号里不允许逗号。
+            int ternaryPending = 0;   // unmatched '?' count, each missing a ':' false branch
+            int lastTernaryPos = 0;   // position of the latest unmatched '?', for the message
+            // callParen[depth]: whether the opening bracket at this depth is a function call (the previous token is a name).
+            // Commas are only allowed in call brackets, not in grouping brackets like (a, b).
             bool[] callParen = new bool[text.Length + 2];
             for (int i = 0; i < tokens.Count; i++)
             {
@@ -657,7 +655,7 @@ namespace Assets.Scripts.Vizzy
                 switch (tk.kind)
                 {
                     case TokKind.Value:
-                        // 相邻值之间缺操作符（容错：name 后跟数据槽如 x[0] 不报）
+                        // Missing operator between values (tolerates a name followed by a data slot, as in x[0])
                         if (prevKind == TokKind.Value && !(prevIsName && tk.isDataSlot))
                         {
                             errStart = tk.start; errEnd = tk.start + tk.length;
@@ -672,7 +670,7 @@ namespace Assets.Scripts.Vizzy
                         }
                         break;
                     case TokKind.Op:
-                        // 三元 ?：前必须是表达式（条件），后必须是表达式（真分支），且需配对的 ':'
+                        // Ternary ?: needs an expression before (condition), an expression after (true branch), and a matching ':'
                         if (tk.value == "?")
                         {
                             if (prevKind == TokKind.Op || prevKind == TokKind.Comma
@@ -692,7 +690,7 @@ namespace Assets.Scripts.Vizzy
                             lastTernaryPos = tk.start;
                             break;
                         }
-                        // 三元 ':'：必须有配对的 '?'，且后必须是表达式（假分支）
+                        // Ternary ':': needs a matching '?', and an expression after (false branch)
                         if (tk.value == ":")
                         {
                             if (ternaryPending == 0)
@@ -710,7 +708,7 @@ namespace Assets.Scripts.Vizzy
                             }
                             break;
                         }
-                        // unary - + !（负号/正号/逻辑非）允许在开头、操作符后、左括号后、逗号后
+                        // Unary - + ! allowed at the start, and after an operator, opening bracket or comma
                         bool unary = tk.value == "-" || tk.value == "+" || tk.value == "!";
                         if ((prevKind == TokKind.Op || prevKind == TokKind.Comma || prevKind == TokKind.None) && !unary)
                         {
@@ -726,7 +724,7 @@ namespace Assets.Scripts.Vizzy
                         }
                         break;
                     case TokKind.LParen:
-                        // '(' 前只能是 name（函数调用）或操作符/左括号/开头；非 name 值后是错误
+                        // Before '(' only a name (function call), an operator, an opening bracket or the start; after other values it's an error
                         if (prevKind == TokKind.Value && !prevIsName)
                         {
                             errStart = tk.start; errEnd = tk.start + tk.length;
@@ -739,7 +737,7 @@ namespace Assets.Scripts.Vizzy
                             message = "Unexpected '('";
                             return true;
                         }
-                        // 记录该层括号是否为函数调用括号：前一个 token 是 name 才允许参数逗号
+                        // Whether this bracket is a call bracket: only if the previous token is a name are argument commas allowed
                         callParen[tk.depth] = prevKind == TokKind.Value && prevIsName;
                         break;
                     case TokKind.RParen:
@@ -751,7 +749,7 @@ namespace Assets.Scripts.Vizzy
                         }
                         break;
                     case TokKind.Comma:
-                        // 逗号只能用在函数调用的参数括号内（分组括号 (a, b) 不允许逗号）
+                        // Commas only inside function call brackets, not grouping brackets like (a, b)
                         if (tk.depth == 0 || !callParen[tk.depth - 1])
                         {
                             errStart = tk.start; errEnd = tk.start + tk.length;
@@ -770,7 +768,7 @@ namespace Assets.Scripts.Vizzy
                 prevIsName = tk.isName;
             }
 
-            // 三元未闭合：'?' 缺对应的 ':'（缺假分支，游戏 SquashTernary 报 "Expecting : after ?"）
+            // Unclosed ternary: '?' with no ':' (the game's SquashTernary reports "Expecting : after ?")
             if (ternaryPending > 0)
             {
                 errStart = lastTernaryPos;
@@ -779,13 +777,13 @@ namespace Assets.Scripts.Vizzy
                 return true;
             }
 
-            // ---- 变量 / 裸名引用校验 ----
-            // 游戏 VariableToken.Create 的解析链：常量 -> Context 属性 -> VariableResolve 委托
-            // （Controls 裸属性 / AGxx / FlightData.X / FD.X / OrbitData.X / OD.X / Part.Modifier.Property
-            //   / v:向量变量 / 数字变量）。裸名不是函数/常量/Controls/AG/已定义变量时，CustomResolve
-            //   （CraftService）会兜底成"数字变量"token，运行时 GetVariableValueAsDoubleAndThrow 抛
-            //   "Could not find Vizzy variable..."。这里提前在编辑器里标出这一类运行时错误。
-            // 拿不到飞行程序（variableNames == null）时跳过，避免误报。
+            // ---- Variable and bare name checks ----
+            // The game's VariableToken.Create resolves in order: constants -> Context properties -> VariableResolve delegates
+            // (bare controls, AGxx, FlightData.X, FD.X, OrbitData.X, OD.X, Part.Modifier.Property,
+            //  v: vector variables, number variables). A bare name that's none of function, constant, control, AG or defined
+            //  variable falls through CustomResolve (CraftService) to a number variable token, and GetVariableValueAsDoubleAndThrow
+            //  throws "Could not find Vizzy variable..." at run time. This marks that error in the editor first.
+            // With no program available (variableNames == null) this is skipped, to avoid false errors.
             if (variableNames != null)
             {
                 for (int i = 0; i < tokens.Count; i++)
@@ -797,7 +795,7 @@ namespace Assets.Scripts.Vizzy
                     }
                     string name = tk.value;
 
-                    // v:name（向量变量）必须已定义（全局变量 + 程序树 IsDefinition 定义）。
+                    // v:name (a vector variable) must be defined.
                     if (name.StartsWith("v:", StringComparison.Ordinal))
                     {
                         string varName = name.Substring(2);
@@ -817,7 +815,7 @@ namespace Assets.Scripts.Vizzy
                         continue;
                     }
 
-                    // 数据属性前缀（FlightData./FD./OrbitData./OD.）交给下面的属性校验层。
+                    // Data property prefixes (FlightData., FD., OrbitData., OD.) go to the property checks below.
                     if (name.StartsWith("FlightData.", StringComparison.Ordinal)
                         || name.StartsWith("FD.", StringComparison.Ordinal)
                         || name.StartsWith("OrbitData.", StringComparison.Ordinal)
@@ -825,13 +823,13 @@ namespace Assets.Scripts.Vizzy
                     {
                         continue;
                     }
-                    // 带点裸名（Part.Modifier.Property 动态零件访问）不静态校验。
+                    // Dotted bare names (Part.Modifier.Property) aren't checked statically.
                     if (name.IndexOf('.') >= 0)
                     {
                         continue;
                     }
 
-                    // 后跟 '(' 是函数调用：必须在内建函数里（含 list*、sum/rate/PID/smooth）。
+                    // Followed by '(': a function call, which must be a built-in function (including list*, sum, rate, PID, smooth).
                     bool isCall = i + 1 < tokens.Count && tokens[i + 1].kind == TokKind.LParen;
                     if (isCall)
                     {
@@ -845,7 +843,7 @@ namespace Assets.Scripts.Vizzy
                         return true;
                     }
 
-                    // 裸名：常量 / Controls 属性 / AGxx 前缀 / 已定义变量 之一合法。
+                    // Bare name: valid if it's a constant, control, AGxx or defined variable.
                     if (Keywords.Contains(name) || ControlsProperties.Contains(name)
                         || variableNames.Contains(name) || IsActionGroupName(name))
                     {
@@ -858,8 +856,8 @@ namespace Assets.Scripts.Vizzy
                 }
             }
 
-            // ---- FlightData / OrbitData 属性校验 ----
-            // FlightData.X / FD.X / FlightData.Orbit.X / OrbitData.X 属性名必须存在。
+            // ---- FlightData and OrbitData property checks ----
+            // FlightData.X, FD.X, OrbitData.X and OD.X names must exist.
             for (int i = 0; i < tokens.Count; i++)
             {
                 FunkToken tk = tokens[i];
@@ -877,8 +875,8 @@ namespace Assets.Scripts.Vizzy
                 }
             }
 
-            // ---- 第 3 层：函数参数个数校验 ----
-            // 对已知函数（FunctionArgCounts 表内）的每次调用检查实参个数。
+            // ---- Layer 3: function argument counts ----
+            // Checks the argument count of each call to a known function (those in FunctionArgCounts).
             for (int i = 0; i < tokens.Count; i++)
             {
                 if (tokens[i].kind != TokKind.LParen || i == 0)
@@ -888,12 +886,12 @@ namespace Assets.Scripts.Vizzy
                 FunkToken prev = tokens[i - 1];
                 if (prev.kind != TokKind.Value || !prev.isName)
                 {
-                    continue; // 不是函数调用（如 2( 已在 token 流层报错）
+                    continue; // Not a function call (2( is already reported by the token stream layer)
                 }
                 int expected;
                 if (!FunctionArgCounts.TryGetValue(prev.value.ToLowerInvariant(), out expected))
                 {
-                    continue; // 未知/自定义函数不校验
+                    continue; // Unknown or custom function: not checked
                 }
                 int lv = tokens[i].depth;
                 int rp = -1;
@@ -907,7 +905,7 @@ namespace Assets.Scripts.Vizzy
                 }
                 if (rp < 0)
                 {
-                    continue; // 未闭合（将由 Missing ')' 报）
+                    continue; // Unclosed: reported as Missing ')'
                 }
                 int commas = 0;
                 bool hasAny = false;
@@ -931,9 +929,9 @@ namespace Assets.Scripts.Vizzy
                         + " argument" + (expected == 1 ? "" : "s") + ", " + args + " given";
                     return true;
                 }
-                // 列表检索函数：第一个参数是字符串列表名 -> 校验列表变量是否存在
-                // （游戏 GetListValueAndThrow 运行时查变量，不存在/非列表会抛 "Could not find
-                //   Vizzy variable..."。与裸名 bc 同类的漏检，这里提前标出。）
+                // List readers: the first argument is the list name as a string, which must be an existing list variable
+                // (the game's GetListValueAndThrow looks it up at run time, and throws "Could not find
+                //  Vizzy variable..." if it's missing or not a list. This marks that error in the editor first.)
                 if (variableNames != null
                     && (prev.value == "listNum" || prev.value == "listVec" || prev.value == "listBool"
                         || prev.value == "listStr" || prev.value == "listLen"))
@@ -964,7 +962,7 @@ namespace Assets.Scripts.Vizzy
             }
             if (depth > 0)
             {
-                // 未闭合的 '('：从最后一个未匹配的开括号到行尾标红
+                // Unclosed '(': red from the last unmatched opening bracket to the end of the line
                 errStart = FindOpenParenStart(tokens);
                 errEnd = text.Length;
                 message = "Missing ')'";
@@ -974,10 +972,10 @@ namespace Assets.Scripts.Vizzy
         }
 
         /// <summary>
-        /// 校验 FlightData / OrbitData 属性访问链：
-        ///   FlightData.X / FD.X        -> X 必须在 FlightDataProperties
-        ///   FlightData.Orbit.X         -> Orbit 在 FlightDataProperties，X 在 OrbitDataProperties
-        /// 非数据属性前缀（普通变量、自定义等）返回 true 不校验。
+        /// Checks a FlightData or OrbitData property path:
+        ///   FlightData.X, FD.X  -> X must be in FlightDataProperties
+        ///   OrbitData.X, OD.X   -> X must be in OrbitDataProperties
+        /// Other names (ordinary variables, custom names) return true, unchecked.
         /// </summary>
         private static bool IsValidDataPropertyAccess(string name, out string error)
         {
@@ -1005,11 +1003,11 @@ namespace Assets.Scripts.Vizzy
             }
             else
             {
-                return true; // 非数据属性前缀，不校验
+                return true; // Not a data property prefix: not checked
             }
             if (path.Length == 0)
             {
-                return true; // "FlightData." / "OD." 单独出现
+                return true; // "FlightData." or "OD." on its own
             }
             string[] segs = path.Split('.');
             if (orbitRoot)
@@ -1026,7 +1024,7 @@ namespace Assets.Scripts.Vizzy
                 }
                 return true;
             }
-            // FlightData 链：第一段在 FlightDataProperties；若第一段是 Orbit，后续段查 OrbitDataProperties
+            // FlightData path: the first segment must be in FlightDataProperties
             if (!FlightDataProperties.Contains(segs[0]))
             {
                 string s = FindClosestProperty(segs[0], FlightDataProperties);
@@ -1050,7 +1048,7 @@ namespace Assets.Scripts.Vizzy
             return true;
         }
 
-        /// <summary>在属性集合里找编辑距离 ≤ 2 的最近候选（用于拼写建议），找不到返回 null。</summary>
+        /// <summary>The closest name within edit distance 2, for spelling suggestions, or null.</summary>
         private static string FindClosestProperty(string prop, HashSet<string> set)
         {
             string best = null;
@@ -1067,7 +1065,7 @@ namespace Assets.Scripts.Vizzy
             return bestDist <= 2 ? best : null;
         }
 
-        /// <summary>Levenshtein 编辑距离。</summary>
+        /// <summary>Levenshtein edit distance.</summary>
         private static int LevenshteinDistance(string a, string b)
         {
             int[,] d = new int[a.Length + 1, b.Length + 1];
@@ -1200,7 +1198,7 @@ namespace Assets.Scripts.Vizzy
         }
     }
 
-    /// <summary>块启动时注册 textComponent -> 输入框 映射并订阅 OnPreRenderText。</summary>
+    /// <summary>When a block starts, registers textComponent -> input field and subscribes to OnPreRenderText.</summary>
     [HarmonyPatch(typeof(TextInputElementScript), "Start")]
     public static class FunkHighlightRegisterPatch
     {

@@ -5,8 +5,8 @@ using ModApi.Craft.Program;
 namespace Assets.Scripts.Vizzy
 {
     /// <summary>
-    /// 3x3 矩阵工具。矩阵用行主序 9 元素列表表示：
-    /// [m00, m01, m02, m10, m11, m12, m20, m21, m22]，即 index = row * 3 + col。
+    /// 3x3 matrix helpers. A matrix is a row-major list of 9 elements:
+    /// [m00, m01, m02, m10, m11, m12, m20, m21, m22], so index = row * 3 + col.
     /// </summary>
     public static class Matrix3x3Math
     {
@@ -43,7 +43,7 @@ namespace Assets.Scripts.Vizzy
             return m[row * Dimension + col];
         }
 
-        /// <summary>返回把 M[row][col] 替换为 value 后的新矩阵</summary>
+        /// <summary>Returns a new matrix with M[row][col] replaced by value.</summary>
         public static double[] SetElement(double[] m, int row, int col, double value)
         {
             var copy = (double[])m.Clone();
@@ -52,8 +52,8 @@ namespace Assets.Scripts.Vizzy
         }
 
         /// <summary>
-        /// 归一化：mode 0 = 逐列归一化，mode 1 = 逐行归一化，mode 2 = Frobenius 整体缩放到模长 1。
-        /// 零向量保持原样，避免除零。
+        /// Normalizes: mode 0 = each column, mode 1 = each row, mode 2 = Frobenius scale to length 1.
+        /// Zero vectors stay as they are, to avoid dividing by zero.
         /// </summary>
         public static double[] Normalize(double[] m, int mode)
         {
@@ -125,7 +125,7 @@ namespace Assets.Scripts.Vizzy
             return m;
         }
 
-        /// <summary>读取第 index 个表达式输入，必须是 9 元素列表，否则报错并回退为单位阵。</summary>
+        /// <summary>Reads expression input number index, which must be a 9-element list. Otherwise logs an error and returns the identity matrix.</summary>
         public static double[] ReadMatrixInput(IThreadContext context, ProgramNode node, int index)
         {
             ProgramExpression expr = node.GetExpression(index);
@@ -154,7 +154,7 @@ namespace Assets.Scripts.Vizzy
             return expr.Evaluate(context).NumberValue;
         }
 
-        /// <summary>读取索引类输入（row/col/mode），越界时报错并收敛到 [0, 2]。</summary>
+        /// <summary>Reads an index input (row, col, mode). Out of range logs an error and clamps to 0-2.</summary>
         public static int ReadIndexInput(IThreadContext context, ProgramNode node, int index, string name)
         {
             int value = (int)Math.Round(ReadNumberInput(context, node, index));
@@ -167,7 +167,7 @@ namespace Assets.Scripts.Vizzy
         }
     }
 
-    /// <summary>矩阵乘法：C = A * B。两个输入均为 9 元素行主序列表。</summary>
+    /// <summary>Matrix multiplication: C = A * B. Both inputs are 9-element row-major lists.</summary>
     [Serializable]
     public class Matrix3x3MulExpression : ProgramExpression
     {
@@ -187,7 +187,7 @@ namespace Assets.Scripts.Vizzy
         }
     }
 
-    /// <summary>读取矩阵元素：返回 M[row][col]（0 基）。</summary>
+    /// <summary>Reads a matrix element: returns M[row][col], 0-based.</summary>
     [Serializable]
     public class Matrix3x3GetElementExpression : ProgramExpression
     {
@@ -208,7 +208,7 @@ namespace Assets.Scripts.Vizzy
         }
     }
 
-    /// <summary>写入矩阵元素：返回把 M[row][col] 替换为 value 后的新矩阵。</summary>
+    /// <summary>Writes a matrix element: returns a new matrix with M[row][col] replaced by value.</summary>
     [Serializable]
     public class Matrix3x3SetElementExpression : ProgramExpression
     {
@@ -230,7 +230,7 @@ namespace Assets.Scripts.Vizzy
         }
     }
 
-    /// <summary>归一化：Mode 0 = 逐列，1 = 逐行，2 = Frobenius 整体缩放。</summary>
+    /// <summary>Normalizes: Mode 0 = columns, 1 = rows, 2 = Frobenius scale.</summary>
     [Serializable]
     public class Matrix3x3NormalizeExpression : ProgramExpression
     {
