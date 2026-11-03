@@ -120,8 +120,10 @@ Code by Oxeter and Torifune, UI textures by QiQi, merged with their agreement.
 
 - **Funk coloring and error marks** (`FunkHighlight`): colors and red marks through
   `TMP_Text.OnPreRenderText`. Names come from `FunkNames`, shared with auto-fill.
-- **Flight buttons** (`FlightButtons`): Edit Vizzy opens the selected part's program, otherwise it acts like
-  the shortcut. Restart Vizzy asks first, and isn't offered for MFD programs. Show Flight Buttons turns them off.
+- **Flight buttons** (`FlightButtons`): a Vizzy button with the editor's icon at the bottom of the nav panel,
+  opening a flyout styled like the nav sphere's, with Restart Vizzy and Edit Vizzy. Both act on the selected
+  part's program straight away, otherwise on the craft's only program or a choice of them. Restart asks first,
+  and isn't offered for MFD programs. Show Flight Buttons turns them off.
 - **Matrix blocks** (`MatrixBlocks`): registered in the serializer's private tables, and added to the bottom
   of the toolbox's Operators category by a patch, which is what needs Harmony. `IsModRequiredForCraft` is true only for a craft that uses one.
 - **MFD programs:** custom ones are editable. Stock ones are excluded, because the game reloads them.

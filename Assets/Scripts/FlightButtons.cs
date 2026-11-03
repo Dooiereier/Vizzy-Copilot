@@ -5,20 +5,26 @@ namespace Assets.Scripts
     using System.Xml.Linq;
     using ModApi.Ui;
     using UI.Xml;
+    using UnityEngine;
 
-    /// <summary>Edit Vizzy and Restart Vizzy buttons on the flight view panel.</summary>
+    /// <summary>A Vizzy button at the bottom of the flight nav panel, opening a flyout with Restart and Edit.</summary>
     public static class FlightButtons
     {
-        private const string ViewPanelId = "Ui/Xml/Flight/ViewPanel";
+        private const string NavPanelId = "Ui/Xml/Flight/NavPanel";
+        private const string StockFlyoutId = "nav-sphere-panel";
+        private const string ToggleId = "vizzy-studio-toggle";
+        private const string ToggleIconId = "vizzy-studio-toggle-icon";
+        private const string FlyoutId = "vizzy-studio-flyout";
         private const string EditId = "vizzy-studio-edit";
         private const string RestartId = "vizzy-studio-restart";
+        private const string ToggledClass = "panel-button-icon-toggled";
 
         public static void Register()
         {
-            Game.Instance.UserInterface.AddBuildUserInterfaceXmlAction(ViewPanelId, OnBuildViewPanel);
+            Game.Instance.UserInterface.AddBuildUserInterfaceXmlAction(NavPanelId, OnBuildNavPanel);
         }
 
-        private static void OnBuildViewPanel(BuildUserInterfaceXmlRequest request)
+        private static void OnBuildNavPanel(BuildUserInterfaceXmlRequest request)
         {
             try
             {
@@ -28,21 +34,44 @@ namespace Assets.Scripts
                 }
 
                 XNamespace ns = XmlLayoutConstants.XmlNamespace;
-                var after = request.XmlDocument.Descendants(ns + "ContentButton")
-                    .FirstOrDefault(button => (string)button.Attribute("id") == "toggle-camera-panel-button");
-                if (after == null)
+                var layouts = request.XmlDocument.Descendants(ns + "VerticalLayout").ToList();
+                var bar = layouts.FirstOrDefault(layout => (string)layout.Attribute("name") == "NavPanel");
+                var stockFlyout = layouts.FirstOrDefault(layout => (string)layout.Attribute("id") == StockFlyoutId);
+                if (bar == null || stockFlyout == null)
                 {
                     EditorLog.Warning("Couldn't find where to put the flight buttons.");
                     return;
                 }
 
-                after.AddAfterSelf(Button(ns, RestartId, "Restart Vizzy", "VizzyStudio/Sprites/IconResetStaging"));
-                after.AddAfterSelf(Button(ns, EditId, "Edit Vizzy", "VizzyStudio/Sprites/IconVariables"));
-                request.AddOnLayoutRebuiltAction(controller =>
-                {
-                    Listen(controller, EditId, () => FlightEditorController.Current?.EditSelected());
-                    Listen(controller, RestartId, () => FlightEditorController.Current?.AskToRestartSelected());
-                });
+                bar.Add(new XElement(ns + "ContentButton",
+                    new XAttribute("id", ToggleId),
+                    new XAttribute("class", "panel-button audio-btn-click"),
+                    new XAttribute("tooltip", "Vizzy"),
+                    new XElement(ns + "Image",
+                        new XAttribute("id", ToggleIconId),
+                        new XAttribute("class", "panel-button-icon"),
+                        new XAttribute("sprite", "Ui/Sprites/Design/IconButtonEditProgram"))));
+
+                stockFlyout.AddAfterSelf(new XElement(ns + "VerticalLayout",
+                    new XAttribute("id", FlyoutId),
+                    new XAttribute("class", "flight-panel"),
+                    new XAttribute("active", "false"),
+                    new XAttribute("padding", "5"),
+                    new XAttribute("childForceExpandWidth", "false"),
+                    new XAttribute("childForceExpandHeight", "false"),
+                    new XAttribute("offsetXY", "-60 0"),
+                    new XAttribute("childAlignment", "UpperRight"),
+                    new XAttribute("spacing", "0"),
+                    new XAttribute("rectAlignment", "UpperRight"),
+                    new XAttribute("width", "100"),
+                    new XAttribute("pivot", "1 1"),
+                    new XAttribute("contentSizeFitter", "vertical"),
+                    new XElement(ns + "HorizontalLayout",
+                        new XAttribute("class", "nav-sphere-row"),
+                        FlyoutButton(ns, RestartId, "Restart Vizzy", "Ui/Sprites/Flight/IconRetry"),
+                        FlyoutButton(ns, EditId, "Edit Vizzy", "Ui/Sprites/Design/IconButtonEdit"))));
+
+                request.AddOnLayoutRebuiltAction(Connect);
             }
             catch (Exception e)
             {
@@ -50,26 +79,102 @@ namespace Assets.Scripts
             }
         }
 
-        private static void Listen(IXmlLayoutController controller, string id, Action action)
+        private static void Connect(IXmlLayoutController controller)
         {
-            var element = ((XmlLayout)controller.XmlLayout).GetElementById(id);
-            if (element == null)
+            var layout = (XmlLayout)controller.XmlLayout;
+            var toggle = layout.GetElementById(ToggleId);
+            var icon = layout.GetElementById(ToggleIconId);
+            var flyout = layout.GetElementById(FlyoutId);
+            var edit = layout.GetElementById(EditId);
+            var restart = layout.GetElementById(RestartId);
+            if (toggle == null || icon == null || flyout == null || edit == null || restart == null)
             {
-                EditorLog.Error("Couldn't find flight button " + id + ".");
+                EditorLog.Error("Couldn't find the flight buttons.");
                 return;
             }
 
-            element.AddOnClickEvent(action);
+            flyout.gameObject.AddComponent<FlyoutPlacement>().Connect(
+                (RectTransform)toggle.transform, layout.GetElementById(StockFlyoutId));
+
+            void Hide()
+            {
+                icon.RemoveClass(ToggledClass);
+                flyout.Hide();
+            }
+
+            toggle.AddOnClickEvent(() =>
+            {
+                if (flyout.gameObject.activeSelf)
+                {
+                    Hide();
+                }
+                else
+                {
+                    icon.AddClass(ToggledClass);
+                    flyout.Show();
+                }
+            });
+            edit.AddOnClickEvent(() =>
+            {
+                Hide();
+                FlightEditorController.Current?.EditSelected();
+            });
+            restart.AddOnClickEvent(() =>
+            {
+                Hide();
+                FlightEditorController.Current?.RestartSelected();
+            });
         }
 
-        private static XElement Button(XNamespace ns, string id, string tooltip, string sprite)
+        private static XElement FlyoutButton(XNamespace ns, string id, string tooltip, string sprite)
         {
             return new XElement(ns + "ContentButton",
-                new XAttribute("name", id),
                 new XAttribute("id", id),
-                new XAttribute("class", "view-button audio-btn-click"),
+                new XAttribute("class", "panel-button audio-btn-click"),
                 new XAttribute("tooltip", tooltip),
-                new XElement(ns + "Image", new XAttribute("sprite", sprite)));
+                new XElement(ns + "Image",
+                    new XAttribute("class", "panel-button-icon"),
+                    new XAttribute("sprite", sprite)));
+        }
+
+        /// <summary>Keeps the flyout level with the Vizzy button, and clear of the nav sphere flyout when that's open.</summary>
+        private sealed class FlyoutPlacement : MonoBehaviour
+        {
+            private const float Gap = 10f;
+            private const float Padding = 5f;
+            private const float StockOffset = -60f;
+
+            private readonly Vector3[] _corners = new Vector3[4];
+            private RectTransform _button;
+            private RectTransform _stockFlyout;
+
+            public void Connect(RectTransform button, XmlElement stockFlyout)
+            {
+                _button = button;
+                _stockFlyout = stockFlyout != null ? (RectTransform)stockFlyout.transform : null;
+            }
+
+            private void LateUpdate()
+            {
+                if (_button == null)
+                {
+                    return;
+                }
+
+                var rect = (RectTransform)transform;
+                var parent = (RectTransform)rect.parent;
+                _button.GetWorldCorners(_corners);
+                var buttonTop = parent.InverseTransformPoint(_corners[1]).y;
+
+                var x = StockOffset;
+                if (_stockFlyout != null && _stockFlyout.gameObject.activeSelf)
+                {
+                    x -= _stockFlyout.rect.width + Gap;
+                }
+
+                // Anchored to the parent's top right corner, with the row's padding above the button's top.
+                rect.anchoredPosition = new Vector2(x, buttonTop - parent.rect.yMax + Padding);
+            }
         }
     }
 }

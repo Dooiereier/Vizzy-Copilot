@@ -1,6 +1,7 @@
 namespace Assets.Scripts
 {
     using System;
+    using System.Linq;
     using System.Xml.Linq;
     using Assets.Scripts.Craft.Parts.Modifiers;
     using UnityEngine;
@@ -120,48 +121,76 @@ namespace Assets.Scripts
             });
         }
 
-        /// <summary>The Restart Vizzy button: only ever after asking, and only the selected part's program.</summary>
-        public void AskToRestartSelected()
+        /// <summary>The Restart Vizzy button: the selected part's program, otherwise a choice of them. Always asks first.</summary>
+        public void RestartSelected()
         {
             RunGuarded("Couldn't restart the program: ", () =>
             {
+                ProgramPicker.Close();
                 if (!CanStart())
                 {
                     return;
                 }
 
                 var scene = Game.Instance.FlightScene;
-                var data = CraftPrograms.Selected(scene);
-                if (data == null)
+                var selected = CraftPrograms.Selected(scene);
+                if (selected != null)
                 {
-                    scene.FlightSceneUI.ShowMessage("Select a part with a Vizzy program first.");
+                    AskToRestart(selected);
                     return;
                 }
 
-                // Its widgets would stay, and each creation block would log an error.
-                if (CraftPrograms.IsMfd(data))
+                var programs = CraftPrograms.Editable(scene.CraftNode.CraftScript).Where(data => !CraftPrograms.IsMfd(data)).ToList();
+                if (programs.Count == 0)
                 {
-                    scene.FlightSceneUI.ShowMessage("Restart isn't available for MFD programs.");
-                    return;
+                    scene.FlightSceneUI.ShowMessage("No Vizzy program to restart on this craft.");
                 }
-
-                FlightPause.Hold();
-                var dialog = Game.Instance.UserInterface.CreateMessageDialog(ModApi.Ui.MessageDialogType.OkayCancel, null, true);
-                dialog.UseDangerButtonStyle = true;
-                dialog.MessageText = "Restart " + data.Part.DisplayName + "'s Vizzy program from the top? Its threads and variables reset. Other programs keep running.";
-                dialog.Closed += _ => FlightPause.Release();
-                dialog.OkayClicked += _ =>
+                else if (programs.Count == 1)
                 {
-                    dialog.Close();
-                    RunGuarded("Couldn't restart the program: ", () =>
-                    {
-                        if (!ProgramSwapper.Restart(data))
-                        {
-                            scene.FlightSceneUI.ShowMessage("The Vizzy program didn't load: see Player.log.");
-                        }
-                    });
-                };
+                    AskToRestart(programs[0]);
+                }
+                else
+                {
+                    FlightPause.Hold();
+                    ProgramPicker.Show("Restart Vizzy", programs, data => RunGuarded("Couldn't restart the program: ", () => AskToRestart(data)), FlightPause.Release);
+                }
             });
+        }
+
+        private void AskToRestart(FlightProgramData data)
+        {
+            var scene = Game.Instance.FlightScene;
+
+            // Its widgets would stay, and each creation block would log an error.
+            if (CraftPrograms.IsMfd(data))
+            {
+                scene.FlightSceneUI.ShowMessage("Restart isn't available for MFD programs.");
+                return;
+            }
+
+            if (data.Script == null)
+            {
+                FlightPause.Release();
+                scene.FlightSceneUI.ShowMessage("The part with this Vizzy program is gone.");
+                return;
+            }
+
+            FlightPause.Hold();
+            var dialog = Game.Instance.UserInterface.CreateMessageDialog(ModApi.Ui.MessageDialogType.OkayCancel, null, true);
+            dialog.UseDangerButtonStyle = true;
+            dialog.MessageText = "Restart " + data.Part.DisplayName + "'s Vizzy program from the top? Its threads and variables reset. Other programs keep running.";
+            dialog.Closed += _ => FlightPause.Release();
+            dialog.OkayClicked += _ =>
+            {
+                dialog.Close();
+                RunGuarded("Couldn't restart the program: ", () =>
+                {
+                    if (!ProgramSwapper.Restart(data))
+                    {
+                        scene.FlightSceneUI.ShowMessage("The Vizzy program didn't load: see Player.log.");
+                    }
+                });
+            };
         }
 
         /// <summary>No dialog in the way, no editor open, no warp.</summary>
@@ -209,7 +238,7 @@ namespace Assets.Scripts
             else
             {
                 FlightPause.Hold();
-                ProgramPicker.Show(programs, data => RunGuarded("Couldn't open the editor: ", () => OpenProgram(data)), FlightPause.Release);
+                ProgramPicker.Show("Edit Vizzy", programs, data => RunGuarded("Couldn't open the editor: ", () => OpenProgram(data)), FlightPause.Release);
             }
         }
 

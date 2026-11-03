@@ -21,12 +21,12 @@ namespace Assets.Scripts
         public static bool IsOpen => _panel != null;
 
         /// <summary>Calls onDismissed instead of onPicked if the panel closes without a choice.</summary>
-        public static void Show(IList<FlightProgramData> programs, Action<FlightProgramData> onPicked, Action onDismissed)
+        public static void Show(string title, IList<FlightProgramData> programs, Action<FlightProgramData> onPicked, Action onDismissed)
         {
             Close();
             _onDismissed = onDismissed;
 
-            var model = new InspectorModel("VizzyStudioPicker", "Edit Vizzy");
+            var model = new InspectorModel("VizzyStudioPicker", title);
             foreach (var data in programs)
             {
                 model.Add(new TextButtonModel(Label(data), _ =>

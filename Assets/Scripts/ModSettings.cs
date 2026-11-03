@@ -125,7 +125,7 @@ namespace Assets.Scripts
                 .SetDefault(false);
 
             this.ShowFlightButtons = this.CreateBool("Show Flight Buttons", "ShowFlightButtons")
-                .SetDescription("Shows Edit Vizzy and Restart Vizzy buttons on the flight view panel. Applies from the next flight.")
+                .SetDescription("Shows a Vizzy button on the flight nav panel, with Restart Vizzy and Edit Vizzy. Applies from the next flight.")
                 .SetDefault(true);
 
             this.ExportMenu = this.CreateBool("Export Menu", "ExportMenu")
