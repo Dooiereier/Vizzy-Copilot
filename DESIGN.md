@@ -5,13 +5,16 @@ carries on from where it was, so you can repeat quickload, edit, fly to tune thi
 
 ## Rules
 
-- **Never restart.** Apply always carries the running threads over to the edited program. A new
-  On Start doesn't run: "on start" only fires when a program starts from the top.
+- **Apply never restarts.** It always carries the running threads over to the edited program. A new
+  On Start doesn't run: "on start" only fires when a program starts from the top. The one restart is the
+  Restart Vizzy button, for the selected part's program, after a confirmation.
 - **A quickload keeps the latest applied edit.** Craft state and thread positions come from the
   quicksave; the program is the latest edit. A key returns to the quicksave's program.
-- **Crafts and saves never need the mod.** No part modifiers; programs stay ordinary stock XML.
-- **Harmony only for Funk auto-fill**, optional (see below). Apart from auto-fill, the designer's editor is
-  unchanged.
+- **Only crafts with a Matrix block need the mod.** No part modifiers; other programs stay ordinary stock XML.
+- **Harmony is required**, from the Juno Harmony mod, and never inside the mod file. Without it the mod logs
+  an error, shows one message and stays off. Patches: auto-fill keys, coloring on each Funk field, and the
+  Matrix category in the toolbox; each has no public alternative, and each applies on its own.
+- **In the designer**, only auto-fill, coloring and the Matrix category differ from stock.
 - **Other mods stay unaffected.** Only an editor this mod opens gets its Apply and Cancel replaced,
   so another mod that opens the stock editor in flight keeps the stock buttons.
 
@@ -92,11 +95,6 @@ Known limits:
   canvas position. Other programs keep running.
 - **Execution order:** Apply runs from a UI event while paused, so not alongside a program update.
 
-## Stock MFD programs
-
-Not editable: the game reloads them from resources in flight. Custom MFD programs wait for a later
-milestone.
-
 ## Funk auto-fill
 
 A list under a Funk field while typing: Up and Down choose, Enter takes it, Esc closes the list.
@@ -109,11 +107,27 @@ A list under a Funk field while typing: Up and Down choose, Enter takes it, Esc 
   `Vector3` properties: `FD.AccelerationFrame` stopped a running program with `TargetParameterCountException`.
 - **Ranking:** start-of-name matches first, then recent use, use in this program, a short common list,
   then alphabetical. Flight and orbit names also appear, with their prefix, after 2 typed characters.
-- **Harmony, optional.** One prefix on `TMP_InputField.OnUpdateSelected`: the field reads queued key events
-  itself, so without a patch Enter has already ended the edit by the time a mod can see it, which adds
-  an undo step and a re-selection. The patch only acts while the list is open for its field, or while
-  a key it took is still held. Without Juno Harmony the mod works with no auto-fill and logs why.
-  The DLL is never bundled: `References/` (gitignored) is outside `Assets/`.
+- **Keys:** a prefix on `TMP_InputField.OnUpdateSelected`. The field reads queued key events itself, so
+  without a patch Enter has already ended the edit by the time a mod can see it. The patch only acts while
+  the list is open for its field, or while a key it took is still held.
+
+## Merged from Vizzy Debugger
+
+Code by Oxeter and Torifune, UI textures by QiQi, merged with their agreement.
+
+- **Funk coloring and error marks** (`FunkHighlight`): colors and red marks through
+  `TMP_Text.OnPreRenderText`. Names come from `FunkNames`, shared with auto-fill.
+- **Flight buttons** (`FlightButtons`): Edit Vizzy opens the selected part's program, otherwise it acts like
+  the shortcut. Restart Vizzy asks first. Show Flight Buttons turns them off.
+- **Matrix blocks** (`MatrixBlocks`): registered in the serializer's private tables through `AccessTools`,
+  which is why they need Harmony. `IsModRequiredForCraft` is true only for a craft that uses one.
+- **MFD programs:** custom ones are editable. Stock ones are excluded, because the game reloads them.
+
+Known risks to test: widgets belong to `MfdScript` and survive an Apply, so widgets from deleted blocks can
+stay on screen, and a restart runs creation blocks again, so widgets could duplicate.
+
+The variable cleaner (`VizzyVariableCleaner`) is left out for now. Vizzy Exporter and MFD Runtime Editor are
+planned later; neither may bring its own copy of Harmony.
 
 ## Testing
 

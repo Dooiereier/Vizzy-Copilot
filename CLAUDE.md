@@ -9,11 +9,13 @@ facts in its `reference/juno-facts.md`.
 
 ## Hard constraints
 
-- The program never restarts on Apply, and a quickload keeps the latest applied edit.
-- Crafts and saves never need the mod: no part modifiers, `IsModRequiredForCraft` stays false.
-- Apart from Funk auto-fill, the designer's editor stays stock, and an editor another mod opens keeps its stock
-  buttons.
-- Harmony only as `DESIGN.md` justifies it, never bundled. No code copied from other mods without permission.
+- Apply never restarts a program; only the Restart Vizzy button does, after asking. A quickload keeps the
+  latest applied edit.
+- Only crafts with a Matrix block need the mod. No part modifiers.
+- Apart from auto-fill, coloring and the Matrix category, the designer's editor stays stock, and an editor another
+  mod opens keeps its stock buttons.
+- Harmony comes from the Juno Harmony mod and is never inside the built mod file: check after each build.
+- No code copied from other mods without permission.
 
 ## Working here
 
@@ -24,6 +26,7 @@ facts in its `reference/juno-facts.md`.
   without Unity. `python3 tools/run_tests.py` (same argument) runs the offline tests.
 - On a fresh clone, put a Harmony 2.4.2.0 package in `References/com.pardeike.harmony` (gitignored) before opening
   Unity or compiling. In-game, the Juno Harmony mod provides it.
-- Must keep working with Vizzy McBlinky and Vizzy Debugger's Funk coloring.
+- Must keep working with Vizzy McBlinky. Replaces Vizzy Debugger, whose code by Oxeter and Torifune is merged
+  here with their agreement.
 - Logs: `~/Library/Logs/Jundroo/SimpleRockets 2/Player.log` (lines start with `[VizzyStudio]`).
   The game keeps only the last two sessions: read them right after a test.

@@ -142,7 +142,7 @@ namespace Assets.Scripts
             {
                 FlightEditorUi.BuildingOurEditor = true;
                 _editor = Game.Instance.ResourceLoader.InstantiatePrefab<VizzyUIScript>("Ui/Vizzy/Vizzy");
-                _editor.Initialize(ui.Transform, _data.FlightProgramXml, false, OnApply);
+                _editor.Initialize(ui.Transform, _data.FlightProgramXml, CraftPrograms.IsMfd(_data), OnApply);
                 _editor.Closed += OnEditorClosed;
                 _restoreViewPending = true;
             }

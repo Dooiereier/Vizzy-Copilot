@@ -9,13 +9,12 @@ namespace Assets.Scripts
     /// <summary>Which programs a craft has, and the key that identifies one across a quickload.</summary>
     public static class CraftPrograms
     {
-        /// <summary>Every part with a program, without MFDs: the game reloads their programs in flight.</summary>
+        /// <summary>Every part with a program, including custom MFD programs. The game reloads stock MFD programs in flight.</summary>
         public static List<FlightProgramData> All(ICraftScript craft)
         {
             return craft.Data.Assembly.Parts
-                .Where(part => part.GetModifier<MfdData>() == null)
                 .Select(part => part.GetModifier<FlightProgramData>())
-                .Where(data => data != null && data.FlightProgramXml != null)
+                .Where(data => data != null && data.FlightProgramXml != null && !IsStockMfdProgram(data))
                 .ToList();
         }
 
@@ -34,7 +33,17 @@ namespace Assets.Scripts
         {
             var data = scene.ViewManager.GameView.SelectedPart?.Data?.GetModifier<FlightProgramData>();
             return data != null && data.FlightProgramXml != null && data.Script != null && !data.HideEditButton
-                && data.Part.GetModifier<MfdData>() == null ? data : null;
+                && !IsStockMfdProgram(data) ? data : null;
+        }
+
+        public static bool IsMfd(FlightProgramData data)
+        {
+            return data.Part.GetModifier<MfdData>() != null;
+        }
+
+        private static bool IsStockMfdProgram(FlightProgramData data)
+        {
+            return IsMfd(data) && !data.SaveFlightProgram;
         }
 
         public static string Key(FlightProgramData data)
