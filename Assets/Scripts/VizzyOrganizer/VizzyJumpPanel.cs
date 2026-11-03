@@ -27,7 +27,7 @@ namespace Assets.Scripts.VizzyOrganizer
         private const string RowsId = "vizzy-studio-jump-rows";
         private const string TemplateId = "vizzy-studio-jump-row";
         private const float IndentPerDepth = 16f;
-        private const string Help = "Jump To: moves the view to tagged blocks. Tag them with a comment starting with //, such as //Landing, or //Landing/Legs to nest it.";
+        private const string Help = "Jump To: moves the view to tagged blocks. Tag them with a comment starting with //, such as //Launch, or //Launch/Pitch Program to nest it.";
 
         private static readonly Color SelectedRow = new Color(0.16f, 0.42f, 0.72f, 1f);
 
