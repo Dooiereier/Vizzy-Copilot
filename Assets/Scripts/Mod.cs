@@ -135,10 +135,6 @@ namespace Assets.Scripts
                     var host = new GameObject("VizzyStudio.Controller");
                     host.AddComponent<FlightEditorController>();
                     host.AddComponent<FunkAutoFill>();
-                    if (ModSettings.Instance.RunFunkCheck.Value)
-                    {
-                        host.AddComponent<FunkCheck>();
-                    }
                 });
             }
             else

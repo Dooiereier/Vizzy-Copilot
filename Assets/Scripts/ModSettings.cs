@@ -32,8 +32,6 @@ namespace Assets.Scripts
 
         public BoolSetting FunkSyntaxHighlight { get; private set; }
 
-        public BoolSetting RunFunkCheck { get; private set; }
-
         public KeyCode KeyCode => KeyCode.A + (int)this.Key.Value;
 
         /// <summary>Gets the shortcut as text, for messages.</summary>
@@ -61,10 +59,6 @@ namespace Assets.Scripts
             this.FunkSyntaxHighlight = this.CreateBool("Funk Syntax Highlight", "FunkSyntaxHighlight")
                 .SetDescription("Colors Funk fields and marks errors in red, in the designer and in flight.")
                 .SetDefault(true);
-
-            this.RunFunkCheck = this.CreateBool("Run Funk Check", "RunFunkCheck")
-                .SetDescription("Diagnostic: at each flight start, tests every Funk name and writes the results to Player.log. Running programs aren't affected. Needs a craft with a running Vizzy program.")
-                .SetDefault(false);
 
             this.FunkAutoFill = this.CreateBool("Funk Auto-Fill", "FunkAutoFill")
                 .SetDescription("Suggests Funk names while typing in a Funk field, in the designer and in flight. Up and Down choose, Enter takes it, Esc closes the list.")
