@@ -49,7 +49,7 @@ namespace Assets.Scripts
                 .SetDefault(false);
 
             this.FunkAutoFill = this.CreateBool("Funk Auto-Fill", "FunkAutoFill")
-                .SetDescription("Suggests Funk names while typing in a Funk field in the flight editor. Up and Down choose, Enter takes it, Esc closes the list. Needs the Juno Harmony mod.")
+                .SetDescription("Suggests Funk names while typing in a Funk field, in the designer and in flight. Up and Down choose, Enter takes it, Esc closes the list. Needs the Juno Harmony mod.")
                 .SetDefault(true);
         }
     }

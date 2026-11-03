@@ -70,6 +70,10 @@ namespace Assets.Scripts
             else
             {
                 LatestEdits.Clear();
+                if (Game.InDesignerScene)
+                {
+                    new GameObject("VizzyFlightEditor.AutoFill").AddComponent<FunkAutoFill>();
+                }
             }
         }
     }

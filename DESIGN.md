@@ -10,7 +10,8 @@ carries on from where it was, so you can repeat quickload, edit, fly to tune thi
 - **A quickload keeps the latest applied edit.** Craft state and thread positions come from the
   quicksave; the program is the latest edit. A key returns to the quicksave's program.
 - **Crafts and saves never need the mod.** No part modifiers; programs stay ordinary stock XML.
-- **Harmony only for Funk auto-fill**, optional (see below). The designer's editor is unchanged.
+- **Harmony only for Funk auto-fill**, optional (see below). Apart from auto-fill, the designer's editor is
+  unchanged.
 - **Other mods stay unaffected.** Only an editor this mod opens gets its Apply and Cancel replaced,
   so another mod that opens the stock editor in flight keeps the stock buttons.
 
@@ -101,7 +102,8 @@ A list under a Funk field while typing: Up and Down choose, Enter takes it, Esc 
 - **Only what works in Vizzy Funk.** Names come at runtime from the game's Vizzy Funk context: `Context`
   defaults, `CraftControls`, `CraftFlightData`, `CraftOrbitData` properties of value types, the Vizzy list
   functions and the program's variables (a bare name for a number, `v:` for a vector). It runs only in
-  Funk fields (`EvaluationExpression`) of an editor this mod opened. Part references aren't offered.
+  Funk fields (`EvaluationExpression`) of a Vizzy editor, in the designer or in flight, whichever opened it.
+  It only ever changes text the player chooses to insert. Part references aren't offered.
 - **Ranking:** start-of-name matches first, then recent use, use in this program, a short common list,
   then alphabetical. Flight and orbit names also appear, with their prefix, after 2 typed characters.
 - **Harmony, optional.** One prefix on `TMP_InputField.OnUpdateSelected`: the field reads queued key events

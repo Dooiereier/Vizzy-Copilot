@@ -6,6 +6,7 @@ namespace Assets.Scripts
     using System.Linq;
     using System.Reflection;
     using Assets.Scripts.Craft.FlightData;
+    using Assets.Scripts.Vizzy.UI;
     using Assets.Scripts.Vizzy.UI.Elements;
     using ModApi.Craft;
     using ModApi.Craft.Program.Expressions;
@@ -15,8 +16,9 @@ namespace Assets.Scripts
     using UnityEngine.EventSystems;
 
     /// <summary>
-    /// Suggests Funk names under a Funk field in an editor this mod opened. Offers only what the game's
-    /// Vizzy Funk context can read. FunkInputPatch hands it the keys while the list is open.
+    /// Suggests Funk names under a Funk field in any Vizzy editor, in the designer or in flight. Offers
+    /// only what the game's Vizzy Funk context can read. FunkInputPatch hands it the keys while the list
+    /// is open. All it ever changes is the text the player chooses to insert.
     /// </summary>
     public class FunkAutoFill : MonoBehaviour
     {
@@ -24,6 +26,7 @@ namespace Assets.Scripts
         private static readonly List<string> Recent = new List<string>();
 
         private TMP_InputField _field;
+        private TextInputElementScript _element;
         private FunkCatalog _catalog;
         private string _program;
         private FunkCompletion _completion;
@@ -71,12 +74,10 @@ namespace Assets.Scripts
 
         private static bool IsEnabled()
         {
-            return FunkInputPatch.Installed
-                && ModSettings.Instance.FunkAutoFill.Value
-                && FlightEditorController.Current?.Session?.IsOpen == true;
+            return FunkInputPatch.Installed && ModSettings.Instance.FunkAutoFill.Value;
         }
 
-        private static FunkCatalog BuildCatalog(EditorSession session)
+        private static FunkCatalog BuildCatalog(VizzyUIScript editor)
         {
             var catalog = new FunkCatalog();
             // Non-public in the game's Context, and reading them keeps this list matching the game's.
@@ -117,7 +118,7 @@ namespace Assets.Scripts
             catalog.OrbitData.AddRange(ValueProperties(typeof(CraftOrbitData)));
 
             // As the editor has them now, including ones just created.
-            foreach (var variable in session.Editor.FlightProgram.GlobalVariables.Variables.Where(variable => !variable.IsList))
+            foreach (var variable in editor.FlightProgram.GlobalVariables.Variables.Where(variable => !variable.IsList))
             {
                 catalog.Variables.Add(new FunkName(variable.Name));
             }
@@ -174,10 +175,12 @@ namespace Assets.Scripts
 
         private void Refresh()
         {
-            var field = IsEnabled() ? SelectedFunkField() : null;
+            var element = IsEnabled() ? SelectedFunkField() : null;
+            var field = element == null ? null : element.GetComponent<TMP_InputField>();
             if (field != _field)
             {
                 _field = field;
+                _element = element;
                 _catalog = null;
                 _dismissed = false;
                 _lastText = null;
@@ -204,9 +207,11 @@ namespace Assets.Scripts
             _lastCaret = field.stringPosition;
             if (_catalog == null)
             {
-                var session = FlightEditorController.Current.Session;
-                _catalog = BuildCatalog(session);
-                _program = session.Data.FlightProgramXml.ToString();
+                var editor = (VizzyUIScript)_element.VizzyUI;
+                _catalog = BuildCatalog(editor);
+
+                // What the program's fields hold now. Not serialized: that renumbers the live blocks.
+                _program = string.Join("\n", editor.ProgramTransform.GetComponentsInChildren<TextInputElementScript>(true).Select(input => input.Text));
             }
 
             _completion = _dismissed ? null : FunkCompletion.Find(field.text, field.stringPosition, _catalog, Recent, _program);
@@ -214,12 +219,12 @@ namespace Assets.Scripts
             ShowList();
         }
 
-        private static TMP_InputField SelectedFunkField()
+        private static TextInputElementScript SelectedFunkField()
         {
             var selected = EventSystem.current == null ? null : EventSystem.current.currentSelectedGameObject;
             var field = selected == null ? null : selected.GetComponent<TMP_InputField>();
             var element = selected == null ? null : selected.GetComponent<TextInputElementScript>();
-            return field != null && element != null && field.isFocused && element.Parent?.Node is EvaluationExpression ? field : null;
+            return field != null && element != null && field.isFocused && element.Parent?.Node is EvaluationExpression ? element : null;
         }
 
         private void OnKey(KeyCode key)

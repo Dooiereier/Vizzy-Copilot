@@ -1,5 +1,11 @@
 {
   "dependencies": {
+    "com.pardeike.harmony": {
+      "version": "file:../References/com.pardeike.harmony",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {}
+    },
     "com.unity.burst": {
       "version": "1.8.11",
       "depth": 0,

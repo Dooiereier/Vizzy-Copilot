@@ -11,7 +11,8 @@ facts in its `reference/juno-facts.md`.
 
 - The program never restarts on Apply, and a quickload keeps the latest applied edit.
 - Crafts and saves never need the mod: no part modifiers, `IsModRequiredForCraft` stays false.
-- The designer's editor stays stock, and an editor another mod opens keeps its stock buttons.
+- Apart from Funk auto-fill, the designer's editor stays stock, and an editor another mod opens keeps its stock
+  buttons.
 - Harmony only as `DESIGN.md` justifies it, never bundled. No code copied from other mods without permission.
 
 ## Working here
