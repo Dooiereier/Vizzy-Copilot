@@ -3,6 +3,7 @@ namespace Assets.Scripts
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Text.RegularExpressions;
 
     /// <summary>One thing Funk can read or call.</summary>
     public sealed class FunkName
@@ -113,6 +114,31 @@ namespace Assets.Scripts
             }
 
             return completion.Suggestions.Count > 0 ? completion : null;
+        }
+
+        /// <summary>Every name Funk text could mean: each word, and the whole of each quoted string for list names.</summary>
+        public static IEnumerable<string> NamesIn(string funk)
+        {
+            if (string.IsNullOrEmpty(funk))
+            {
+                yield break;
+            }
+
+            foreach (Match word in Regex.Matches(funk, "[A-Za-z_$][A-Za-z0-9_$]*"))
+            {
+                yield return word.Value;
+            }
+
+            foreach (Match quoted in Regex.Matches(funk, "\"((?:[^\\\\\"]|\\\\.)*)\""))
+            {
+                yield return quoted.Groups[1].Value;
+            }
+
+            // A bracketed part reference can hold a variable name with spaces.
+            foreach (Match bracketed in Regex.Matches(funk, "\\.(?:VZ|FlightProgram)\\.(?:v:)?([^\\]]+)\\]"))
+            {
+                yield return bracketed.Groups[1].Value;
+            }
         }
 
         /// <summary>The field's text with a suggestion in place of the word.</summary>

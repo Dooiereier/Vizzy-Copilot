@@ -70,6 +70,7 @@ namespace Assets.Scripts
         {
             FlightEditorUi.Register();
             FlightButtons.Register();
+            Guarded("add the console command", () => Assets.Packages.DevConsole.DevConsoleApi.RegisterCommand("CleanUnusedVariables", VizzyVariableCleaner.CleanCurrentEditingProgram));
 
             var harmony = new HarmonyLib.Harmony("VizzyStudio");
             var applied = 0;

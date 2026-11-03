@@ -42,6 +42,14 @@ public static class FunkCompletionTests
         check("part references aren't offered", Find("Tank.Fuel") == null);
         check("nothing once the word is complete", Find("FD.AltitudeAboveSeaLevel") == null);
 
+        var names = FunkCompletion.NamesIn("PID(Target, FD.Pitch, v:Gain, 0) + listNum(\"my list\", 1) + [Space Capsule.VZ.other var] + Part.VZ.far").ToList();
+        check("a plain variable counts as used", names.Contains("Target"));
+        check("a v: variable counts as used", names.Contains("Gain"));
+        check("a quoted list name counts as used", names.Contains("my list"));
+        check("a bracketed variable counts as used", names.Contains("other var"));
+        check("a dotted variable counts as used", names.Contains("far"));
+        check("empty Funk text has no names", !FunkCompletion.NamesIn("").Any());
+
         var completion = FunkCompletion.Find("max(Pi, 1)", 6, catalog, null, null);
         var text = completion.Apply("max(Pi, 1)", completion.Suggestions.First(s => s.Insert == "Pitch"), out var caret);
         check("replaces the word and keeps the rest", text == "max(Pitch, 1)" && caret == 9);

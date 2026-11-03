@@ -132,8 +132,12 @@ as `+a` and `((a)`.
 **Startup:** checks and patches run at the first `SceneLoaded`, because a mod's `OnModLoaded` runs as soon as
 that mod loads, before later mods. `_loadPriority` is above Juno Harmony's.
 
-The variable cleaner (`VizzyVariableCleaner`) is left out for now. Vizzy Exporter and MFD Runtime Editor are
-planned later; neither may bring its own copy of Harmony.
+- **Variable cleaner** (`VizzyVariableCleaner`): the console command `CleanUnusedVariables` removes global
+  variables the open program doesn't use, as one Undo step. Names in Funk text count as used, and it removes
+  nothing if a Funk block's text is built by other blocks. It can't see another part reading a variable
+  through `Part.VZ.Name`.
+
+Vizzy Exporter and MFD Runtime Editor are planned later; neither may bring its own copy of Harmony.
 
 ## Testing
 
