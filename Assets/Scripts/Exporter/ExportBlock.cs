@@ -2,15 +2,11 @@ namespace Assets.Scripts.Exporter
 {
     using Assets.Scripts.Vizzy.UI;
     using Assets.Scripts.Vizzy.UI.Elements;
-    using UnityEngine;
 
-    /// <summary>The Export Block button: exports the block last clicked on the canvas, which stays lit until another is clicked.</summary>
+    /// <summary>The Export Block button: exports the block last clicked on the canvas.</summary>
     public static class ExportBlock
     {
-        private const float Highlight = 0.35f;
-
         private static BlockElementScript _selected;
-        private static Color _selectedColor;
 
         public static void Select(BlockElementScript block)
         {
@@ -21,10 +17,7 @@ namespace Assets.Scripts.Exporter
                 return;
             }
 
-            Clear();
             _selected = block;
-            _selectedColor = block.Color;
-            block.Color = Color.Lerp(_selectedColor, Color.white, Highlight);
         }
 
         public static void Run(VizzyUIScript editor)
@@ -43,16 +36,6 @@ namespace Assets.Scripts.Exporter
             }
 
             Game.Instance.UserInterface.CreateListView(new ExportTargetViewModel(editor, snippet));
-        }
-
-        private static void Clear()
-        {
-            if (_selected != null)
-            {
-                _selected.Color = _selectedColor;
-            }
-
-            _selected = null;
         }
     }
 }
