@@ -104,6 +104,8 @@ namespace Assets.Scripts
 
         public BoolSetting ExportMenu { get; private set; }
 
+        public BoolSetting CheckForUpdates { get; private set; }
+
         public BoolSetting FunkAutoFill { get; private set; }
 
         public BoolSetting FunkSyntaxHighlight { get; private set; }
@@ -130,6 +132,10 @@ namespace Assets.Scripts
 
             this.ExportMenu = this.CreateBool("Export Block", "ExportMenu")
                 .SetDescription("Adds an Export Block button to the Vizzy menu, which copies the clicked block, with the variables and custom blocks it needs, to another saved program.")
+                .SetDefault(true);
+
+            this.CheckForUpdates = this.CreateBool("Check For Updates", "CheckForUpdates")
+                .SetDescription("At game start, reads the latest version from the mod's SimpleRockets.com page and, if it's newer, offers to open the page. Nothing is downloaded automatically.")
                 .SetDefault(true);
 
             this.FunkSyntaxHighlight = this.CreateBool("Funk Syntax Highlight", "FunkSyntaxHighlight")

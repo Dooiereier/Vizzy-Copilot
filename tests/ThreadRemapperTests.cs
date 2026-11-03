@@ -42,6 +42,7 @@ public static class ThreadRemapperTests
         RevertGivesTheLoadedProgram();
 
         FunkCompletionTests.Run(Check);
+        ModPageVersionTests.Run(Check);
 
         Console.WriteLine($"{_passed} passed, {_failed} failed.");
         return _failed == 0 ? 0 : 1;

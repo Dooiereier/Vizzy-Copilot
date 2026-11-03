@@ -142,6 +142,12 @@ that mod loads, before later mods. `_loadPriority` is above Juno Harmony's.
 
 MFD Runtime Editor is planned later; it may not bring its own copy of Harmony.
 
+## Update check
+
+`UpdateCheck`: at the first scene, with Check For Updates on, reads the "Mod Version" from the mod's SimpleRockets.com
+page and offers to open the page if it's newer. Nothing is downloaded automatically. `ModPageUrl` is empty until
+the mod is published, which skips the check.
+
 ## Merged from Vizzy Exporter and Vizzy McBlinky
 
 Both by Dooiereier. Replace the separate mods, and the mod warns if they're also loaded.
