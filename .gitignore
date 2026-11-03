@@ -1,0 +1,17 @@
+.vs
+Library
+Temp
+obj
+Logs
+ModAssetBundles
+Assets/_ModAssets_/*
+Assets/_ModAssets_.meta
+*.sln
+*.csproj
+Assets/ModTools/*
+*.sr2-mod
+*.sr2-mod-info
+# Personal / OS
+UserSettings
+.vscode
+.DS_Store

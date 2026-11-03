@@ -1,0 +1,7 @@
+{
+	"name": "Vizzy Flight Editor",
+	"references": [
+		"UnityEngine.UI",
+		"Unity.TextMeshPro"
+	]
+}
