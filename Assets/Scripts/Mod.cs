@@ -1,6 +1,7 @@
 namespace Assets.Scripts
 {
     using System;
+    using System.Collections.Generic;
     using System.Linq;
     using System.Runtime.CompilerServices;
     using Assets.Scripts.Vizzy;
@@ -18,7 +19,8 @@ namespace Assets.Scripts
 
         public static Mod Instance { get; } = GetModInstance<Mod>();
 
-        public override bool IsModRequiredForCraft(ModApi.Craft.CraftData craftData) => false;
+        /// <summary>Only a craft with a Matrix block needs the mod: every other program is plain stock XML.</summary>
+        public override bool IsModRequiredForCraft(ModApi.Craft.CraftData craftData) => MatrixBlocks.IsUsedBy(craftData);
 
         public override void OnModLoaded()
         {
@@ -54,7 +56,20 @@ namespace Assets.Scripts
             var harmony = new HarmonyLib.Harmony("VizzyStudio");
             var applied = 0;
             var failed = 0;
-            foreach (var patch in new[] { typeof(FunkInputPatch), typeof(FunkHighlightRegisterPatch) })
+            var patches = new List<Type> { typeof(FunkInputPatch), typeof(FunkHighlightRegisterPatch) };
+            try
+            {
+                // Before the toolbox patch: a block in the toolbox has to be able to save.
+                MatrixBlocks.Register();
+                patches.Add(typeof(MatrixToolboxPatch));
+            }
+            catch (Exception e)
+            {
+                failed++;
+                Debug.LogWarning("[VizzyStudio] Matrix blocks are off: " + e);
+            }
+
+            foreach (var patch in patches)
             {
                 try
                 {
