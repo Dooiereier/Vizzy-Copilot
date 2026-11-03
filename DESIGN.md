@@ -1,4 +1,4 @@
-# Vizzy Copilot: design
+# Vizzy Studio: design
 
 Pause in flight, open a craft's program in the stock Vizzy editor, change it and apply. The program
 carries on from where it was, so you can repeat quickload, edit, fly to tune things like PID gains.

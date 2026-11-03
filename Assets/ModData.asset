@@ -13,13 +13,13 @@ MonoBehaviour:
   m_Name: ModData
   m_EditorClassIdentifier: 
   _assemblies:
-  - Vizzy Copilot.dll
+  - Vizzy Studio.dll
   _author: Dooiereier
   _description: Edit a running craft's Vizzy program in the stock editor in flight.
     It carries on from where it was, and a quickload keeps your latest edit. Press
     Shift+O or use Edit Vizzy in the flight menu. Shift+O.
   _loadPriority: 0
-  _name: Vizzy Copilot
+  _name: Vizzy Studio
   _otherAssets: []
   _prefabs: []
   _steamDescription: 

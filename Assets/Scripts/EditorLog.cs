@@ -6,7 +6,7 @@ namespace Assets.Scripts
     /// </summary>
     public static class EditorLog
     {
-        private const string Prefix = "[VizzyCopilot] ";
+        private const string Prefix = "[VizzyStudio] ";
 
         public static void Info(string message) => UnityEngine.Debug.Log(Prefix + message);
 

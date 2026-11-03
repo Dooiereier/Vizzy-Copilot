@@ -9,12 +9,12 @@ namespace Assets.Scripts
         A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z,
     }
 
-    /// <summary>The mod's settings (Settings → Mods → Vizzy Copilot).</summary>
+    /// <summary>The mod's settings (Settings → Mods → Vizzy Studio).</summary>
     public class ModSettings : SettingsCategory<ModSettings>
     {
         private static ModSettings _instance;
 
-        public ModSettings() : base("Vizzy Copilot")
+        public ModSettings() : base("Vizzy Studio")
         {
         }
 

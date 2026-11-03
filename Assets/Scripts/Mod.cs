@@ -25,7 +25,7 @@ namespace Assets.Scripts
             FlightEditorUi.Register();
             Game.Instance.SceneManager.SceneLoaded += OnSceneLoaded;
             TryPatch();
-            Debug.Log("[VizzyCopilot] Started.");
+            Debug.Log("[VizzyStudio] Started.");
         }
 
         /// <summary>
@@ -48,13 +48,13 @@ namespace Assets.Scripts
         {
             try
             {
-                new HarmonyLib.Harmony("VizzyCopilot").CreateClassProcessor(typeof(FunkInputPatch)).Patch();
+                new HarmonyLib.Harmony("VizzyStudio").CreateClassProcessor(typeof(FunkInputPatch)).Patch();
                 FunkInputPatch.Installed = true;
-                Debug.Log("[VizzyCopilot] Patches: 1 applied, 0 failed.");
+                Debug.Log("[VizzyStudio] Patches: 1 applied, 0 failed.");
             }
             catch (Exception e)
             {
-                Debug.LogWarning("[VizzyCopilot] Patches: 0 applied, 1 failed. Funk auto-fill is off: " + e);
+                Debug.LogWarning("[VizzyStudio] Patches: 0 applied, 1 failed. Funk auto-fill is off: " + e);
             }
         }
 
@@ -63,7 +63,7 @@ namespace Assets.Scripts
             TryPatch();
             if (Game.InFlightScene)
             {
-                var host = new GameObject("VizzyCopilot.Controller");
+                var host = new GameObject("VizzyStudio.Controller");
                 host.AddComponent<FlightEditorController>();
                 host.AddComponent<FunkAutoFill>();
                 host.AddComponent<FunkCheck>();
@@ -73,7 +73,7 @@ namespace Assets.Scripts
                 LatestEdits.Clear();
                 if (Game.InDesignerScene)
                 {
-                    new GameObject("VizzyCopilot.AutoFill").AddComponent<FunkAutoFill>();
+                    new GameObject("VizzyStudio.AutoFill").AddComponent<FunkAutoFill>();
                 }
             }
         }

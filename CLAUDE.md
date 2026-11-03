@@ -1,4 +1,4 @@
-# Vizzy Copilot
+# Vizzy Studio
 
 A Juno: New Origins mod: edit a running craft's Vizzy program in the stock editor in flight, and
 continue from where it was. Design: `DESIGN.md`.
@@ -17,7 +17,7 @@ facts in its `reference/juno-facts.md`.
 
 ## Working here
 
-- Unity 2022.3.62f3. Mod name "Vizzy Copilot"; the root asmdef has the same name.
+- Unity 2022.3.62f3. Mod name "Vizzy Studio"; the root asmdef has the same name.
 - Commit as `Dooiereier <323592728+Dooiereier@users.noreply.github.com>`. One branch per phase or
   feature; merge to `main` only after the user has tested in the game.
 - `python3 tools/compile_check.py <a Juno project's .csproj>` compiles the scripts
@@ -25,5 +25,5 @@ facts in its `reference/juno-facts.md`.
 - On a fresh clone, put a Harmony 2.4.2.0 package in `References/com.pardeike.harmony` (gitignored) before opening
   Unity or compiling. In-game, the Juno Harmony mod provides it.
 - Must keep working with Vizzy McBlinky and Vizzy Debugger's Funk coloring.
-- Logs: `~/Library/Logs/Jundroo/SimpleRockets 2/Player.log` (lines start with `[VizzyCopilot]`).
+- Logs: `~/Library/Logs/Jundroo/SimpleRockets 2/Player.log` (lines start with `[VizzyStudio]`).
   The game keeps only the last two sessions: read them right after a test.

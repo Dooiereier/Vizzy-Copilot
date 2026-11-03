@@ -19,7 +19,7 @@ namespace Assets.Scripts
             Close();
             _onDismissed = onDismissed;
 
-            var model = new InspectorModel("VizzyCopilotPicker", "Edit Vizzy");
+            var model = new InspectorModel("VizzyStudioPicker", "Edit Vizzy");
             foreach (var data in programs)
             {
                 model.Add(new TextButtonModel(Label(data), _ =>

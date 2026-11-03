@@ -15,9 +15,9 @@ namespace Assets.Scripts
     /// </summary>
     public static class FlightEditorUi
     {
-        private const string MenuButtonId = "vizzy-copilot-menu-button";
-        private const string ApplyButtonId = "vizzy-copilot-apply";
-        private const string CancelButtonId = "vizzy-copilot-cancel";
+        private const string MenuButtonId = "vizzy-studio-menu-button";
+        private const string ApplyButtonId = "vizzy-studio-apply";
+        private const string CancelButtonId = "vizzy-studio-cancel";
 
         /// <summary>Gets or sets a value indicating whether the editor being built is one of this mod's.</summary>
         public static bool BuildingOurEditor { get; set; }

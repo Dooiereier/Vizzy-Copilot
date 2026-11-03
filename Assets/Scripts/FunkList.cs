@@ -24,7 +24,7 @@ namespace Assets.Scripts
         public FunkList(TMP_InputField field)
         {
             var rootCanvas = field.GetComponentInParent<Canvas>().rootCanvas;
-            _root = new GameObject("VizzyCopilot.FunkList", typeof(RectTransform), typeof(Canvas), typeof(Image));
+            _root = new GameObject("VizzyStudio.FunkList", typeof(RectTransform), typeof(Canvas), typeof(Image));
             _rect = (RectTransform)_root.transform;
             _rect.SetParent(rootCanvas.transform, false);
             _rect.anchorMin = _rect.anchorMax = new Vector2(0.5f, 0.5f);
