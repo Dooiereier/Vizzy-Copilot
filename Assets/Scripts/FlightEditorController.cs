@@ -1,8 +1,8 @@
 namespace Assets.Scripts
 {
     using System;
-    using System.Linq;
     using System.Xml.Linq;
+    using Assets.Scripts.Craft.Parts.Modifiers;
     using UnityEngine;
 
     /// <summary>
@@ -11,12 +11,18 @@ namespace Assets.Scripts
     /// </summary>
     public class FlightEditorController : MonoBehaviour
     {
-        private EditorSession _session;
         private string _restoreMessage;
         private bool _restoreChecked;
+        private int _openRequestFrame = -1;
+
+        /// <summary>Gets the controller of the current flight scene, or null outside flight.</summary>
+        public static FlightEditorController Current { get; private set; }
+
+        public EditorSession Session { get; private set; }
 
         private void Awake()
         {
+            Current = this;
             RestoreLatestEdits();
         }
 
@@ -33,62 +39,107 @@ namespace Assets.Scripts
                 _restoreMessage = null;
             }
 
-            _session?.Update();
+            this.Session?.Update();
 
-            var shift = UnityEngine.Input.GetKey(KeyCode.LeftShift) || UnityEngine.Input.GetKey(KeyCode.RightShift);
-            if (shift && UnityEngine.Input.GetKeyDown(KeyCode.O) && _session?.IsOpen == true)
+            if (_openRequestFrame >= 0 && Time.frameCount > _openRequestFrame)
             {
-                _session.ApplyAndClose();
+                _openRequestFrame = -1;
+                RunGuarded("Couldn't open the editor: ", Open);
             }
-            else if (shift && UnityEngine.Input.GetKeyDown(KeyCode.O))
+
+            var settings = ModSettings.Instance;
+            var shift = UnityEngine.Input.GetKey(KeyCode.LeftShift) || UnityEngine.Input.GetKey(KeyCode.RightShift);
+            if ((shift || !settings.RequireShift.Value) && UnityEngine.Input.GetKeyDown(settings.KeyCode))
             {
                 var alt = UnityEngine.Input.GetKey(KeyCode.LeftAlt) || UnityEngine.Input.GetKey(KeyCode.RightAlt);
-                try
+                if (this.Session?.IsOpen == true)
                 {
-                    if (alt)
-                    {
-                        RevertToLoadedProgram();
-                    }
-                    else
-                    {
-                        Open();
-                    }
+                    this.Session.ApplyFromShortcut();
                 }
-                catch (Exception e)
+                else if (alt)
                 {
-                    EditorLog.Error((alt ? "Couldn't revert: " : "Couldn't open the editor: ") + e);
+                    RunGuarded("Couldn't revert: ", RevertToLoadedProgram);
+                }
+                else
+                {
+                    RunGuarded("Couldn't open the editor: ", Open);
                 }
             }
         }
 
+        private static void RunGuarded(string failure, Action action)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception e)
+            {
+                EditorLog.Error(failure + e);
+            }
+        }
+
+        /// <summary>From the flight menu: next frame, so closing the menu has finished un-pausing.</summary>
+        public void RequestOpen()
+        {
+            _openRequestFrame = Time.frameCount;
+        }
+
         private void OnDestroy()
         {
-            _session?.Close();
+            ProgramPicker.Close();
+            this.Session?.Close();
+            if (Current == this)
+            {
+                Current = null;
+            }
         }
 
         private void Open()
         {
             var ui = Game.Instance.UserInterface;
-            if (ui.AnyDialogsOpen || ui.IsTextInputFocused)
+            if (ui.AnyDialogsOpen || ui.IsTextInputFocused || this.Session?.IsOpen == true)
             {
+                return;
+            }
+
+            if (ProgramPicker.IsOpen)
+            {
+                ProgramPicker.Close();
                 return;
             }
 
             var scene = Game.Instance.FlightScene;
+            var programs = CraftPrograms.Editable(scene.CraftNode.CraftScript);
+            if (programs.Count == 0)
+            {
+                scene.FlightSceneUI.ShowMessage("No editable Vizzy program on this craft.");
+            }
+            else if (programs.Count == 1)
+            {
+                OpenProgram(programs[0]);
+            }
+            else
+            {
+                ProgramPicker.Show(programs, data => RunGuarded("Couldn't open the editor: ", () => OpenProgram(data)));
+            }
+        }
+
+        private void OpenProgram(FlightProgramData data)
+        {
+            var scene = Game.Instance.FlightScene;
             if (scene.TimeManager.CurrentMode.WarpMode)
             {
                 scene.FlightSceneUI.ShowMessage("Leave time warp before editing a Vizzy program.");
-                return;
             }
-
-            var data = CraftPrograms.Editable(scene.CraftNode.CraftScript).FirstOrDefault();
-            if (data == null)
+            else if (data.Script == null)
             {
-                scene.FlightSceneUI.ShowMessage("No editable Vizzy program on this craft.");
-                return;
+                scene.FlightSceneUI.ShowMessage("The part with this Vizzy program is gone.");
             }
-
-            _session = EditorSession.Open(data);
+            else
+            {
+                this.Session = EditorSession.Open(data);
+            }
         }
 
         private void RestoreLatestEdits()
@@ -134,7 +185,7 @@ namespace Assets.Scripts
                     message = ProgramSwapper.Prepare(data, latest);
                 }
 
-                _restoreMessage = message ?? "Kept your latest Vizzy edit. Alt+Shift+O goes back to the quicksave's program.";
+                _restoreMessage = message ?? "Kept your latest Vizzy edit. Alt+" + ModSettings.Instance.ShortcutText + " goes back to the quicksave's program.";
             }
         }
 

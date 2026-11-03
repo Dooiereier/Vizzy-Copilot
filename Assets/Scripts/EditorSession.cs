@@ -5,6 +5,8 @@ namespace Assets.Scripts
     using System.Xml.Linq;
     using Assets.Scripts.Craft.Parts.Modifiers;
     using Assets.Scripts.Vizzy.UI;
+    using ModApi;
+    using ModApi.Ui;
     using UnityEngine;
 
     /// <summary>One open editor: pauses the game, hides the flight UI, puts the canvas back and closes.</summary>
@@ -60,15 +62,18 @@ namespace Assets.Scripts
             }
         }
 
-        /// <summary>The same as the editor's Apply, unless a key was being typed somewhere.</summary>
-        public void ApplyAndClose()
+        /// <summary>The shortcut's use in the editor: Apply, unless the key was being typed somewhere.</summary>
+        public void ApplyFromShortcut()
         {
             var ui = Game.Instance.UserInterface;
-            if (ui.AnyDialogsOpen || ui.IsTextInputFocused)
+            if (!ui.AnyDialogsOpen && !ui.IsTextInputFocused)
             {
-                return;
+                ApplyAndClose();
             }
+        }
 
+        public void ApplyAndClose()
+        {
             try
             {
                 _editor.ApplyChangesToCraft();
@@ -79,6 +84,19 @@ namespace Assets.Scripts
             }
 
             _editor.Close();
+        }
+
+        /// <summary>The editor's Cancel: asks first, in the stock dialog.</summary>
+        public void ConfirmDiscard()
+        {
+            var dialog = Game.Instance.UserInterface.CreateMessageDialog(MessageDialogType.OkayCancel, null, true);
+            dialog.UseDangerButtonStyle = true;
+            dialog.MessageText = Locale.GetString("Vizzy.UI.DiscardChanges.Confirm");
+            dialog.OkayClicked += _ =>
+            {
+                dialog.Close();
+                Close();
+            };
         }
 
         public void Close()
@@ -98,10 +116,30 @@ namespace Assets.Scripts
             _wasUiVisible = scene.FlightSceneUI.Visible;
             scene.FlightSceneUI.Visible = false;
 
-            _editor = Game.Instance.ResourceLoader.InstantiatePrefab<VizzyUIScript>("Ui/Vizzy/Vizzy");
-            _editor.Initialize(ui.Transform, _data.FlightProgramXml, false, OnApply);
-            _editor.Closed += OnEditorClosed;
-            _restoreViewPending = true;
+            try
+            {
+                FlightEditorUi.BuildingOurEditor = true;
+                _editor = Game.Instance.ResourceLoader.InstantiatePrefab<VizzyUIScript>("Ui/Vizzy/Vizzy");
+                _editor.Initialize(ui.Transform, _data.FlightProgramXml, false, OnApply);
+                _editor.Closed += OnEditorClosed;
+                _restoreViewPending = true;
+            }
+            catch
+            {
+                if (_editor != null)
+                {
+                    UnityEngine.Object.Destroy(_editor.gameObject);
+                    _editor = null;
+                }
+
+                RestoreFlight();
+                throw;
+            }
+            finally
+            {
+                FlightEditorUi.BuildingOurEditor = false;
+            }
+
             EditorLog.Debug("Editor open for part " + _key + ".");
         }
 
@@ -109,6 +147,12 @@ namespace Assets.Scripts
         {
             try
             {
+                if (_data.Script == null)
+                {
+                    _closingMessage = "The part with this Vizzy program is gone: the edit wasn't applied.";
+                    return;
+                }
+
                 var before = _data.FlightProgramXml;
                 if (ProgramSwapper.Swap(_data, newProgram, out _closingMessage))
                 {
@@ -132,9 +176,22 @@ namespace Assets.Scripts
 
             _restoreViewPending = false;
             _viewContainer = null;
-            var scene = Game.Instance.FlightScene;
-            if (scene != null)
+            RestoreFlight();
+            _editor = null;
+            EditorLog.Debug("Editor closed.");
+        }
+
+        /// <summary>Scene teardown may have removed the flight UI already: the next scene doesn't need it.</summary>
+        private void RestoreFlight()
+        {
+            try
             {
+                var scene = Game.Instance.FlightScene;
+                if (scene == null)
+                {
+                    return;
+                }
+
                 scene.FlightSceneUI.Visible = _wasUiVisible;
                 if (!_wasPaused)
                 {
@@ -146,9 +203,10 @@ namespace Assets.Scripts
                     scene.FlightSceneUI.ShowMessage(_closingMessage);
                 }
             }
-
-            _editor = null;
-            EditorLog.Debug("Editor closed.");
+            catch (Exception e)
+            {
+                EditorLog.Debug("Flight UI not restored while the scene ends: " + e.Message);
+            }
         }
 
         private struct EditorView

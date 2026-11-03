@@ -16,6 +16,8 @@ namespace Assets.Scripts
 
         protected override void OnModInitialized()
         {
+            _ = ModSettings.Instance;
+            FlightEditorUi.Register();
             Game.Instance.SceneManager.SceneLoaded += OnSceneLoaded;
             Debug.Log("[VizzyFlightEditor] Started.");
         }
@@ -24,7 +26,9 @@ namespace Assets.Scripts
         {
             if (Game.InFlightScene)
             {
-                new GameObject("VizzyFlightEditor.Controller").AddComponent<FlightEditorController>();
+                var host = new GameObject("VizzyFlightEditor.Controller");
+                host.AddComponent<FlightEditorController>();
+                host.AddComponent<FunkKeyTest>();
             }
             else
             {
