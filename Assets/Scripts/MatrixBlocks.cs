@@ -115,7 +115,7 @@ namespace Assets.Scripts
                 {
                     category = new XElement(ns + "Category",
                         new XAttribute("name", CategoryName),
-                        new XAttribute("displayName", CategoryName),
+                        new XAttribute("displayName", CategoryName + " (using these requires Vizzy Studio mod)"),
                         new XAttribute("icon", "Ui/Vizzy/ToolboxIconOperators"));
                     categoriesElement.Add(category);
                 }
