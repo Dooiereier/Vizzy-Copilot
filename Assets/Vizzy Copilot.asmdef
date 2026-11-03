@@ -1,7 +1,0 @@
-{
-	"name": "Vizzy Copilot",
-	"references": [
-		"UnityEngine.UI",
-		"Unity.TextMeshPro"
-	]
-}

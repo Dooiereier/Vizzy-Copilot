@@ -9,12 +9,8 @@ Assets/_ModAssets_.meta
 *.sln
 *.csproj
 Assets/ModTools/*
-*.sr2-mod
-*.sr2-mod-info
-# Personal / OS
-UserSettings
-.vscode
-.DS_Store
-
-# Harmony compile reference: copied in by hand, provided in-game by the Juno Harmony mod
-References/
+/.idea
+/tools
+/UserSettings
+/ProjectSettings
+/ProjectSettings

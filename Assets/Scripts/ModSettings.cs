@@ -1,62 +1,53 @@
 namespace Assets.Scripts
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+    using ModApi.Common;
     using ModApi.Settings.Core;
-    using UnityEngine;
 
-    /// <summary>The letter keys the editor shortcut can use.</summary>
-    public enum EditorKey
-    {
-        A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z,
-    }
-
-    /// <summary>The mod's settings (Settings → Mods → Vizzy Copilot).</summary>
+    /// <summary>
+    /// The settings for the mod.
+    /// </summary>
+    /// <seealso cref="ModApi.Settings.Core.SettingsCategory{Assets.Scripts.ModSettings}" />
     public class ModSettings : SettingsCategory<ModSettings>
     {
+        /// <summary>
+        /// The mod settings instance.
+        /// </summary>
         private static ModSettings _instance;
 
-        public ModSettings() : base("Vizzy Copilot")
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ModSettings"/> class.
+        /// </summary>
+        public ModSettings() : base("VizzyDebugger")
         {
         }
 
+        /// <summary>
+        /// Gets the mod settings instance.
+        /// </summary>
+        /// <value>
+        /// The mod settings instance.
+        /// </value>
         public static ModSettings Instance => _instance ?? (_instance = Game.Instance.Settings.ModSettings.GetCategory<ModSettings>());
 
-        public EnumSetting<EditorKey> Key { get; private set; }
+        ///// <summary>
+        ///// Gets the TestSetting1 value
+        ///// </summary>
+        ///// <value>
+        ///// The TestSetting1 value.
+        ///// </value>
+        //public NumericSetting<float> TestSetting1 { get; private set; }
 
-        public BoolSetting RequireShift { get; private set; }
-
-        public BoolSetting DebugLogging { get; private set; }
-
-        public BoolSetting FunkAutoFill { get; private set; }
-
-        public BoolSetting RunFunkCheck { get; private set; }
-
-        public KeyCode KeyCode => KeyCode.A + (int)this.Key.Value;
-
-        /// <summary>Gets the shortcut as text, for messages.</summary>
-        public string ShortcutText => (this.RequireShift.Value ? "Shift+" : string.Empty) + this.Key.Value;
-
-        // XML names are given explicitly: the game derives them from the display name otherwise.
+        public BoolSetting FunkSyntaxHighlight { get; private set; }
+        /// <summary>
+        /// Initializes the settings in the category.
+        /// </summary>
         protected override void InitializeSettings()
         {
-            this.Key = this.CreateEnum<EditorKey>("Editor Key", "Key")
-                .SetDescription("Opens the Vizzy editor in flight. In the editor it applies the edit and returns to flight. With Alt it returns to the quicksave's program.")
-                .SetDefault(EditorKey.O);
-
-            this.RequireShift = this.CreateBool("Editor Key Needs Shift", "RequireShift")
-                .SetDescription("The editor key only works together with Shift.")
-                .SetDefault(true);
-
-            this.DebugLogging = this.CreateBool("Debug Logging", "DebugLogging")
-                .SetDescription("Writes thread positions and other details to Player.log.")
-                .SetDefault(false);
-
-            this.RunFunkCheck = this.CreateBool("Run Funk Check", "RunFunkCheck")
-                .SetDescription("Diagnostic: at each flight start, tests every Funk name and writes the results to Player.log. Running programs aren't affected. Needs a craft with a running Vizzy program.")
-                .SetDefault(false);
-
-            this.FunkAutoFill = this.CreateBool("Funk Auto-Fill", "FunkAutoFill")
-                .SetDescription("Suggests Funk names while typing in a Funk field, in the designer and in flight. Up and Down choose, Enter takes it, Esc closes the list. Needs the Juno Harmony mod.")
-                .SetDefault(true);
+            FunkSyntaxHighlight = CreateBool("Funk Syntax Highlight").SetDescription("Enabled Funk Syntax Highlight").SetDefault(true);
         }
     }
 }

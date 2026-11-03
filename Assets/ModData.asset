@@ -13,14 +13,16 @@ MonoBehaviour:
   m_Name: ModData
   m_EditorClassIdentifier: 
   _assemblies:
-  - Vizzy Copilot.dll
-  _author: Dooiereier
-  _description: Edit a running craft's Vizzy program in the stock editor in flight.
-    It carries on from where it was, and a quickload keeps your latest edit. Press
-    Shift+O or use Edit Vizzy in the flight menu. Shift+O.
-  _loadPriority: 0
-  _name: Vizzy Copilot
-  _otherAssets: []
+  - VizzyDebugger.dll
+  _author: Oxeter AND Torifune
+  _description: 'Code by Oxeter
+
+    UI texture by QiQi'
+  _loadPriority: 1000
+  _name: VizzyDebugger
+  _otherAssets:
+  - {fileID: 2800000, guid: 1c0e21f9e83fb4c44b60ac9eede2688a, type: 3}
+  - {fileID: 2800000, guid: 9425aa4d702fb6b47a280956c5837b18, type: 3}
   _prefabs: []
   _steamDescription: 
   _steamLanguage: English
@@ -28,11 +30,12 @@ MonoBehaviour:
   _steamTags: 
   _steamTitle: 
   _steamVisibility: 0
-  _versionMajor: 0
-  _versionMinor: 1
+  _versionMajor: 1
+  _versionMinor: 0
   _partCategories: []
   _parts: []
   _partStyleExtensions: []
   _partTextureStyles: []
   _persistentObjects: []
-  _uiResourceDatabases: []
+  _uiResourceDatabases:
+  - {fileID: 11400000, guid: cda680f1971891a40aeffcd35cbb2b85, type: 2}
