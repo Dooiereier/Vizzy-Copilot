@@ -32,6 +32,7 @@ namespace Assets.Scripts.VizzyOrganizer
 
         private readonly List<Image> _rowImages = new List<Image>();
         private readonly List<Color> _rowColors = new List<Color>();
+        private readonly List<string> _rowPaths = new List<string>();
         private VizzyUIController _controller;
         private XmlElement _button;
         private XmlElement _flyout;
@@ -77,6 +78,8 @@ namespace Assets.Scripts.VizzyOrganizer
                         new XElement(ns + "VerticalLayout",
                             new XAttribute("id", RowsId),
                             new XAttribute("class", "no-image"),
+                            new XAttribute("pivot", "0 1"),
+                            new XAttribute("childAlignment", "UpperLeft"),
                             new XAttribute("childForceExpandHeight", "false"),
                             new XAttribute("contentSizeFitter", "vertical"),
                             new XAttribute("padding", "10"),
@@ -150,6 +153,14 @@ namespace Assets.Scripts.VizzyOrganizer
         /// <summary>Rebuilds the tree from the program as the editor has it now.</summary>
         private void Refresh()
         {
+            LoadIndex();
+            BuildRows();
+            _selectedIds = null;
+        }
+
+        /// <summary>Saving renumbers the blocks, so ids from an earlier load no longer mean the same ones.</summary>
+        private void LoadIndex()
+        {
             var editor = _controller.VizzyUI;
 
             // Comment text has no public accessor, so it's read from the saved form, keyed by block id.
@@ -164,7 +175,10 @@ namespace Assets.Scripts.VizzyOrganizer
 
             _index = VizzyFolderIndex.Build(editor.FlightProgram, comment =>
                 commentTextById.TryGetValue(GetInstructionId(comment), out var text) ? text : null);
+        }
 
+        private void BuildRows()
+        {
             foreach (Transform child in _rows)
             {
                 if (child.gameObject != _template)
@@ -175,7 +189,7 @@ namespace Assets.Scripts.VizzyOrganizer
 
             _rowImages.Clear();
             _rowColors.Clear();
-            _selectedIds = null;
+            _rowPaths.Clear();
             AddRow("All", 0, null, null);
             foreach (var folder in _index.Root.Children.Values.OrderBy(folder => folder.Name))
             {
@@ -185,14 +199,14 @@ namespace Assets.Scripts.VizzyOrganizer
 
         private void AddFolderRows(VizzyFolderNode folder, int depth, Color color)
         {
-            AddRow(folder.Name, depth, new HashSet<int>(folder.GetAllInstructionIds()), color);
+            AddRow(folder.Name, depth, folder.FullPath, color);
             foreach (var child in folder.Children.Values.OrderBy(child => child.Name))
             {
                 AddFolderRows(child, depth + 1, color);
             }
         }
 
-        private void AddRow(string label, int depth, HashSet<int> ids, Color? color)
+        private void AddRow(string label, int depth, string path, Color? color)
         {
             var row = Instantiate(_template, _rows);
             row.SetActive(true);
@@ -209,17 +223,49 @@ namespace Assets.Scripts.VizzyOrganizer
             var image = row.GetComponent<Image>();
             _rowImages.Add(image);
             _rowColors.Add(image.color);
-            var index = _rowImages.Count - 1;
-            row.GetComponent<Button>().onClick.AddListener(() =>
-            {
-                for (var i = 0; i < _rowImages.Count; i++)
-                {
-                    _rowImages[i].color = i == index ? SelectedRow : _rowColors[i];
-                }
+            _rowPaths.Add(path);
+            row.GetComponent<Button>().onClick.AddListener(() => Select(path));
+        }
 
-                _selectedIds = ids;
-                ApplyFilter();
-            });
+        /// <summary>Reads the program again first: it can have changed since the rows were built.</summary>
+        private void Select(string path)
+        {
+            LoadIndex();
+            var paths = new List<string> { null };
+            var folders = new Dictionary<string, VizzyFolderNode>();
+            foreach (var folder in _index.Root.Children.Values.OrderBy(folder => folder.Name))
+            {
+                CollectFolders(folder, paths, folders);
+            }
+
+            if (!paths.SequenceEqual(_rowPaths))
+            {
+                BuildRows();
+            }
+
+            var found = path != null && folders.ContainsKey(path);
+            for (var i = 0; i < _rowImages.Count; i++)
+            {
+                _rowImages[i].color = (found || path == null) && _rowPaths[i] == path ? SelectedRow : _rowColors[i];
+            }
+
+            if (path != null && !found)
+            {
+                return;
+            }
+
+            _selectedIds = found ? new HashSet<int>(folders[path].GetAllInstructionIds()) : null;
+            ApplyFilter();
+        }
+
+        private static void CollectFolders(VizzyFolderNode folder, List<string> paths, Dictionary<string, VizzyFolderNode> folders)
+        {
+            paths.Add(folder.FullPath);
+            folders[folder.FullPath] = folder;
+            foreach (var child in folder.Children.Values.OrderBy(child => child.Name))
+            {
+                CollectFolders(child, paths, folders);
+            }
         }
 
         // The viewport's own pan position before we ever focused a folder - restored when
@@ -249,19 +295,25 @@ namespace Assets.Scripts.VizzyOrganizer
             var chainIdGroups = VizzyFolderIndex.GetChainIdGroups(_controller.VizzyUI?.FlightProgram);
             var matchingChains = chainIdGroups.Where(chain => chain.Any(id => _selectedIds.Contains(id))).ToList();
 
-            var idToTopLevelBlock = new Dictionary<int, BlockElementScript>();
+            // Nested blocks too: a loop or if body is a chain of its own.
+            var idToBlock = new Dictionary<int, BlockElementScript>();
             foreach (var block in programContainer.transform.GetComponentsInChildren<BlockElementScript>(true))
-                if (block.Parent == null && block.Node is IInstructionId withId)
-                    idToTopLevelBlock[withId.Id] = block;
+                if (block.Node is ProgramInstruction && block.Node is IInstructionId withId)
+                    idToBlock[withId.Id] = block;
 
             // One position per chain - its own topmost/head block - not one per instruction,
             // so a long chain doesn't outweigh a short one in the average.
             var chainHeadWorldPositions = new List<Vector3>();
             foreach (var chain in matchingChains)
             {
-                var headId = chain.FirstOrDefault(idToTopLevelBlock.ContainsKey);
-                if (idToTopLevelBlock.TryGetValue(headId, out var headBlock))
-                    chainHeadWorldPositions.Add(headBlock.RectTransform.position);
+                foreach (var id in chain)
+                {
+                    if (idToBlock.TryGetValue(id, out var headBlock))
+                    {
+                        chainHeadWorldPositions.Add(headBlock.RectTransform.position);
+                        break;
+                    }
+                }
             }
 
             PanToBoundsCenter(chainHeadWorldPositions);

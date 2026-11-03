@@ -9,10 +9,12 @@ namespace Assets.Scripts.Exporter
     /// <summary>Chooses the program to export to, in the same list the game uses for Load Program.</summary>
     public class ExportTargetViewModel : LoadProgramViewModel
     {
+        private readonly VizzyUIScript _editor;
         private readonly VizzyExportSnippet _snippet;
 
         public ExportTargetViewModel(VizzyUIScript editor, VizzyExportSnippet snippet) : base(editor, false)
         {
+            _editor = editor;
             _snippet = snippet;
         }
 
@@ -28,6 +30,13 @@ namespace Assets.Scripts.Exporter
         {
             if (selectedItem?.ItemModel is FileInfo file)
             {
+                // Saving the open program would write over the export.
+                if (string.Equals(Path.GetFileNameWithoutExtension(file.Name), _editor.FlightProgram?.Name, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    Game.Instance.UserInterface.CreateMessageDialog("That's the program you have open. Choose another one.");
+                    return;
+                }
+
                 ListView.Close();
                 Report(file.FullName);
             }

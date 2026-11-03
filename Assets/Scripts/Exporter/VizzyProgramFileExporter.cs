@@ -106,6 +106,13 @@ namespace Assets.Scripts.Exporter
                     return false;
                 }
 
+                string customName = (string)snippet.Nodes[0].Attribute("name");
+                if (IsCustomDefinitionIn(root, snippet.Nodes[0].Name.LocalName, customName))
+                {
+                    error = "That program already has a custom block called " + customName + ".";
+                    return false;
+                }
+
                 // Deep-copy every node before touching it - the source XElements may already
                 // be parented (e.g. under the throwaway scratch element SerializerBridge
                 // uses), and an XElement can't be added as a child in two places at once.
@@ -148,7 +155,18 @@ namespace Assets.Scripts.Exporter
                     CustomInstructionsCreated = AddMissingCustomInstructions(root, snippet.ReferencedCustomInstructionBlocks, anchorX, anchorY),
                 };
 
-                doc.Save(targetFilePath);
+                // Only replaces the file once the new one is complete.
+                string temporaryPath = targetFilePath + ".tmp";
+                try
+                {
+                    doc.Save(temporaryPath);
+                    File.Replace(temporaryPath, targetFilePath, null);
+                }
+                finally
+                {
+                    File.Delete(temporaryPath);
+                }
+
                 return true;
             }
             catch (Exception ex)
@@ -211,6 +229,18 @@ namespace Assets.Scripts.Exporter
         /// persists across exports (and across game sessions); it means nothing to the game
         /// itself.
         /// </summary>
+        private static bool IsCustomDefinitionIn(XElement root, string kind, string name)
+        {
+            if (string.IsNullOrEmpty(name))
+                return false;
+
+            IEnumerable<XElement> existing =
+                kind == "CustomInstruction" ? root.Elements("Instructions").Select(block => block.Elements().FirstOrDefault())
+                : kind == "CustomExpression" ? root.Elements("Expressions").Elements()
+                : Enumerable.Empty<XElement>();
+            return existing.Any(e => e != null && e.Name.LocalName == kind && (string)e.Attribute("name") == name);
+        }
+
         private static (int x, int y) NextStaircasePosition(XElement root, int anchorX, int anchorY)
         {
             int x = 0, y = 0;
@@ -220,6 +250,17 @@ namespace Assets.Scripts.Exporter
                 string[] parts = existing.Split(',');
                 if (parts.Length != 2 || !int.TryParse(parts[0], out x) || !int.TryParse(parts[1], out y))
                     x = y = 0;
+            }
+
+            // Saving a program in the editor drops the offset, so step past earlier exports.
+            var taken = new HashSet<string>(root.Elements("Instructions").Select(block => block.Elements().FirstOrDefault())
+                .Concat(root.Elements("Expressions").Elements())
+                .Select(e => (string)e?.Attribute(PosAttributeName))
+                .Where(pos => pos != null));
+            while (taken.Contains($"{anchorX + x},{anchorY + y}"))
+            {
+                x += StepX;
+                y += StepY;
             }
 
             root.SetAttributeValue(ExportOffsetAttributeName, $"{x + StepX},{y + StepY}");

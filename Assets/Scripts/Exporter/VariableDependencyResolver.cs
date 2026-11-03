@@ -27,7 +27,8 @@ namespace Assets.Scripts.Exporter
         /// Local variables (local="true" - a For loop counter, a SetLocalVariable block,
         /// a custom instruction's own parameter) are deliberately excluded: they're created
         /// by the instruction that owns them wherever the snippet is pasted, not by a
-        /// persistent global variable list.
+        /// persistent global variable list. Funk text and typed names can also name locals
+        /// or functions, which ResolveDefinitions drops as they aren't global variables.
         /// </summary>
         public static List<string> FindReferencedGlobalVariableNames(IEnumerable<XElement> nodes)
         {
@@ -35,7 +36,20 @@ namespace Assets.Scripts.Exporter
 
             foreach (XElement node in nodes)
             {
-                IEnumerable<XElement> candidates = new[] { node }.Concat(node.Descendants());
+                IEnumerable<XElement> candidates = new[] { node }.Concat(node.Descendants()).ToList();
+                foreach (XElement holder in candidates)
+                {
+                    string text = (string)holder.Elements().FirstOrDefault()?.Attribute("text");
+                    if (string.IsNullOrEmpty(text) || holder.Elements().First().Name.LocalName != "Constant")
+                        continue;
+
+                    string kind = holder.Name.LocalName;
+                    if (kind == "SetVariable" || kind == "ChangeVariable" || kind == "UserInput")
+                        names.Add(text);
+                    else if (kind == "EvaluateExpression")
+                        names.UnionWith(FunkCompletion.NamesIn(text));
+                }
+
                 foreach (XElement variableRef in candidates.Where(e => e.Name.LocalName == "Variable"))
                 {
                     string variableName = (string)variableRef.Attribute("variableName");
