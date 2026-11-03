@@ -102,11 +102,11 @@ namespace Assets.Scripts
                 { "smooth", "smooth(value, maxRate)" },
                 { "sum", "sum(value)" },
                 { "rate", "rate(value)" },
-                { "listLen", "listLen(name)" },
-                { "listNum", "listNum(name, index)" },
-                { "listBool", "listBool(name, index)" },
-                { "listStr", "listStr(name, index)" },
-                { "listVec", "listVec(name, index)" },
+                { "listLen", "listLen(\"name\")" },
+                { "listNum", "listNum(\"name\", index)" },
+                { "listBool", "listBool(\"name\", index)" },
+                { "listStr", "listStr(\"name\", index)" },
+                { "listVec", "listVec(\"name\", index)" },
             })
             {
                 catalog.TopLevel.RemoveAll(name => name.Name == signature.Key);
