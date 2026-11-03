@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Runs the offline tests in tests/ with Unity's Mono. Only ThreadRemapper.cs and LatestEdits.cs are
-compiled in: they work on XML alone, so they need no game or engine.
+"""Runs the offline tests in tests/ with Unity's Mono. Only ThreadRemapper.cs, LatestEdits.cs and
+FunkCompletion.cs are compiled in: they need no game or engine.
 
     python3 tools/run_tests.py
 """
@@ -20,7 +20,7 @@ MONO = f"{compile_check.UNITY}/MonoBleedingEdge/bin/mono"
 def main():
     csproj = compile_check.find_csproj()
     references, defines = compile_check.read_references(csproj, os.path.join(ROOT, "Assets", "ModTools"))
-    sources = [os.path.join(ROOT, "Assets", "Scripts", name) for name in ("ThreadRemapper.cs", "LatestEdits.cs")]
+    sources = [os.path.join(ROOT, "Assets", "Scripts", name) for name in ("ThreadRemapper.cs", "LatestEdits.cs", "FunkCompletion.cs")]
     sources += sorted(glob.glob(os.path.join(ROOT, "tests", "*.cs")))
     with tempfile.TemporaryDirectory() as temp:
         program = os.path.join(temp, "Tests.exe")

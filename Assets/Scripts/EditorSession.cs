@@ -33,6 +33,10 @@ namespace Assets.Scripts
 
         public bool IsOpen => _editor != null;
 
+        public VizzyUIScript Editor => _editor;
+
+        public FlightProgramData Data => _data;
+
         public static EditorSession Open(FlightProgramData data)
         {
             var session = new EditorSession(data);

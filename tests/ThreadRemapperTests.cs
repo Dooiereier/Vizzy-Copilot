@@ -40,6 +40,8 @@ public static class ThreadRemapperTests
         LatestEditAlreadyLoadedIsLeftAlone();
         RevertGivesTheLoadedProgram();
 
+        FunkCompletionTests.Run(Check);
+
         Console.WriteLine($"{_passed} passed, {_failed} failed.");
         return _failed == 0 ? 0 : 1;
     }

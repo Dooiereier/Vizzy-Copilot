@@ -1,0 +1,55 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Assets.Scripts;
+
+/// <summary>Offline tests of what auto-fill offers and how it inserts it.</summary>
+public static class FunkCompletionTests
+{
+    public static void Run(Action<string, bool> check)
+    {
+        var catalog = new FunkCatalog();
+        catalog.TopLevel.Add(new FunkName("PID", "PID(target, current, p, i, d)"));
+        catalog.TopLevel.Add(new FunkName("pow", "pow(x, y)"));
+        catalog.TopLevel.Add(new FunkName("pi"));
+        catalog.TopLevel.Add(new FunkName("Pitch"));
+        catalog.TopLevel.Add(new FunkName("Throttle"));
+        catalog.FlightData.Add(new FunkName("Pitch"));
+        catalog.FlightData.Add(new FunkName("AltitudeAboveSeaLevel"));
+        catalog.OrbitData.Add(new FunkName("Inclination"));
+        catalog.Variables.Add(new FunkName("Kp"));
+        catalog.Variables.Add(new FunkName("Target"));
+
+        FunkCompletion Find(string text, IList<string> recent = null, string program = null) => FunkCompletion.Find(text, text.Length, catalog, recent, program);
+        List<string> Names(string text, IList<string> recent = null, string program = null) => Find(text, recent, program)?.Suggestions.Select(s => s.Insert).ToList() ?? new List<string>();
+
+        check("PID ranks first for p", Names("P").First() == "PID(");
+        check("functions show their arguments", Find("PI").Suggestions.First().Display == "PID(target, current, p, i, d)");
+        check("variables are offered bare", Names("K").Contains("Kp"));
+        check("FD. lists flight data", Names("FD.").SequenceEqual(new[] { "FD.AltitudeAboveSeaLevel", "FD.Pitch" }));
+        check("FD. filters", Names("FD.Alt").SequenceEqual(new[] { "FD.AltitudeAboveSeaLevel" }));
+        check("v: lists variables", Names("v:").SequenceEqual(new[] { "v:Kp", "v:Target" }));
+        check("OD. lists orbit data", Names("OD.In").SequenceEqual(new[] { "OD.Inclination" }));
+        check("flight names appear with their prefix", Names("Alt").Contains("FD.AltitudeAboveSeaLevel"));
+        check("flight names wait for two letters", !Names("A").Contains("FD.AltitudeAboveSeaLevel"));
+        check("start-of-name beats contains", Names("t").IndexOf("Throttle") < Names("t").IndexOf("Pitch"));
+        check("recent use ranks first", Names("P", new[] { "pow" }).First() == "pow(");
+        check("use in this program ranks up", Names("t", null, "<x text=\"Target\"/>").First() == "Target");
+        check("nothing inside text", Find("\"Pi") == null);
+        check("after closed text it works", Names("\"a\" + Pi").Any());
+        check("nothing for a number", Find("1.5") == null);
+        check("nothing for an empty word", Find("clamp(") == null);
+        check("part references aren't offered", Find("Tank.Fuel") == null);
+        check("nothing once the word is complete", Find("FD.AltitudeAboveSeaLevel") == null);
+
+        var completion = FunkCompletion.Find("max(Pi, 1)", 6, catalog, null, null);
+        var text = completion.Apply("max(Pi, 1)", completion.Suggestions.First(s => s.Insert == "Pitch"), out var caret);
+        check("replaces the word and keeps the rest", text == "max(Pitch, 1)" && caret == 9);
+
+        var inWord = FunkCompletion.Find("PIxx", 2, catalog, null, null);
+        check("replaces the rest of the word", inWord.Apply("PIxx", inWord.Suggestions.First(), out _) == "PID(");
+
+        var bracket = FunkCompletion.Find("PI(1)", 2, catalog, null, null);
+        check("no second bracket", bracket.Suggestions.First().Insert == "PID");
+    }
+}

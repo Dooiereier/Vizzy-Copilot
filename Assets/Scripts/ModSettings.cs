@@ -26,7 +26,7 @@ namespace Assets.Scripts
 
         public BoolSetting DebugLogging { get; private set; }
 
-        public BoolSetting TestAutoFillKeys { get; private set; }
+        public BoolSetting FunkAutoFill { get; private set; }
 
         public KeyCode KeyCode => KeyCode.A + (int)this.Key.Value;
 
@@ -48,9 +48,9 @@ namespace Assets.Scripts
                 .SetDescription("Writes thread positions and other details to Player.log.")
                 .SetDefault(false);
 
-            this.TestAutoFillKeys = this.CreateBool("Test Auto-Fill Keys", "TestAutoFillKeys")
-                .SetDescription("Temporary check of key handling in a Funk field: Up and Down keep the cursor in place, Enter inserts TEST.")
-                .SetDefault(false);
+            this.FunkAutoFill = this.CreateBool("Funk Auto-Fill", "FunkAutoFill")
+                .SetDescription("Suggests Funk names while typing in a Funk field in the flight editor. Up and Down choose, Enter takes it, Esc closes the list. Needs the Juno Harmony mod.")
+                .SetDefault(true);
         }
     }
 }

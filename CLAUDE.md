@@ -12,7 +12,7 @@ facts in its `reference/juno-facts.md`.
 - The program never restarts on Apply, and a quickload keeps the latest applied edit.
 - Crafts and saves never need the mod: no part modifiers, `IsModRequiredForCraft` stays false.
 - The designer's editor stays stock, and an editor another mod opens keeps its stock buttons.
-- No Harmony unless a design note justifies it. No code copied from other mods without permission.
+- Harmony only as `DESIGN.md` justifies it, never bundled. No code copied from other mods without permission.
 
 ## Working here
 
@@ -21,6 +21,8 @@ facts in its `reference/juno-facts.md`.
   feature; merge to `main` only after the user has tested in the game.
 - `python3 tools/compile_check.py "~/Projects/pr_check/Juno Harmony.csproj"` compiles the scripts
   without Unity. `python3 tools/run_tests.py` (same argument) runs the offline tests.
+- On a fresh clone, copy `~/Drood 2.0/References/com.pardeike.harmony` to `References/` (gitignored) before
+  opening Unity or compiling.
 - Must keep working with Vizzy McBlinky and Vizzy Debugger's Funk coloring.
 - Logs: `~/Library/Logs/Jundroo/SimpleRockets 2/Player.log` (lines start with `[VizzyFlightEditor]`).
   The game keeps only the last two sessions: read them right after a test.

@@ -55,6 +55,7 @@ def read_references(csproj, modtools):
     hints = [path for path in hints if "Harmony" not in os.path.basename(path)]
     references = [re.sub(r"^.*/Assets/ModTools(?=/)", lambda _: modtools, path) for path in hints]
     references = [path for path in references if os.path.exists(path)]
+    references.append(os.path.join(ROOT, "References", "com.pardeike.harmony", "0Harmony.dll"))
     return references, re.findall(r"<DefineConstants>([^<]+)</DefineConstants>", text)
 
 

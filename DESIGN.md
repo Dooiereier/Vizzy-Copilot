@@ -10,7 +10,7 @@ carries on from where it was, so you can repeat quickload, edit, fly to tune thi
 - **A quickload keeps the latest applied edit.** Craft state and thread positions come from the
   quicksave; the program is the latest edit. A key returns to the quicksave's program.
 - **Crafts and saves never need the mod.** No part modifiers; programs stay ordinary stock XML.
-- **No Harmony** unless a note here justifies it. The designer's editor is unchanged.
+- **Harmony only for Funk auto-fill**, optional (see below). The designer's editor is unchanged.
 - **Other mods stay unaffected.** Only an editor this mod opens gets its Apply and Cancel replaced,
   so another mod that opens the stock editor in flight keeps the stock buttons.
 
@@ -64,7 +64,8 @@ Known limits:
 - `FlightEditorUi`: XML changes to the flight menu and the Vizzy editor.
 - `ProgramPicker`: choice panel for crafts with several programs.
 - `CraftPrograms`: which programs a craft has. `ProgramSwapper`: puts a program in place.
-- `ThreadRemapper`, `LatestEdits`: XML and memory only, tested offline.
+- `ThreadRemapper`, `LatestEdits`, `FunkCompletion`: no game code, tested offline.
+- `FunkAutoFill`, `FunkCatalog`, `FunkList`, `FunkInputPatch`: auto-fill's game side.
 
 ## Lifecycle
 
@@ -93,15 +94,21 @@ Known limits:
 Not editable: the game reloads them from resources in flight. Custom MFD programs wait for a later
 milestone.
 
-## Next: Funk auto-fill
+## Funk auto-fill
 
-A list under a Funk field while typing, Up/Down to move, Enter to take, Esc to close. Names come from
-the game at runtime (`Context.Functions`, its constants and `SpecialFunctions`, and the `CraftControls`,
-`CraftFlightData`, `CraftOrbitData` properties, and the program's variables: a bare name for a number,
-`v:` for a vector), filtered by what's been typed (`FD.`, `OD.`, `v:`).
-Ranked by prefix match, recent use, use in this program, a short common list, then alphabetical. The
-text field handles those keys itself, so the mod restores the cursor or re-selects the field after
-it. `FunkKeyTest` is the temporary in-game check of that.
+A list under a Funk field while typing: Up and Down choose, Enter takes it, Esc closes the list.
+
+- **Only what works in Vizzy Funk.** Names come at runtime from the game's Vizzy Funk context: `Context`
+  defaults, `CraftControls`, `CraftFlightData`, `CraftOrbitData` properties of value types, the Vizzy list
+  functions and the program's variables (a bare name for a number, `v:` for a vector). It runs only in
+  Funk fields (`EvaluationExpression`) of an editor this mod opened. Part references aren't offered.
+- **Ranking:** start-of-name matches first, then recent use, use in this program, a short common list,
+  then alphabetical. Flight and orbit names also appear, with their prefix, after 2 typed characters.
+- **Harmony, optional.** One prefix on `TMP_InputField.OnUpdateSelected`: the field reads queued key events
+  itself, so without a patch Enter has already ended the edit by the time a mod can see it, which adds
+  an undo step and a re-selection. The patch only acts while the list is open for its field, or while
+  a key it took is still held. Without Juno Harmony the mod works with no auto-fill and logs why.
+  The DLL is never bundled: `References/` (gitignored) is outside `Assets/`.
 
 ## Testing
 

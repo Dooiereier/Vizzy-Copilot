@@ -1,0 +1,121 @@
+namespace Assets.Scripts
+{
+    using System.Collections.Generic;
+    using TMPro;
+    using UnityEngine;
+    using UnityEngine.UI;
+
+    /// <summary>The list under a Funk field. Shows only; it takes no clicks, so the field keeps its focus.</summary>
+    public sealed class FunkList
+    {
+        private const int VisibleRows = 8;
+        private const float RowHeight = 26f;
+        private const float Width = 420f;
+
+        private static readonly Color Background = new Color(0.09f, 0.12f, 0.17f, 0.98f);
+        private static readonly Color Selected = new Color(0.16f, 0.42f, 0.72f, 1f);
+        private static readonly Color Clear = new Color(0f, 0f, 0f, 0f);
+
+        private readonly GameObject _root;
+        private readonly RectTransform _rect;
+        private readonly List<Image> _rowImages = new List<Image>();
+        private readonly List<TextMeshProUGUI> _rowTexts = new List<TextMeshProUGUI>();
+
+        public FunkList(TMP_InputField field)
+        {
+            var rootCanvas = field.GetComponentInParent<Canvas>().rootCanvas;
+            _root = new GameObject("VizzyFlightEditor.FunkList", typeof(RectTransform), typeof(Canvas), typeof(Image));
+            _rect = (RectTransform)_root.transform;
+            _rect.SetParent(rootCanvas.transform, false);
+            _rect.anchorMin = _rect.anchorMax = new Vector2(0.5f, 0.5f);
+            _rect.pivot = new Vector2(0f, 1f);
+            _rect.localScale = Vector3.one;
+
+            var canvas = _root.GetComponent<Canvas>();
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = 30000;
+
+            var background = _root.GetComponent<Image>();
+            background.color = Background;
+            background.raycastTarget = false;
+
+            for (var i = 0; i < VisibleRows; i++)
+            {
+                var row = new GameObject("Row", typeof(RectTransform), typeof(Image));
+                var rowRect = (RectTransform)row.transform;
+                rowRect.SetParent(_rect, false);
+                rowRect.anchorMin = new Vector2(0f, 1f);
+                rowRect.anchorMax = new Vector2(1f, 1f);
+                rowRect.pivot = new Vector2(0.5f, 1f);
+                rowRect.sizeDelta = new Vector2(0f, RowHeight);
+                rowRect.anchoredPosition = new Vector2(0f, -i * RowHeight);
+                var image = row.GetComponent<Image>();
+                image.raycastTarget = false;
+                _rowImages.Add(image);
+
+                var textObject = new GameObject("Text", typeof(RectTransform));
+                var textRect = (RectTransform)textObject.transform;
+                textRect.SetParent(rowRect, false);
+                textRect.anchorMin = Vector2.zero;
+                textRect.anchorMax = Vector2.one;
+                textRect.offsetMin = new Vector2(8f, 0f);
+                textRect.offsetMax = new Vector2(-8f, 0f);
+                var text = textObject.AddComponent<TextMeshProUGUI>();
+                text.font = field.textComponent.font;
+                text.fontSize = 16f;
+                text.color = Color.white;
+                text.alignment = TextAlignmentOptions.MidlineLeft;
+                text.enableWordWrapping = false;
+                text.overflowMode = TextOverflowModes.Ellipsis;
+                text.raycastTarget = false;
+                _rowTexts.Add(text);
+            }
+        }
+
+        public void Show(TMP_InputField field, IList<FunkSuggestion> suggestions, int selected)
+        {
+            var count = Mathf.Min(VisibleRows, suggestions.Count);
+            var first = Mathf.Clamp(selected - (VisibleRows / 2), 0, Mathf.Max(0, suggestions.Count - VisibleRows));
+            for (var i = 0; i < VisibleRows; i++)
+            {
+                var visible = i < count;
+                _rowImages[i].gameObject.SetActive(visible);
+                if (visible)
+                {
+                    _rowTexts[i].text = suggestions[first + i].Display;
+                    _rowImages[i].color = first + i == selected ? Selected : Clear;
+                }
+            }
+
+            var height = count * RowHeight;
+            _rect.sizeDelta = new Vector2(Width, height);
+            Place(field, height);
+            _root.SetActive(true);
+        }
+
+        public void Hide()
+        {
+            _root.SetActive(false);
+        }
+
+        public void Destroy()
+        {
+            Object.Destroy(_root);
+        }
+
+        /// <summary>Under the field, or above it when there's no room below.</summary>
+        private void Place(TMP_InputField field, float height)
+        {
+            var corners = new Vector3[4];
+            ((RectTransform)field.transform).GetWorldCorners(corners);
+            var parent = (RectTransform)_rect.parent;
+            var bottomLeft = parent.InverseTransformPoint(corners[0]);
+            var topLeft = parent.InverseTransformPoint(corners[1]);
+            var bounds = parent.rect;
+
+            var y = bottomLeft.y - height < bounds.yMin ? topLeft.y + height : bottomLeft.y;
+            var x = Mathf.Min(bottomLeft.x, bounds.xMax - Width);
+            _rect.localPosition = new Vector3(x, y, 0f);
+        }
+    }
+}
