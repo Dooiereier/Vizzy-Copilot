@@ -1,16 +1,11 @@
 namespace Assets.Scripts
 {
     using System;
-    using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
-    using System.Reflection;
-    using Assets.Scripts.Craft.FlightData;
     using Assets.Scripts.Vizzy.UI;
     using Assets.Scripts.Vizzy.UI.Elements;
-    using ModApi.Craft;
     using ModApi.Craft.Program.Expressions;
-    using ModApi.Expressions;
     using TMPro;
     using UnityEngine;
     using UnityEngine.EventSystems;
@@ -80,42 +75,11 @@ namespace Assets.Scripts
         private static FunkCatalog BuildCatalog(VizzyUIScript editor)
         {
             var catalog = new FunkCatalog();
-            // Non-public in the game's Context, and reading them keeps this list matching the game's.
-            var context = new Context(true);
-            foreach (DictionaryEntry function in ContextMember(context, "Functions"))
-            {
-                var method = (MethodInfo)function.Value.GetType().GetField("Item1").GetValue(function.Value);
-                var parameters = method.GetParameters().Select(parameter => parameter.Name);
-                var name = (string)function.Key;
-                catalog.TopLevel.Add(new FunkName(name, name + "(" + string.Join(", ", parameters) + ")"));
-            }
-
-            foreach (DictionaryEntry constant in ContextMember(context, "Constants"))
-            {
-                catalog.TopLevel.Add(new FunkName((string)constant.Key));
-            }
-
-            // The stateful functions and Vizzy's list functions have no parameter names to read.
-            foreach (var signature in new Dictionary<string, string>
-            {
-                { "PID", "PID(target, current, p, i, d)" },
-                { "smooth", "smooth(value, maxRate)" },
-                { "sum", "sum(value)" },
-                { "rate", "rate(value)" },
-                { "listLen", "listLen(\"name\")" },
-                { "listNum", "listNum(\"name\", index)" },
-                { "listBool", "listBool(\"name\", index)" },
-                { "listStr", "listStr(\"name\", index)" },
-                { "listVec", "listVec(\"name\", index)" },
-            })
-            {
-                catalog.TopLevel.RemoveAll(name => name.Name == signature.Key);
-                catalog.TopLevel.Add(new FunkName(signature.Key, signature.Value));
-            }
-
-            catalog.TopLevel.AddRange(ValueProperties(typeof(CraftControls)));
-            catalog.FlightData.AddRange(ValueProperties(typeof(CraftFlightData)));
-            catalog.OrbitData.AddRange(ValueProperties(typeof(CraftOrbitData)));
+            catalog.TopLevel.AddRange(FunkNames.Functions);
+            catalog.TopLevel.AddRange(FunkNames.Constants);
+            catalog.TopLevel.AddRange(FunkNames.Controls);
+            catalog.FlightData.AddRange(FunkNames.FlightData);
+            catalog.OrbitData.AddRange(FunkNames.OrbitData);
 
             // As the editor has them now, including ones just created.
             foreach (var variable in editor.FlightProgram.GlobalVariables.Variables.Where(variable => !variable.IsList))
@@ -124,27 +88,6 @@ namespace Assets.Scripts
             }
 
             return catalog;
-        }
-
-        public static IDictionary ContextMember(Context context, string name)
-        {
-            return (IDictionary)typeof(Context)
-                .GetProperty(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                .GetValue(context);
-        }
-
-        private static IEnumerable<FunkName> ValueProperties(Type type)
-        {
-            return type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Where(property => IsValueType(property.PropertyType))
-                .Select(property => new FunkName(property.Name));
-        }
-
-        private static bool IsValueType(Type type)
-        {
-            // Not Vector3: FD.AccelerationFrame compiled, then stopped the program when it ran.
-            return type == typeof(float) || type == typeof(double) || type == typeof(bool) || type == typeof(int) || type == typeof(short)
-                || type == typeof(Vector3d);
         }
 
         private void Awake()

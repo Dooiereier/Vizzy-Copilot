@@ -81,12 +81,12 @@ namespace Assets.Scripts
         private static IEnumerable<string> Tests(FlightProgramData data)
         {
             var context = new Context(true);
-            foreach (DictionaryEntry constant in FunkAutoFill.ContextMember(context, "Constants"))
+            foreach (DictionaryEntry constant in FunkNames.ContextMember(context, "Constants"))
             {
                 yield return (string)constant.Key;
             }
 
-            foreach (DictionaryEntry function in FunkAutoFill.ContextMember(context, "Functions"))
+            foreach (DictionaryEntry function in FunkNames.ContextMember(context, "Functions"))
             {
                 var method = (MethodInfo)function.Value.GetType().GetField("Item1").GetValue(function.Value);
                 yield return function.Key + "(" + string.Join(", ", method.GetParameters().Select(SampleArgument)) + ")";

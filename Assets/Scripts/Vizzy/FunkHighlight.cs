@@ -54,38 +54,12 @@ namespace Assets.Scripts.Vizzy
         private static readonly Color32 ColorVector = FromHex("#4EC9B0");   // v: 向量前缀 青
         private static readonly Color32 ColorError = FromHex("#FF4D4D");    // 语法错误 红
 
-        private static readonly HashSet<string> Functions = new HashSet<string>(StringComparer.Ordinal)
-        {
-            // Math?
-            "abs", "ceil", "clamp", "clamp01", "deltaAngle", "exp", "floor", "inverselerp", "lerp",
-            "lerpangle", "lerpunclamped", "log", "log10", "pingpong", "max", "min", "pow", "repeat",
-            "round", "sign", "smoothstep", "sqrt", "sin", "cos", "tan", "asin", "acos", "atan", "atan2",
-            // 向量函数
-            "angle", "clampMagnitude", "cross", "distance", "dot", "exclude", "isNaN", "lerp3",
-            "magnitude", "max3", "min3", "moveTowards", "normalize", "project", "projectOnPlane",
-            "reflect", "scale", "signedAngle", "slerp", "sqrMagnitude", "vec", "x", "y", "z",
-            // 列表检索器
-            "listNum", "listVec", "listBool", "listStr", "listLen",
-            // some extra stuff
-            "ln", "sum", "rate", "PID", "smooth"
-        };
+        private static readonly HashSet<string> Functions = NamesOf(FunkNames.Functions);
 
-        private static readonly HashSet<string> Keywords = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "pi", "E", "Rad2Deg", "Deg2Rad", "true", "false"
-        };
+        private static readonly HashSet<string> Keywords = NamesOf(FunkNames.Constants);
 
         // Controls 裸属性（CraftControls 属性，游戏 ResolveVariable 里直接 GetProperty(text) 注册）。
-        private static readonly HashSet<string> ControlsProperties = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "Brake", "EvaAnalogJump", "EvaMoveFwdAft", "EvaMoveUpDown", "EvaPitch", "EvaRoll",
-            "EvaShootTether", "EvaStrafe", "EvaTetherLength", "EvaTetherLengthOffset", "EvaTurn", "EvaWalk",
-            "OffsetBrake", "OffsetPitch", "OffsetRoll", "OffsetSlider1", "OffsetSlider2", "OffsetSlider3",
-            "OffsetSlider4", "OffsetTranslateForward", "OffsetTranslateRight", "OffsetTranslateUp", "OffsetYaw",
-            "Pitch", "PitchInputReceived", "Roll", "RollInputReceived", "Slider1", "Slider2", "Slider3",
-            "Slider4", "Throttle", "TranslateForward", "TranslateRight", "TranslateUp", "TranslationModeEnabled",
-            "Yaw", "YawInputReceived"
-        };
+        private static readonly HashSet<string> ControlsProperties = NamesOf(FunkNames.Controls);
 
         // 函数参数个数表（从游戏 Context.GetDefaults / Mathd / CraftService 提取，键统一小写）。
         // 只对表内已知函数做参数个数校验；sum/rate/PID/smooth 等特殊函数与自定义函数不校验。
@@ -111,30 +85,11 @@ namespace Assets.Scripts.Vizzy
 
         // FlightData 全部属性名（JNO XML Guide 社区指南 + 游戏 ICraftFlightData 提取）。
         // Funk 表达式里 FlightData.X / FD.X 的属性名必须在此表中。
-        private static readonly HashSet<string> FlightDataProperties = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "Acceleration", "AccelerationMagnitude", "AltitudeAboveGroundLevel", "AltitudeAboveSeaLevel",
-            "AltitudeAboveTerrain", "AngleOfAttack", "AngularVelocity", "AngularVelocityMagnitude",
-            "BankAngle", "CraftForward", "CraftRight", "CraftUp", "CurrentEngineThrust",
-            "CurrentEngineThrustUnscaled", "CurrentMass", "CurrentMassUnscaled", "CurrentReactionControlNozzleThrust",
-            "DeltaVStage", "DragAccelerationMagnitude", "East", "FuelMass", "Gravity", "GravityMagnitude",
-            "Grounded", "Heading", "InWater", "LateralSurfaceVelocity", "MachNumber", "MaxActiveEngineThrust",
-            "MaxActiveEngineThrustUnscaled", "North", "ParentPlanetOcclusion", "Pitch", "Position",
-            "PositionNormalized", "RemainingBattery", "RemainingFuelInStage", "RemainingMonopropellant",
-            "SideSlip", "SolarRadiationDirection", "SolarRadiationIntensity", "SupportsWarpBurn",
-            "SurfaceVelocity", "SurfaceVelocityMagnitude", "TimeDelta", "TimeMultiplier", "TimeReal",
-            "Velocity", "VelocityMagnitude", "VerticalSurfaceVelocity", "WeightedThrottleResponse",
-            "WeightedThrottleResponseTime", "Orbit"
-        };
+        private static readonly HashSet<string> FlightDataProperties = NamesOf(FunkNames.FlightData);
 
         // OrbitData 全部属性名（JNO XML Guide 社区指南 + 游戏 ICraftOrbitData 提取）。
         // 支持OrbitData.X 全称，以及 FlightData.Orbit.X 子对象链。
-        private static readonly HashSet<string> OrbitDataProperties = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "ApoapsisAltitude", "ApoapsisTime", "BurnNodeDeltaV", "Eccentricity", "Inclination",
-            "PeriapsisAltitude", "PeriapsisTime", "Period", "MeanAnomaly", "MeanMotion",
-            "PeriapsisArgument", "RightAscension", "TrueAnomaly", "SemiMajorAxis", "SemiMinorAxis"
-        };
+        private static readonly HashSet<string> OrbitDataProperties = NamesOf(FunkNames.OrbitData);
 
         // textComponent.GetInstanceID() -> 所属 TMP_InputField
         private static readonly Dictionary<int, TMP_InputField> _textToInput = new Dictionary<int, TMP_InputField>();
@@ -153,6 +108,17 @@ namespace Assets.Scripts.Vizzy
         /// 把 Funk 输入框的 textComponent 注册进字典并订阅 OnPreRenderText（块 Start 时调用）。
         /// 只处理真正的 Funk 表达式块；注释块等其他 TextInputElementScript 不订阅、不处理。
         /// </summary>
+        private static HashSet<string> NamesOf(IEnumerable<FunkName> names)
+        {
+            var set = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var name in names)
+            {
+                set.Add(name.Name);
+            }
+
+            return set;
+        }
+
         /// <summary>The fields of the last scene are gone, so nothing of them is kept.</summary>
         public static void ClearScene()
         {
@@ -989,6 +955,11 @@ namespace Assets.Scripts.Vizzy
              if (name.StartsWith("OrbitData.", StringComparison.Ordinal))
             {
                 path = name.Substring("OrbitData.".Length);
+                orbitRoot = true;
+            }
+            else if (name.StartsWith("OD.", StringComparison.Ordinal))
+            {
+                path = name.Substring("OD.".Length);
                 orbitRoot = true;
             }
             else if (name.StartsWith("FD.", StringComparison.Ordinal))
