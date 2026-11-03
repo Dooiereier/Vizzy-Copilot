@@ -165,7 +165,7 @@ namespace Assets.Scripts
                     new XAttribute("sprite", sprite)));
         }
 
-        /// <summary>Keeps the flyout level with the Vizzy button, and clear of the nav sphere flyout when that's open.</summary>
+        /// <summary>Keeps the flyout level with the Vizzy button, and clear of the nav sphere flyout when they'd overlap.</summary>
         private sealed class FlyoutPlacement : MonoBehaviour
         {
             private const float Gap = 10f;
@@ -194,10 +194,15 @@ namespace Assets.Scripts
                 _button.GetWorldCorners(_corners);
                 var buttonTop = parent.InverseTransformPoint(_corners[1]).y;
 
+                // Its row count varies, so it's only in the way when it reaches down this far.
                 var x = StockOffset;
                 if (_stockFlyout != null && _stockFlyout.gameObject.activeSelf)
                 {
-                    x -= _stockFlyout.rect.width + Gap;
+                    _stockFlyout.GetWorldCorners(_corners);
+                    if (parent.InverseTransformPoint(_corners[0]).y < buttonTop + Padding)
+                    {
+                        x -= _stockFlyout.rect.width + Gap;
+                    }
                 }
 
                 // Anchored to the parent's top right corner, with the row's padding above the button's top.
