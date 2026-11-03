@@ -29,6 +29,14 @@ namespace Assets.Scripts
                 .ToList();
         }
 
+        /// <summary>The selected part's program if it can be edited, otherwise null.</summary>
+        public static FlightProgramData Selected(ModApi.Flight.IFlightScene scene)
+        {
+            var data = scene.ViewManager.GameView.SelectedPart?.Data?.GetModifier<FlightProgramData>();
+            return data != null && data.FlightProgramXml != null && data.Script != null && !data.HideEditButton
+                && data.Part.GetModifier<MfdData>() == null ? data : null;
+        }
+
         public static string Key(FlightProgramData data)
         {
             // Not the craft node: a part keeps its id when a separation or docking changes the node.

@@ -21,13 +21,7 @@ namespace Assets.Scripts
             var remapped = oldProcess == null ? null : ThreadRemapper.Remap(oldProgram, newProgram, oldProcess);
             message = LogRemap(remapped);
 
-            // A beep's looping sound is only stopped by the craft service that StartProgram replaces.
-            var beep = script.GetComponent<UnityEngine.AudioSource>();
-            if (beep != null)
-            {
-                beep.volume = 0f;
-            }
-
+            SilenceBeep(script);
             data.FlightProgramXml = newProgram;
             data.ProcessXml = remapped == null ? null : new XElement(remapped.Process);
             script.StartProgram();
@@ -53,6 +47,16 @@ namespace Assets.Scripts
             return true;
         }
 
+        /// <summary>Starts a running part's program from the top, which fires "on start" again. Its program stays.</summary>
+        public static bool Restart(FlightProgramData data)
+        {
+            var script = data.Script;
+            SilenceBeep(script);
+            data.ProcessXml = null;
+            script.StartProgram();
+            return script.FlightProgram != null;
+        }
+
         /// <summary>For a part the game hasn't started yet: it starts from these, with no frame on the old program.</summary>
         public static string Prepare(FlightProgramData data, XElement newProgram)
         {
@@ -61,6 +65,16 @@ namespace Assets.Scripts
             data.FlightProgramXml = newProgram;
             data.ProcessXml = new XElement(remapped.Process);
             return message;
+        }
+
+        /// <summary>A beep's looping sound is only stopped by the craft service that StartProgram replaces.</summary>
+        private static void SilenceBeep(FlightProgramScript script)
+        {
+            var beep = script.GetComponent<UnityEngine.AudioSource>();
+            if (beep != null)
+            {
+                beep.volume = 0f;
+            }
         }
 
         private static string LogRemap(ThreadRemapper.Result remapped)

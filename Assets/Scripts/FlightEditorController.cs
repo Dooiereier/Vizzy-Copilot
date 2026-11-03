@@ -100,27 +100,96 @@ namespace Assets.Scripts
             }
         }
 
-        private void Open()
+        /// <summary>The Edit Vizzy button: the selected part's program, otherwise the same as the shortcut.</summary>
+        public void EditSelected()
+        {
+            RunGuarded("Couldn't open the editor: ", () =>
+            {
+                var scene = Game.Instance.FlightScene;
+                var selected = CraftPrograms.Selected(scene);
+                if (selected == null)
+                {
+                    Open();
+                }
+                else if (CanStart())
+                {
+                    ProgramPicker.Close();
+                    FlightPause.Hold();
+                    OpenProgram(selected);
+                }
+            });
+        }
+
+        /// <summary>The Restart Vizzy button: only ever after asking, and only the selected part's program.</summary>
+        public void AskToRestartSelected()
+        {
+            RunGuarded("Couldn't restart the program: ", () =>
+            {
+                if (!CanStart())
+                {
+                    return;
+                }
+
+                var scene = Game.Instance.FlightScene;
+                var data = CraftPrograms.Selected(scene);
+                if (data == null)
+                {
+                    scene.FlightSceneUI.ShowMessage("Select a part with a Vizzy program first.");
+                    return;
+                }
+
+                FlightPause.Hold();
+                var dialog = Game.Instance.UserInterface.CreateMessageDialog(ModApi.Ui.MessageDialogType.OkayCancel, null, true);
+                dialog.UseDangerButtonStyle = true;
+                dialog.MessageText = "Restart " + data.Part.DisplayName + "'s Vizzy program from the top? Its threads and variables reset. Other programs keep running.";
+                dialog.Closed += _ => FlightPause.Release();
+                dialog.OkayClicked += _ =>
+                {
+                    dialog.Close();
+                    RunGuarded("Couldn't restart the program: ", () =>
+                    {
+                        if (!ProgramSwapper.Restart(data))
+                        {
+                            scene.FlightSceneUI.ShowMessage("The Vizzy program didn't load: see Player.log.");
+                        }
+                    });
+                };
+            });
+        }
+
+        /// <summary>No dialog in the way, no editor open, no warp.</summary>
+        private bool CanStart()
         {
             var ui = Game.Instance.UserInterface;
             if (ui.AnyDialogsOpen || ui.IsTextInputFocused || this.Session?.IsOpen == true)
             {
-                return;
+                return false;
             }
 
+            var scene = Game.Instance.FlightScene;
+            if (scene.TimeManager.CurrentMode.WarpMode)
+            {
+                scene.FlightSceneUI.ShowMessage("Leave time warp before changing a Vizzy program.");
+                return false;
+            }
+
+            return true;
+        }
+
+        private void Open()
+        {
             if (ProgramPicker.IsOpen)
             {
                 ProgramPicker.Close();
                 return;
             }
 
-            var scene = Game.Instance.FlightScene;
-            if (scene.TimeManager.CurrentMode.WarpMode)
+            if (!CanStart())
             {
-                scene.FlightSceneUI.ShowMessage("Leave time warp before editing a Vizzy program.");
                 return;
             }
 
+            var scene = Game.Instance.FlightScene;
             var programs = CraftPrograms.Editable(scene.CraftNode.CraftScript);
             if (programs.Count == 0)
             {

@@ -49,6 +49,7 @@ namespace Assets.Scripts
         private static void StartFeatures()
         {
             FlightEditorUi.Register();
+            FlightButtons.Register();
 
             var harmony = new HarmonyLib.Harmony("VizzyStudio");
             var applied = 0;
@@ -97,6 +98,7 @@ namespace Assets.Scripts
                 host.AddComponent<FlightEditorController>();
                 host.AddComponent<FunkAutoFill>();
                 host.AddComponent<FunkCheck>();
+                FlightButtons.Connect();
             }
             else
             {

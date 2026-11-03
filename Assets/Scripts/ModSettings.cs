@@ -26,6 +26,8 @@ namespace Assets.Scripts
 
         public BoolSetting DebugLogging { get; private set; }
 
+        public BoolSetting ShowFlightButtons { get; private set; }
+
         public BoolSetting FunkAutoFill { get; private set; }
 
         public BoolSetting FunkSyntaxHighlight { get; private set; }
@@ -51,6 +53,10 @@ namespace Assets.Scripts
             this.DebugLogging = this.CreateBool("Debug Logging", "DebugLogging")
                 .SetDescription("Writes thread positions and other details to Player.log.")
                 .SetDefault(false);
+
+            this.ShowFlightButtons = this.CreateBool("Show Flight Buttons", "ShowFlightButtons")
+                .SetDescription("Shows Edit Vizzy and Restart Vizzy buttons on the flight view panel. Applies from the next flight.")
+                .SetDefault(true);
 
             this.FunkSyntaxHighlight = this.CreateBool("Funk Syntax Highlight", "FunkSyntaxHighlight")
                 .SetDescription("Colors Funk fields and marks errors in red, in the designer and in flight.")
