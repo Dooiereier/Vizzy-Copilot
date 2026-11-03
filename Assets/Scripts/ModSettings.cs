@@ -3,10 +3,86 @@ namespace Assets.Scripts
     using ModApi.Settings.Core;
     using UnityEngine;
 
-    /// <summary>The letter keys the editor shortcut can use.</summary>
+    /// <summary>The letter keys the editor shortcut can use, always with Shift.</summary>
     public enum EditorKey
     {
-        A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z,
+        [EnumOption("Shift - A")]
+        A,
+
+        [EnumOption("Shift - B")]
+        B,
+
+        [EnumOption("Shift - C")]
+        C,
+
+        [EnumOption("Shift - D")]
+        D,
+
+        [EnumOption("Shift - E")]
+        E,
+
+        [EnumOption("Shift - F")]
+        F,
+
+        [EnumOption("Shift - G")]
+        G,
+
+        [EnumOption("Shift - H")]
+        H,
+
+        [EnumOption("Shift - I")]
+        I,
+
+        [EnumOption("Shift - J")]
+        J,
+
+        [EnumOption("Shift - K")]
+        K,
+
+        [EnumOption("Shift - L")]
+        L,
+
+        [EnumOption("Shift - M")]
+        M,
+
+        [EnumOption("Shift - N")]
+        N,
+
+        [EnumOption("Shift - O")]
+        O,
+
+        [EnumOption("Shift - P")]
+        P,
+
+        [EnumOption("Shift - Q")]
+        Q,
+
+        [EnumOption("Shift - R")]
+        R,
+
+        [EnumOption("Shift - S")]
+        S,
+
+        [EnumOption("Shift - T")]
+        T,
+
+        [EnumOption("Shift - U")]
+        U,
+
+        [EnumOption("Shift - V")]
+        V,
+
+        [EnumOption("Shift - W")]
+        W,
+
+        [EnumOption("Shift - X")]
+        X,
+
+        [EnumOption("Shift - Y")]
+        Y,
+
+        [EnumOption("Shift - Z")]
+        Z,
     }
 
     /// <summary>The mod's settings (Settings → Mods → Vizzy Studio).</summary>
@@ -22,8 +98,6 @@ namespace Assets.Scripts
 
         public EnumSetting<EditorKey> Key { get; private set; }
 
-        public BoolSetting RequireShift { get; private set; }
-
         public BoolSetting DebugLogging { get; private set; }
 
         public BoolSetting ShowFlightButtons { get; private set; }
@@ -35,7 +109,7 @@ namespace Assets.Scripts
         public KeyCode KeyCode => KeyCode.A + (int)this.Key.Value;
 
         /// <summary>Gets the shortcut as text, for messages.</summary>
-        public string ShortcutText => (this.RequireShift.Value ? "Shift+" : string.Empty) + this.Key.Value;
+        public string ShortcutText => "Shift+" + (char)('A' + (int)this.Key.Value);
 
         // XML names are given explicitly: the game derives them from the display name otherwise.
         protected override void InitializeSettings()
@@ -43,10 +117,6 @@ namespace Assets.Scripts
             this.Key = this.CreateEnum<EditorKey>("Editor Key", "Key")
                 .SetDescription("Opens the Vizzy editor in flight. In the editor it applies the edit and returns to flight. With Alt it returns to the quicksave's program.")
                 .SetDefault(EditorKey.O);
-
-            this.RequireShift = this.CreateBool("Editor Key Needs Shift", "RequireShift")
-                .SetDescription("The editor key only works together with Shift.")
-                .SetDefault(true);
 
             this.DebugLogging = this.CreateBool("Debug Logging", "DebugLogging")
                 .SetDescription("Writes thread positions and other details to Player.log.")

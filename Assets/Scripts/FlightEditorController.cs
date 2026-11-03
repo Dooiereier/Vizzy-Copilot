@@ -52,7 +52,7 @@ namespace Assets.Scripts
 
             var settings = ModSettings.Instance;
             var shift = UnityEngine.Input.GetKey(KeyCode.LeftShift) || UnityEngine.Input.GetKey(KeyCode.RightShift);
-            if ((shift || !settings.RequireShift.Value) && UnityEngine.Input.GetKeyDown(settings.KeyCode)
+            if (shift && UnityEngine.Input.GetKeyDown(settings.KeyCode)
                 && !Game.Instance.UserInterface.IgnoreKeyboardInputs)
             {
                 var alt = UnityEngine.Input.GetKey(KeyCode.LeftAlt) || UnityEngine.Input.GetKey(KeyCode.RightAlt);
