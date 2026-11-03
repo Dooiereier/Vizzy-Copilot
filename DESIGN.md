@@ -66,7 +66,9 @@ Known limits:
 - `ProgramPicker`: choice panel for crafts with several programs.
 - `CraftPrograms`: which programs a craft has. `ProgramSwapper`: puts a program in place.
 - `ThreadRemapper`, `LatestEdits`, `FunkCompletion`: no game code, tested offline.
-- `FunkAutoFill`, `FunkCatalog`, `FunkList`, `FunkInputPatch`: auto-fill's game side.
+- `FunkAutoFill`, `FunkList`, `FunkInputPatch`: auto-fill's game side.
+- `FunkCheck`: diagnostic, off by default. Tests every Funk name from outside program threads, so a
+  failure can't stop a running program. It reads `_craftService` through reflection.
 
 ## Lifecycle
 

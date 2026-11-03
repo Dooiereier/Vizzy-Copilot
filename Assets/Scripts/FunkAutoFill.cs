@@ -126,7 +126,7 @@ namespace Assets.Scripts
             return catalog;
         }
 
-        private static IDictionary ContextMember(Context context, string name)
+        public static IDictionary ContextMember(Context context, string name)
         {
             return (IDictionary)typeof(Context)
                 .GetProperty(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)

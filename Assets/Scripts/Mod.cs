@@ -66,6 +66,7 @@ namespace Assets.Scripts
                 var host = new GameObject("VizzyFlightEditor.Controller");
                 host.AddComponent<FlightEditorController>();
                 host.AddComponent<FunkAutoFill>();
+                host.AddComponent<FunkCheck>();
             }
             else
             {

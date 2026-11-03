@@ -28,6 +28,8 @@ namespace Assets.Scripts
 
         public BoolSetting FunkAutoFill { get; private set; }
 
+        public BoolSetting RunFunkCheck { get; private set; }
+
         public KeyCode KeyCode => KeyCode.A + (int)this.Key.Value;
 
         /// <summary>Gets the shortcut as text, for messages.</summary>
@@ -46,6 +48,10 @@ namespace Assets.Scripts
 
             this.DebugLogging = this.CreateBool("Debug Logging", "DebugLogging")
                 .SetDescription("Writes thread positions and other details to Player.log.")
+                .SetDefault(false);
+
+            this.RunFunkCheck = this.CreateBool("Run Funk Check", "RunFunkCheck")
+                .SetDescription("Diagnostic: at each flight start, tests every Funk name and writes the results to Player.log. Running programs aren't affected. Needs a craft with a running Vizzy program.")
                 .SetDefault(false);
 
             this.FunkAutoFill = this.CreateBool("Funk Auto-Fill", "FunkAutoFill")
