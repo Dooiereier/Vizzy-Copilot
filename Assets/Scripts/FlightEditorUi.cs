@@ -74,7 +74,7 @@ namespace Assets.Scripts
             try
             {
                 XNamespace ns = XmlLayoutConstants.XmlNamespace;
-                FindButton(request, "OnButtonSaveClicked();").AddAfterSelf(
+                FindButton(request, "OnButtonLoadClicked();").AddAfterSelf(
                     new XElement(ns + "Button",
                         new XAttribute("id", CleanButtonId),
                         new XAttribute("class", "btn"),
