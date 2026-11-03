@@ -46,10 +46,11 @@ namespace Assets.Scripts
             }
 
             _debuggerLoaded = assemblies.Contains("VizzyDebugger");
-            if (_debuggerLoaded)
+            var replaced = new[] { "VizzyDebugger", "Vizzy Exporter", "Vizzy McBlinky" }.Where(assemblies.Contains).ToList();
+            if (replaced.Count > 0)
             {
-                _startupProblem = "Vizzy Studio includes Vizzy Debugger's features. Remove the Vizzy Debugger mod, or both will act on the same fields.";
-                Debug.LogWarning("[VizzyStudio] Vizzy Debugger is also loaded.");
+                _startupProblem = "Vizzy Studio includes the features of " + string.Join(", ", replaced) + ". Remove those mods, or both will act on the same editor.";
+                Debug.LogWarning("[VizzyStudio] Replaced mods are also loaded: " + string.Join(", ", replaced));
             }
 
             try
@@ -108,6 +109,17 @@ namespace Assets.Scripts
                     failed++;
                     Debug.LogWarning("[VizzyStudio] Patch " + patch.Name + " failed: " + e);
                 }
+            }
+
+            try
+            {
+                Assets.Scripts.Exporter.ContextMenuPatcher.Apply(harmony);
+                applied++;
+            }
+            catch (Exception e)
+            {
+                failed++;
+                Debug.LogWarning("[VizzyStudio] The export menu is off: " + e);
             }
 
             Debug.Log("[VizzyStudio] Patches: " + applied + " applied, " + failed + " failed.");

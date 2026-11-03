@@ -102,6 +102,8 @@ namespace Assets.Scripts
 
         public BoolSetting ShowFlightButtons { get; private set; }
 
+        public BoolSetting ExportMenu { get; private set; }
+
         public BoolSetting FunkAutoFill { get; private set; }
 
         public BoolSetting FunkSyntaxHighlight { get; private set; }
@@ -124,6 +126,10 @@ namespace Assets.Scripts
 
             this.ShowFlightButtons = this.CreateBool("Show Flight Buttons", "ShowFlightButtons")
                 .SetDescription("Shows Edit Vizzy and Restart Vizzy buttons on the flight view panel. Applies from the next flight.")
+                .SetDefault(true);
+
+            this.ExportMenu = this.CreateBool("Export Menu", "ExportMenu")
+                .SetDescription("Right-click a Vizzy block to export it, with the variables and custom blocks it needs, to another saved program.")
                 .SetDefault(true);
 
             this.FunkSyntaxHighlight = this.CreateBool("Funk Syntax Highlight", "FunkSyntaxHighlight")
