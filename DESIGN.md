@@ -71,6 +71,8 @@ Known limits:
 - `CraftPrograms`: which programs a craft has. `ProgramSwapper`: puts a program in place.
 - `ThreadRemapper`, `LatestEdits`, `FunkCompletion`: no game code, tested offline.
 - `FunkAutoFill`, `FunkList`, `FunkInputPatch`: auto-fill's game side.
+- `FunkHighlight`, `FlightButtons`, `MatrixBlocks`, `VizzyVariableCleaner`: from Vizzy Debugger.
+- `Exporter/`, `VizzyOrganizer/`: from Vizzy Exporter and Vizzy McBlinky.
 
 ## Lifecycle
 
@@ -136,7 +138,18 @@ that mod loads, before later mods. `_loadPriority` is above Juno Harmony's.
   them after asking, as one Undo step. Names in Funk text count as used, and it removes nothing if a Funk block's
   text is built by other blocks. It can't see another part reading a variable through `Part.VZ.Name`.
 
-Vizzy Exporter and MFD Runtime Editor are planned later; neither may bring its own copy of Harmony.
+MFD Runtime Editor is planned later; it may not bring its own copy of Harmony.
+
+## Merged from Vizzy Exporter and Vizzy McBlinky
+
+Both by Dooiereier. Replace the separate mods, and the mod warns if they're also loaded.
+
+- **Export** (`Exporter/`): right-click a block for an inspector panel with Export To, then the game's Load
+  Program list (`LoadProgramViewModel`). It writes to the target program's file on disk, with the variables and
+  custom blocks it needs. The right-click needs a patch on `OnPointerClick`, as there's no public click event.
+  Export Menu turns it off.
+- **Jump To** (`VizzyOrganizer/`): a left-bar button and stock flyout built in the editor's XML, listing
+  `//Path/To` tag comments. Selecting a row pans the canvas. Tags are plain comments, so crafts don't need the mod.
 
 ## Testing
 

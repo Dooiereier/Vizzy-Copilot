@@ -1,0 +1,318 @@
+namespace Assets.Scripts.VizzyOrganizer
+{
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Xml.Linq;
+    using Assets.Scripts.Vizzy.UI;
+    using Assets.Scripts.Vizzy.UI.Elements;
+    using ModApi.Craft.Program;
+    using ModApi.Craft.Program.Instructions;
+    using ModApi.Ui;
+    using TMPro;
+    using UI.Xml;
+    using UnityEngine;
+    using UnityEngine.UI;
+
+    /// <summary>
+    /// A Jump To flyout on the Vizzy editor's left bar, listing "//Path/To" tag comments as a tree. Selecting
+    /// a row pans the canvas to that folder's chains; nothing is hidden or changed, and tags are plain comments.
+    /// Built from the editor's own XML, so it looks like the toolbox and menu flyouts.
+    /// </summary>
+    public sealed class VizzyJumpPanel : MonoBehaviour
+    {
+        private const string ButtonId = "vizzy-studio-jump-button";
+        private const string FlyoutId = "vizzy-studio-jump";
+        private const string CloseId = "vizzy-studio-jump-close";
+        private const string RowsId = "vizzy-studio-jump-rows";
+        private const string TemplateId = "vizzy-studio-jump-row";
+        private const float IndentPerDepth = 16f;
+
+        private static readonly Color SelectedRow = new Color(0.16f, 0.42f, 0.72f, 1f);
+
+        private readonly List<Image> _rowImages = new List<Image>();
+        private readonly List<Color> _rowColors = new List<Color>();
+        private VizzyUIController _controller;
+        private XmlElement _button;
+        private XmlElement _flyout;
+        private Transform _rows;
+        private GameObject _template;
+        private VizzyFolderIndex _index = new VizzyFolderIndex();
+
+        // null = everything. Otherwise the ids owned by the selected row.
+        private HashSet<int> _selectedIds;
+
+        /// <summary>Adds the button and flyout to the editor's XML, then connects them once it's built.</summary>
+        public static void AddTo(BuildUserInterfaceXmlRequest request)
+        {
+            XNamespace ns = XmlLayoutConstants.XmlNamespace;
+            var panels = request.XmlDocument.Descendants(ns + "Panel").ToList();
+            var menuButton = panels.First(panel => (string)panel.Attribute("id") == "menu-button");
+            menuButton.AddAfterSelf(
+                new XElement(ns + "Panel",
+                    new XAttribute("id", ButtonId),
+                    new XAttribute("name", "JumpTo"),
+                    new XAttribute("class", "toggle-button audio-btn-click"),
+                    new XAttribute("tooltip", "Jump To"),
+                    new XElement(ns + "Image",
+                        new XAttribute("class", "toggle-button-icon"),
+                        new XAttribute("sprite", "VizzyStudio/Sprites/IconVariables"))));
+
+            panels.First(panel => (string)panel.Attribute("id") == "menu").AddAfterSelf(
+                new XElement(ns + "Panel",
+                    new XAttribute("id", FlyoutId),
+                    new XAttribute("class", "panel flyout"),
+                    new XAttribute("height", "100%"),
+                    new XAttribute("width", "300"),
+                    new XAttribute("active", "false"),
+                    new XElement(ns + "Panel",
+                        new XAttribute("class", "flyout-header"),
+                        new XElement(ns + "TextMeshPro", new XAttribute("text", "JUMP TO")),
+                        new XElement(ns + "Image",
+                            new XAttribute("id", CloseId),
+                            new XAttribute("class", "flyout-close-button audio-btn-back"))),
+                    new XElement(ns + "VerticalScrollView",
+                        new XAttribute("class", "no-image"),
+                        new XAttribute("offsetMax", "0 -30"),
+                        new XElement(ns + "VerticalLayout",
+                            new XAttribute("id", RowsId),
+                            new XAttribute("class", "no-image"),
+                            new XAttribute("childForceExpandHeight", "false"),
+                            new XAttribute("contentSizeFitter", "vertical"),
+                            new XAttribute("padding", "10"),
+                            new XAttribute("spacing", "6"),
+                            new XElement(ns + "Button",
+                                new XAttribute("id", TemplateId),
+                                new XAttribute("class", "btn audio-btn-click"),
+                                new XAttribute("preferredHeight", "30"),
+                                new XAttribute("active", "false"),
+                                new XElement(ns + "TextMeshPro", new XAttribute("text", string.Empty)))))));
+
+            request.AddOnLayoutRebuiltAction(controller =>
+            {
+                if (controller is VizzyUIController vizzy && vizzy.GetComponent<VizzyJumpPanel>() == null)
+                {
+                    vizzy.gameObject.AddComponent<VizzyJumpPanel>().Connect(vizzy);
+                }
+            });
+        }
+
+        private static Color ColorForName(string name)
+        {
+            // Stable per name, so a folder's color doesn't shift as others come and go.
+            var hash = name.Aggregate(17, (total, c) => unchecked((total * 31) + c));
+            return Color.HSVToRGB((hash & 0x7fffffff) % 360 / 360f, 0.55f, 1f);
+        }
+
+        private static int GetInstructionId(ProgramInstruction instruction) => ((IInstructionId)instruction).Id;
+
+        private void Connect(VizzyUIController controller)
+        {
+            _controller = controller;
+            var layout = (XmlLayout)((IXmlLayoutController)controller).XmlLayout;
+            _flyout = layout.GetElementById(FlyoutId);
+            _rows = layout.GetElementById(RowsId).transform;
+            _template = layout.GetElementById(TemplateId).gameObject;
+            _button = layout.GetElementById(ButtonId);
+            _button.AddOnClickEvent(Toggle);
+            layout.GetElementById(CloseId).AddOnClickEvent(HideFlyout);
+        }
+
+        /// <summary>A stock flyout opening closes this one, as they share the same space.</summary>
+        private void Update()
+        {
+            if (_flyout != null && _flyout.gameObject.activeSelf && _controller.SelectedCategoryButton != null)
+            {
+                HideFlyout();
+            }
+        }
+
+        private void Toggle()
+        {
+            if (_flyout.gameObject.activeSelf)
+            {
+                HideFlyout();
+                return;
+            }
+
+            _controller.OnClosePanelClicked();
+            _button.AddClass("toggle-button-toggled");
+            _flyout.Show();
+            Refresh();
+        }
+
+        private void HideFlyout()
+        {
+            _button.RemoveClass("toggle-button-toggled");
+            _flyout.Hide();
+        }
+
+        /// <summary>Rebuilds the tree from the program as the editor has it now.</summary>
+        private void Refresh()
+        {
+            var editor = _controller.VizzyUI;
+
+            // Comment text has no public accessor, so it's read from the saved form, keyed by block id.
+            var commentTextById = new Dictionary<int, string>();
+            foreach (var comment in editor.SaveFlightProgram().Descendants("Comment"))
+            {
+                if (int.TryParse((string)comment.Attribute("id"), out var id))
+                {
+                    commentTextById[id] = (string)comment.Element("Constant")?.Attribute("text");
+                }
+            }
+
+            _index = VizzyFolderIndex.Build(editor.FlightProgram, comment =>
+                commentTextById.TryGetValue(GetInstructionId(comment), out var text) ? text : null);
+
+            foreach (Transform child in _rows)
+            {
+                if (child.gameObject != _template)
+                {
+                    Destroy(child.gameObject);
+                }
+            }
+
+            _rowImages.Clear();
+            _rowColors.Clear();
+            _selectedIds = null;
+            AddRow("All", 0, null, null);
+            foreach (var folder in _index.Root.Children.Values.OrderBy(folder => folder.Name))
+            {
+                AddFolderRows(folder, 1, ColorForName(folder.Name));
+            }
+        }
+
+        private void AddFolderRows(VizzyFolderNode folder, int depth, Color color)
+        {
+            AddRow(folder.Name, depth, new HashSet<int>(folder.GetAllInstructionIds()), color);
+            foreach (var child in folder.Children.Values.OrderBy(child => child.Name))
+            {
+                AddFolderRows(child, depth + 1, color);
+            }
+        }
+
+        private void AddRow(string label, int depth, HashSet<int> ids, Color? color)
+        {
+            var row = Instantiate(_template, _rows);
+            row.SetActive(true);
+            var text = row.GetComponentInChildren<TextMeshProUGUI>(true);
+            text.text = label;
+            text.alignment = TextAlignmentOptions.MidlineLeft;
+            text.margin = new Vector4(8f + (Mathf.Max(0, depth - 1) * IndentPerDepth), 0f, 4f, 0f);
+            text.fontStyle = depth <= 1 ? FontStyles.Bold : FontStyles.Normal;
+            if (color != null)
+            {
+                text.color = color.Value;
+            }
+
+            var image = row.GetComponent<Image>();
+            _rowImages.Add(image);
+            _rowColors.Add(image.color);
+            var index = _rowImages.Count - 1;
+            row.GetComponent<Button>().onClick.AddListener(() =>
+            {
+                for (var i = 0; i < _rowImages.Count; i++)
+                {
+                    _rowImages[i].color = i == index ? SelectedRow : _rowColors[i];
+                }
+
+                _selectedIds = ids;
+                ApplyFilter();
+            });
+        }
+
+        // The viewport's own pan position before we ever focused a folder - restored when
+        // going back to "All", so the camera doesn't stay wherever it was left panned to.
+        private Vector2? _originalViewportPosition;
+
+        // 0 = bottom of the viewport, 1 = top. 0.9 puts the target near the very top, leaving
+        // most of the screen below it for the chain content that extends downward from there.
+        private const float TargetVerticalFraction = 0.9f;
+
+        // 0 = left edge of the viewport, 1 = right. 0.4 puts the target left of center.
+        private const float TargetHorizontalFraction = 0.4f;
+
+        // Selecting a folder only pans the camera. Nothing is ever hidden or altered.
+        private void ApplyFilter()
+        {
+            var programContainer = _controller.ProgramContainer;
+            if (programContainer == null)
+                return;
+
+            if (_selectedIds == null)
+            {
+                PanToBoundsCenter(new List<Vector3>());
+                return;
+            }
+
+            var chainIdGroups = VizzyFolderIndex.GetChainIdGroups(_controller.VizzyUI?.FlightProgram);
+            var matchingChains = chainIdGroups.Where(chain => chain.Any(id => _selectedIds.Contains(id))).ToList();
+
+            var idToTopLevelBlock = new Dictionary<int, BlockElementScript>();
+            foreach (var block in programContainer.transform.GetComponentsInChildren<BlockElementScript>(true))
+                if (block.Parent == null && block.Node is IInstructionId withId)
+                    idToTopLevelBlock[withId.Id] = block;
+
+            // One position per chain - its own topmost/head block - not one per instruction,
+            // so a long chain doesn't outweigh a short one in the average.
+            var chainHeadWorldPositions = new List<Vector3>();
+            foreach (var chain in matchingChains)
+            {
+                var headId = chain.FirstOrDefault(idToTopLevelBlock.ContainsKey);
+                if (idToTopLevelBlock.TryGetValue(headId, out var headBlock))
+                    chainHeadWorldPositions.Add(headBlock.RectTransform.position);
+            }
+
+            PanToBoundsCenter(chainHeadWorldPositions);
+        }
+
+        // Pans the viewport to the mean position of each matching chain's own top block - each
+        // chain counts once regardless of how many instructions it has, so this lands wherever
+        // the relevant chains are clustered, rather than the bounding box's min/max midpoint
+        // (which ignores clustering entirely and only depends on the two most extreme points).
+        // Restores the original pan when back on "All".
+        private void PanToBoundsCenter(List<Vector3> visiblePositions)
+        {
+            var viewportTransform = _controller.VizzyUI?.ProgramTransform;
+            var programContainer = _controller.ProgramContainer;
+            if (viewportTransform == null || programContainer == null)
+                return;
+
+            if (_selectedIds == null || visiblePositions.Count == 0)
+            {
+                if (_originalViewportPosition.HasValue)
+                    viewportTransform.anchoredPosition = _originalViewportPosition.Value;
+                _originalViewportPosition = null;
+                return;
+            }
+
+            if (!_originalViewportPosition.HasValue)
+                _originalViewportPosition = viewportTransform.anchoredPosition;
+
+            var sum = Vector3.zero;
+            foreach (var pos in visiblePositions)
+                sum += pos;
+            var meanWorld = sum / visiblePositions.Count;
+
+            // The true, fixed screen reference is the outer viewport frame
+            // (ProgramContainerScript's own rect - it receives pan/zoom input but doesn't
+            // move itself), not viewportTransform's own world position, which moves with the pan.
+            //
+            // Biased toward the top (not dead center) - chain content extends downward from
+            // its head, so putting the head near the top leaves more room below to actually
+            // see it. Also biased left of center horizontally.
+            var viewportRect = (RectTransform)programContainer.transform;
+            var targetLocal = new Vector3(
+                viewportRect.rect.xMin + viewportRect.rect.width * TargetHorizontalFraction,
+                viewportRect.rect.yMin + viewportRect.rect.height * TargetVerticalFraction,
+                0f);
+            var fixedTargetWorld = viewportRect.TransformPoint(targetLocal);
+
+            var deltaWorld = fixedTargetWorld - meanWorld;
+            var parent = viewportTransform.parent;
+            var deltaLocal = parent != null ? parent.InverseTransformVector(deltaWorld) : deltaWorld;
+            viewportTransform.anchoredPosition += (Vector2)deltaLocal;
+        }
+    }
+}

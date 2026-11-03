@@ -26,7 +26,7 @@ facts in its `reference/juno-facts.md`.
   without Unity. `python3 tools/run_tests.py` (same argument) runs the offline tests.
 - On a fresh clone, put a Harmony 2.4.2.0 package in `References/com.pardeike.harmony` (gitignored) before opening
   Unity or compiling. In-game, the Juno Harmony mod provides it.
-- Must keep working with Vizzy McBlinky. Replaces Vizzy Debugger, whose code by Oxeter and Torifune is merged
-  here with their agreement.
+- Replaces Vizzy Debugger, whose code by Oxeter and Torifune is merged here with their agreement, and Vizzy
+  Exporter and Vizzy McBlinky.
 - Logs: `~/Library/Logs/Jundroo/SimpleRockets 2/Player.log` (lines start with `[VizzyStudio]`).
   The game keeps only the last two sessions: read them right after a test.

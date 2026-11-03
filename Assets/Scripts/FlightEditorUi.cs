@@ -62,6 +62,15 @@ namespace Assets.Scripts
         private static void OnBuildVizzyUi(BuildUserInterfaceXmlRequest request)
         {
             AddCleanVariablesButton(request);
+            try
+            {
+                Assets.Scripts.VizzyOrganizer.VizzyJumpPanel.AddTo(request);
+            }
+            catch (Exception e)
+            {
+                EditorLog.Warning("Couldn't add the Jump To flyout: " + e);
+            }
+
             if (BuildingOurEditor)
             {
                 ReplaceApplyAndCancel(request);
