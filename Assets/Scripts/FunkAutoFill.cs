@@ -142,8 +142,9 @@ namespace Assets.Scripts
 
         private static bool IsValueType(Type type)
         {
+            // Not Vector3: FD.AccelerationFrame compiled, then stopped the program when it ran.
             return type == typeof(float) || type == typeof(double) || type == typeof(bool) || type == typeof(int) || type == typeof(short)
-                || type == typeof(Vector3d) || type == typeof(Vector3);
+                || type == typeof(Vector3d);
         }
 
         private void Awake()

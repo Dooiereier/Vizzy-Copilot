@@ -103,7 +103,8 @@ A list under a Funk field while typing: Up and Down choose, Enter takes it, Esc 
   defaults, `CraftControls`, `CraftFlightData`, `CraftOrbitData` properties of value types, the Vizzy list
   functions and the program's variables (a bare name for a number, `v:` for a vector). It runs only in
   Funk fields (`EvaluationExpression`) of a Vizzy editor, in the designer or in flight, whichever opened it.
-  It only ever changes text the player chooses to insert. Part references aren't offered.
+  It only ever changes text the player chooses to insert. Part references aren't offered, nor are
+  `Vector3` properties: `FD.AccelerationFrame` stopped a running program with `TargetParameterCountException`.
 - **Ranking:** start-of-name matches first, then recent use, use in this program, a short common list,
   then alphabetical. Flight and orbit names also appear, with their prefix, after 2 typed characters.
 - **Harmony, optional.** One prefix on `TMP_InputField.OnUpdateSelected`: the field reads queued key events
