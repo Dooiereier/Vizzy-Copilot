@@ -82,7 +82,8 @@ milestone.
 
 A list under a Funk field while typing, Up/Down to move, Enter to take, Esc to close. Names come from
 the game at runtime (`Context.Functions`, its constants and `SpecialFunctions`, and the `CraftControls`,
-`CraftFlightData`, `CraftOrbitData` properties), filtered by what's been typed (`FD.`, `OD.`, `v:`).
+`CraftFlightData`, `CraftOrbitData` properties, and the program's variables: a bare name for a number,
+`v:` for a vector), filtered by what's been typed (`FD.`, `OD.`, `v:`).
 Ranked by prefix match, recent use, use in this program, a short common list, then alphabetical. The
 text field handles those keys itself, so the mod restores the cursor or re-selects the field after
 it. `FunkKeyTest` is the temporary in-game check of that.
