@@ -1,5 +1,5 @@
 {
-	"name": "Vizzy Flight Editor",
+	"name": "Vizzy Copilot",
 	"references": [
 		"UnityEngine.UI",
 		"Unity.TextMeshPro"
