@@ -3,12 +3,14 @@ namespace Assets.Scripts
     using System;
     using System.Linq;
     using System.Runtime.CompilerServices;
+    using Assets.Scripts.Vizzy;
     using ModApi.Scenes.Events;
     using UnityEngine;
 
     public class Mod : ModApi.Mods.GameMod
     {
-        private static bool _patched;
+        private static bool _started;
+        private static string _startupProblem;
 
         private Mod() : base()
         {
@@ -16,51 +18,79 @@ namespace Assets.Scripts
 
         public static Mod Instance { get; } = GetModInstance<Mod>();
 
-        // Programs stay ordinary stock XML, so crafts and saves never need this mod.
         public override bool IsModRequiredForCraft(ModApi.Craft.CraftData craftData) => false;
 
-        protected override void OnModInitialized()
+        public override void OnModLoaded()
         {
+            base.OnModLoaded();
             _ = ModSettings.Instance;
-            FlightEditorUi.Register();
             Game.Instance.SceneManager.SceneLoaded += OnSceneLoaded;
-            TryPatch();
-            Debug.Log("[VizzyStudio] Started.");
+
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies().Select(assembly => assembly.GetName().Name).ToList();
+            if (!assemblies.Contains("0Harmony"))
+            {
+                _startupProblem = "Vizzy Studio needs the Juno Harmony mod, so it is switched off. Install and enable Juno Harmony, then restart the game.";
+                Debug.LogError("[VizzyStudio] Juno Harmony isn't loaded, so the mod is off.");
+                return;
+            }
+
+            if (assemblies.Contains("VizzyDebugger"))
+            {
+                _startupProblem = "Vizzy Studio includes Vizzy Debugger's features. Remove the Vizzy Debugger mod, or both will act on the same fields.";
+                Debug.LogWarning("[VizzyStudio] Vizzy Debugger is also loaded.");
+            }
+
+            StartFeatures();
+            _started = true;
         }
 
-        /// <summary>
-        /// Harmony comes from the Juno Harmony mod, which may load after this one, so this runs again at
-        /// each scene load. Everything that touches HarmonyLib is in a method only compiled once it's there.
-        /// </summary>
-        private static void TryPatch()
+        /// <summary>Only compiled once Harmony is known to be there. Each patch alone, so one failing leaves the others.</summary>
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void StartFeatures()
         {
-            if (_patched || !AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name == "0Harmony"))
+            FlightEditorUi.Register();
+
+            var harmony = new HarmonyLib.Harmony("VizzyStudio");
+            var applied = 0;
+            var failed = 0;
+            foreach (var patch in new[] { typeof(FunkInputPatch), typeof(FunkHighlightRegisterPatch) })
+            {
+                try
+                {
+                    RuntimeHelpers.RunClassConstructor(patch.TypeHandle);
+                    harmony.CreateClassProcessor(patch).Patch();
+                    applied++;
+                    if (patch == typeof(FunkInputPatch))
+                    {
+                        FunkInputPatch.Installed = true;
+                    }
+                }
+                catch (Exception e)
+                {
+                    failed++;
+                    Debug.LogWarning("[VizzyStudio] Patch " + patch.Name + " failed: " + e);
+                }
+            }
+
+            Debug.Log("[VizzyStudio] Patches: " + applied + " applied, " + failed + " failed.");
+        }
+
+        private static void OnSceneLoaded(object sender, SceneEventArgs e)
+        {
+            if (_startupProblem != null && Game.Instance.UserInterface != null)
+            {
+                var problem = _startupProblem;
+                _startupProblem = null;
+                var dialog = Game.Instance.UserInterface.CreateMessageDialog(ModApi.Ui.MessageDialogType.Okay, null, true);
+                dialog.MessageText = problem;
+            }
+
+            if (!_started)
             {
                 return;
             }
 
-            _patched = true;
-            ApplyPatches();
-        }
-
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        private static void ApplyPatches()
-        {
-            try
-            {
-                new HarmonyLib.Harmony("VizzyStudio").CreateClassProcessor(typeof(FunkInputPatch)).Patch();
-                FunkInputPatch.Installed = true;
-                Debug.Log("[VizzyStudio] Patches: 1 applied, 0 failed.");
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning("[VizzyStudio] Patches: 0 applied, 1 failed. Funk auto-fill is off: " + e);
-            }
-        }
-
-        private void OnSceneLoaded(object sender, SceneEventArgs e)
-        {
-            TryPatch();
+            FunkHighlight.ClearScene();
             if (Game.InFlightScene)
             {
                 var host = new GameObject("VizzyStudio.Controller");
