@@ -31,7 +31,14 @@ namespace Assets.Scripts
         /// <summary>The selected part's program if it can be edited, otherwise null.</summary>
         public static FlightProgramData Selected(ModApi.Flight.IFlightScene scene)
         {
-            var data = scene.ViewManager.GameView.SelectedPart?.Data?.GetModifier<FlightProgramData>();
+            // Only the player's craft: restoring after a load and reverting only look there.
+            var part = scene.ViewManager.GameView.SelectedPart;
+            if (part == null || part.CraftScript != scene.CraftNode.CraftScript)
+            {
+                return null;
+            }
+
+            var data = part.Data?.GetModifier<FlightProgramData>();
             return data != null && data.FlightProgramXml != null && data.Script != null && !data.HideEditButton
                 && !IsStockMfdProgram(data) ? data : null;
         }

@@ -93,13 +93,13 @@ namespace Assets.Scripts
                     stylesElement = new XElement(ns + "Styles");
                     xml.Add(stylesElement);
                 }
-                stylesElement.Add(Style(ns, "Matrix3x3Mul", "Matrix Multiply: A={0}, B={1}",
+                stylesElement.Add(Style(ns, "Matrix3x3Mul", "Matrix Multiply A=(0), B=(1)",
                     "3x3 matrix multiplication. Both inputs are 9-element row-major lists [m00..m22]."));
-                stylesElement.Add(Style(ns, "Matrix3x3GetElement", "Get Matrix Element: M={0}, Row={1}, Col={2}",
+                stylesElement.Add(Style(ns, "Matrix3x3GetElement", "Get Matrix Element M=(0), Row=(1:Number), Col=(2:Number)",
                     "Returns element M[row][col]. Row and col are 0-based."));
-                stylesElement.Add(Style(ns, "Matrix3x3SetElement", "Set Matrix Element: M={0}, Row={1}, Col={2}, Value={3}",
+                stylesElement.Add(Style(ns, "Matrix3x3SetElement", "Set Matrix Element M=(0), Row=(1:Number), Col=(2:Number), Value=(3:Number)",
                     "Returns a copy of M with element [row][col] replaced by Value."));
-                stylesElement.Add(Style(ns, "Matrix3x3Normalize", "Normalize Matrix: M={0}, Mode={1}",
+                stylesElement.Add(Style(ns, "Matrix3x3Normalize", "Normalize Matrix M=(0), Mode=(1:Number)",
                     "Mode 0: normalize columns, 1: normalize rows, 2: Frobenius scale to length 1."));
 
                 // Category
@@ -113,7 +113,10 @@ namespace Assets.Scripts
                     .FirstOrDefault(x => (string)x.Attribute("name") == CategoryName);
                 if (category == null)
                 {
-                    category = new XElement(ns + "Category", new XAttribute("name", CategoryName));
+                    category = new XElement(ns + "Category",
+                        new XAttribute("name", CategoryName),
+                        new XAttribute("displayName", CategoryName),
+                        new XAttribute("icon", "Ui/Vizzy/ToolboxIconOperators"));
                     categoriesElement.Add(category);
                 }
 

@@ -54,12 +54,14 @@ namespace Assets.Scripts.Vizzy
         private static readonly Color32 ColorVector = FromHex("#4EC9B0");   // v: 向量前缀 青
         private static readonly Color32 ColorError = FromHex("#FF4D4D");    // 语法错误 红
 
-        private static readonly HashSet<string> Functions = NamesOf(FunkNames.Functions);
+        private static bool _namesFailed;
 
-        private static readonly HashSet<string> Keywords = NamesOf(FunkNames.Constants);
+        private static readonly HashSet<string> Functions = NamesOf(() => FunkNames.Functions);
+
+        private static readonly HashSet<string> Keywords = NamesOf(() => FunkNames.Constants);
 
         // Controls 裸属性（CraftControls 属性，游戏 ResolveVariable 里直接 GetProperty(text) 注册）。
-        private static readonly HashSet<string> ControlsProperties = NamesOf(FunkNames.Controls);
+        private static readonly HashSet<string> ControlsProperties = NamesOf(() => FunkNames.Controls);
 
         // 函数参数个数表（从游戏 Context.GetDefaults / Mathd / CraftService 提取，键统一小写）。
         // 只对表内已知函数做参数个数校验；sum/rate/PID/smooth 等特殊函数与自定义函数不校验。
@@ -85,11 +87,11 @@ namespace Assets.Scripts.Vizzy
 
         // FlightData 全部属性名（JNO XML Guide 社区指南 + 游戏 ICraftFlightData 提取）。
         // Funk 表达式里 FlightData.X / FD.X 的属性名必须在此表中。
-        private static readonly HashSet<string> FlightDataProperties = NamesOf(FunkNames.FlightData);
+        private static readonly HashSet<string> FlightDataProperties = NamesOf(() => FunkNames.FlightData);
 
         // OrbitData 全部属性名（JNO XML Guide 社区指南 + 游戏 ICraftOrbitData 提取）。
         // 支持OrbitData.X 全称，以及 FlightData.Orbit.X 子对象链。
-        private static readonly HashSet<string> OrbitDataProperties = NamesOf(FunkNames.OrbitData);
+        private static readonly HashSet<string> OrbitDataProperties = NamesOf(() => FunkNames.OrbitData);
 
         // textComponent.GetInstanceID() -> 所属 TMP_InputField
         private static readonly Dictionary<int, TMP_InputField> _textToInput = new Dictionary<int, TMP_InputField>();
@@ -108,12 +110,21 @@ namespace Assets.Scripts.Vizzy
         /// 把 Funk 输入框的 textComponent 注册进字典并订阅 OnPreRenderText（块 Start 时调用）。
         /// 只处理真正的 Funk 表达式块；注释块等其他 TextInputElementScript 不订阅、不处理。
         /// </summary>
-        private static HashSet<string> NamesOf(IEnumerable<FunkName> names)
+        /// <summary>If the game's names can't be read, coloring turns off rather than mark everything red.</summary>
+        private static HashSet<string> NamesOf(Func<IEnumerable<FunkName>> names)
         {
             var set = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var name in names)
+            try
             {
-                set.Add(name.Name);
+                foreach (var name in names())
+                {
+                    set.Add(name.Name);
+                }
+            }
+            catch (Exception e)
+            {
+                _namesFailed = true;
+                EditorLog.Error("Funk coloring is off: couldn't read the game's names: " + e);
             }
 
             return set;
@@ -123,7 +134,10 @@ namespace Assets.Scripts.Vizzy
         public static void ClearScene()
         {
             _textToInput.Clear();
+            _errorOverlays.Clear();
             _loggedOnce.Clear();
+            _varCacheFp = null;
+            _varCacheNames = null;
         }
 
         public static void Register(TMP_InputField input)
@@ -241,6 +255,7 @@ namespace Assets.Scripts.Vizzy
                 CollectVariableDefinitions(fp.RootInstructions, names);
                 CollectVariableDefinitions(fp.CustomExpressions, names);
                 CollectVariableDefinitions(fp.CustomInstructions, names);
+                CollectLocalVariables(fp, names);
             }
             catch (Exception e)
             {
@@ -252,6 +267,31 @@ namespace Assets.Scripts.Vizzy
             return names;
         }
 
+        /// <summary>Funk also resolves locals at run time: For variables and custom block parameters.</summary>
+        private static void CollectLocalVariables(FlightProgram program, HashSet<string> names)
+        {
+            foreach (var instruction in program.RootInstructions)
+            {
+                ProgramNode.ExecuteActionOnTree<ForInstruction>(instruction, loop => names.Add(loop.VariableName));
+            }
+
+            foreach (var custom in program.CustomInstructions)
+            {
+                foreach (var local in custom.LocalVariables)
+                {
+                    names.Add(local.Name);
+                }
+            }
+
+            foreach (var custom in program.CustomExpressions)
+            {
+                foreach (var local in custom.LocalVariables)
+                {
+                    names.Add(local.Name);
+                }
+            }
+        }
+
         private static void CollectVariableDefinitions(IEnumerable<ProgramNode> nodes, HashSet<string> names)
         {
             if (nodes == null)
@@ -261,20 +301,13 @@ namespace Assets.Scripts.Vizzy
             foreach (ProgramNode node in nodes)
             {
                 ProgramNode.ExecuteActionOnTree<VariableExpression>(node,
-                    v => { if (v.IsDefinition) { names.Add(v.VariableName); } });
+                    v => { if (v.IsDefinition || v.IsLocal) { names.Add(v.VariableName); } });
             }
         }
 
         private static bool IsHighlightEnabled()
         {
-            try
-            {
-                return ModSettings.Instance.FunkSyntaxHighlight.Value;
-            }
-            catch
-            {
-                return true;
-            }
+            return !_namesFailed && ModSettings.Instance.FunkSyntaxHighlight.Value;
         }
 
         // ---- 渲染入口：OnPreRenderText 事件（TMP 上传 mesh 数据之前触发）----

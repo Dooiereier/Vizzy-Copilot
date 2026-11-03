@@ -15,10 +15,8 @@ MonoBehaviour:
   _assemblies:
   - Vizzy Studio.dll
   _author: Dooiereier, Oxeter and Torifune
-  _description: Edit a running craft's Vizzy program in the stock editor in flight, with Funk auto-fill and coloring. Code by Dooiereier, Oxeter and Torifune. UI textures by QiQi. Needs Juno Harmony.
-    It carries on from where it was, and a quickload keeps your latest edit. Press
-    Shift+O or use Edit Vizzy in the flight menu. Shift+O.
-  _loadPriority: 0
+  _description: Edit a running craft's Vizzy program in the stock editor in flight, with Funk auto-fill and coloring. Press Shift+O or use Edit Vizzy in the flight menu. Code by Dooiereier, Oxeter and Torifune. UI textures by QiQi. Needs Juno Harmony.
+  _loadPriority: 10
   _name: Vizzy Studio
   _otherAssets:
   - {fileID: 2800000, guid: 1c0e21f9e83fb4c44b60ac9eede2688a, type: 3}

@@ -138,6 +138,13 @@ namespace Assets.Scripts
                     return;
                 }
 
+                // Its widgets would stay, and each creation block would log an error.
+                if (CraftPrograms.IsMfd(data))
+                {
+                    scene.FlightSceneUI.ShowMessage("Restart isn't available for MFD programs.");
+                    return;
+                }
+
                 FlightPause.Hold();
                 var dialog = Game.Instance.UserInterface.CreateMessageDialog(ModApi.Ui.MessageDialogType.OkayCancel, null, true);
                 dialog.UseDangerButtonStyle = true;

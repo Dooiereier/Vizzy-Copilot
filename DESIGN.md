@@ -88,7 +88,9 @@ Known limits:
   Redo) while choosing or editing. Esc is read raw, so `EditorSession` re-hides the flight UI each frame
   and `FlightPause` re-asserts the pause.
 - **Craft switch, EVA, docking:** blocked with the other keys while editing. Docking is handled by the
-  stock `OnMovedToNewCraft`. Edits are keyed by part id, which outlives a separation or docking.
+  stock `OnMovedToNewCraft`. A part's id changes when it moves to another craft, so kept edits are found
+  by program content, with the id only choosing between several matches. Two crafts running the same program
+  can still share a history. Selected parts must be on the player's craft.
 - **Failed Apply:** the editor stays open with a message, so the work isn't lost. That includes a part
   that's gone.
 - **Several programs:** a picker lists them, one editor at a time. Each keeps its own latest edit and
@@ -118,13 +120,17 @@ Code by Oxeter and Torifune, UI textures by QiQi, merged with their agreement.
 - **Funk coloring and error marks** (`FunkHighlight`): colors and red marks through
   `TMP_Text.OnPreRenderText`. Names come from `FunkNames`, shared with auto-fill.
 - **Flight buttons** (`FlightButtons`): Edit Vizzy opens the selected part's program, otherwise it acts like
-  the shortcut. Restart Vizzy asks first. Show Flight Buttons turns them off.
-- **Matrix blocks** (`MatrixBlocks`): registered in the serializer's private tables through `AccessTools`,
-  which is why they need Harmony. `IsModRequiredForCraft` is true only for a craft that uses one.
+  the shortcut. Restart Vizzy asks first, and isn't offered for MFD programs. Show Flight Buttons turns them off.
+- **Matrix blocks** (`MatrixBlocks`): registered in the serializer's private tables, and added to the toolbox
+  by a patch, which is what needs Harmony. `IsModRequiredForCraft` is true only for a craft that uses one.
 - **MFD programs:** custom ones are editable. Stock ones are excluded, because the game reloads them.
 
-Known risks to test: widgets belong to `MfdScript` and survive an Apply, so widgets from deleted blocks can
-stay on screen, and a restart runs creation blocks again, so widgets could duplicate.
+Known risk to test: widgets belong to `MfdScript` and survive an Apply, so widgets from deleted blocks can
+stay on screen. Known limit: `FindError` is a second parser and differs from the game's on rare forms such
+as `+a` and `((a)`.
+
+**Startup:** checks and patches run at the first `SceneLoaded`, because a mod's `OnModLoaded` runs as soon as
+that mod loads, before later mods. `_loadPriority` is above Juno Harmony's.
 
 The variable cleaner (`VizzyVariableCleaner`) is left out for now. Vizzy Exporter and MFD Runtime Editor are
 planned later; neither may bring its own copy of Harmony.

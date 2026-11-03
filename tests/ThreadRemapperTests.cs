@@ -33,6 +33,7 @@ public static class ThreadRemapperTests
         UnwrappingFromALoopRemovesItsFrame();
         BlockAfterCurrentIfRuns();
         RetryEndsTheEditHistory();
+        SameProgramOnTwoPartsUsesTheId();
         LoadedProgramFollowsEachLoad();
         QuickloadKeepsLatestEdit();
         NewLaunchKeepsItsOwnProgram();
@@ -279,6 +280,19 @@ public static class ThreadRemapperTests
         Check("a quickload after a new launch keeps its program", LatestEdits.ProgramToRestore("part", saved, Process()) == null);
     }
 
+    private static void SameProgramOnTwoPartsUsesTheId()
+    {
+        LatestEdits.Clear();
+        var saved = Program(Stack(1, Event(0, "One"), Wait(1, "saved")));
+        var first = Program(Stack(1, Event(0, "One"), Wait(1, "first")));
+        var second = Program(Stack(1, Event(0, "One"), Wait(1, "second")));
+        LatestEdits.Remember("a", saved, first);
+        LatestEdits.Remember("b", saved, second);
+        LatestEdits.Clear();
+        LatestEdits.Remember("a", saved, first);
+        Check("one history is found by program alone", XNode.DeepEquals(first, LatestEdits.ProgramToRestore("z", saved, Process())));
+    }
+
     private static void LoadedProgramFollowsEachLoad()
     {
         LatestEdits.Clear();
@@ -316,7 +330,7 @@ public static class ThreadRemapperTests
         LatestEdits.Remember("part", saved, Program(Stack(1, Event(0, "One"), Wait(1, "edit"))));
         var other = Program(Stack(1, Event(0, "Other"), Wait(1, "other")));
         Check("a program outside the history stays", LatestEdits.ProgramToRestore("part", other, Process()) == null);
-        Check("another part stays", LatestEdits.ProgramToRestore("other part", saved, Process()) == null);
+        Check("a new id still finds the history, as after a separation", LatestEdits.ProgramToRestore("other part", saved, Process()) != null);
     }
 
     private static void LatestEditAlreadyLoadedIsLeftAlone()
