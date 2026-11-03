@@ -128,6 +128,13 @@ namespace Assets.Scripts
                 yield return "[" + part + ".VZ." + variable.Name + "]";
                 yield return "{" + part + "}.VZ." + variable.Name;
                 yield return part.Replace(" ", "_") + ".VZ." + variable.Name;
+
+                // Names that can't exist: what these return is what "not found" looks like.
+                yield return "NoSuchPart.VZ." + variable.Name;
+                yield return "[NoSuchPart.VZ." + variable.Name + "]";
+                yield return part.Replace(" ", "_") + ".VZ.NoSuchVariable";
+                yield return "[" + part + ".VZ.NoSuchVariable]";
+                yield return "NoSuchVariable";
             }
 
             var list = variables.FirstOrDefault(item => item.IsList);
