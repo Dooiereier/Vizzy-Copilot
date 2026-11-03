@@ -90,6 +90,12 @@ namespace Assets.Scripts
             return names;
         }
 
+        private static HashSet<string> _vectorDataNames;
+
+        /// <summary>Data names that read as a vector, however they're written.</summary>
+        private static HashSet<string> VectorDataNames => _vectorDataNames ?? (_vectorDataNames = new HashSet<string>(
+            VectorDataOf(typeof(CraftFlightData), "FD.", "FlightData.").Concat(VectorDataOf(typeof(CraftOrbitData), "OD.", "OrbitData."))));
+
         private static readonly HashSet<string> VectorOperators = new HashSet<string> { "norm", "cross", "clamp", "min", "max", "project", "scale" };
 
         private static readonly HashSet<string> ArithmeticOperators = new HashSet<string> { "+", "-", "*", "/" };
@@ -160,8 +166,7 @@ namespace Assets.Scripts
                 case CraftPropertyExpression _:
                     return CraftPropertyField?.GetValue(node) is string property && VectorProperties.Contains(property);
                 case EvaluationExpression funk:
-                    return funk.GetExpression(0) is ConstantExpression text && text.ExpressionResult.TextValue != null
-                        && System.Text.RegularExpressions.Regex.IsMatch(text.ExpressionResult.TextValue, @"^\s*v:[A-Za-z_$][A-Za-z0-9_$]*\s*$");
+                    return funk.GetExpression(0) is ConstantExpression text && FunkCompletion.IsVectorFunk(text.ExpressionResult.TextValue, VectorDataNames);
                 default:
                     return false;
             }
@@ -263,6 +268,13 @@ namespace Assets.Scripts
             }
 
             return names;
+        }
+
+        private static IEnumerable<string> VectorDataOf(Type type, params string[] prefixes)
+        {
+            return type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(property => property.PropertyType == typeof(Vector3d))
+                .SelectMany(property => prefixes.Select(prefix => prefix + property.Name));
         }
 
         private static List<FunkName> ValueProperties(Type type)

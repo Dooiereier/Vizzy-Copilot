@@ -60,6 +60,15 @@ public static class FunkCompletionTests
         var bracket = FunkCompletion.Find("PI(1)", 2, catalog, null, null);
         check("no second bracket", bracket.Suggestions.First().Insert == "PID");
 
+        var vectorData = new[] { "FD.Position" };
+        check("vec() is a vector", FunkCompletion.IsVectorFunk(" vec(0,1,1) ", vectorData));
+        check("nested call is a vector", FunkCompletion.IsVectorFunk("cross(vec(1,0,0), FD.Position)", vectorData));
+        check("v:name is a vector", FunkCompletion.IsVectorFunk("v:aaa", vectorData));
+        check("vector data is a vector", FunkCompletion.IsVectorFunk("FD.Position", vectorData));
+        check("a number isn't", !FunkCompletion.IsVectorFunk("FD.Pitch", vectorData));
+        check("a part of a vector isn't", !FunkCompletion.IsVectorFunk("x(vec(0,1,1))", vectorData));
+        check("more after the call isn't certain", !FunkCompletion.IsVectorFunk("vec(0,1,1) > 1", vectorData));
+
         var vectors = new FunkCatalog();
         vectors.Variables.Add(new FunkName("LaunchNormal"));
         vectors.Variables.Add(new FunkName("LaunchAlt"));

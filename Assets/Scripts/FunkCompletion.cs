@@ -58,6 +58,12 @@ namespace Assets.Scripts
             "FD.VelocityMagnitude", "FD.SurfaceVelocityMagnitude", "FD.VerticalSurfaceVelocity", "FD.MachNumber",
         };
 
+        private static readonly HashSet<string> VectorFunctions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "vec", "cross", "normalize", "project", "projectOnPlane", "reflect", "lerp3", "slerp", "moveTowards",
+            "clampMagnitude", "exclude", "max3", "min3", "scale", "listVec",
+        };
+
         public int Start { get; private set; }
 
         public int End { get; private set; }
@@ -142,6 +148,40 @@ namespace Assets.Scripts
             {
                 yield return bracketed.Groups[1].Value;
             }
+        }
+
+        /// <summary>Whether Funk text is certainly a vector: v:name, a vector data name, or one whole call to a function returning a vector.</summary>
+        public static bool IsVectorFunk(string funk, ICollection<string> vectorData)
+        {
+            var text = funk?.Trim();
+            if (string.IsNullOrEmpty(text))
+            {
+                return false;
+            }
+
+            if (Regex.IsMatch(text, @"^v:[A-Za-z_$][A-Za-z0-9_$]*$") || vectorData.Contains(text))
+            {
+                return true;
+            }
+
+            var call = Regex.Match(text, @"^([A-Za-z0-9_]+)\(");
+            if (!call.Success || !VectorFunctions.Contains(call.Groups[1].Value))
+            {
+                return false;
+            }
+
+            // The call's bracket has to close at the very end: vec(1,2,3).x or x(...) isn't a vector.
+            var depth = 0;
+            for (var i = call.Length - 1; i < text.Length; i++)
+            {
+                depth += text[i] == '(' ? 1 : text[i] == ')' ? -1 : 0;
+                if (depth == 0)
+                {
+                    return i == text.Length - 1;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>The field's text with a suggestion in place of the word.</summary>

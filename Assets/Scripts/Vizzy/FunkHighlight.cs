@@ -236,7 +236,7 @@ namespace Assets.Scripts.Vizzy
                 _varCacheNames = null;
                 return null;
             }
-            if (_varCacheFp == fp && Time.time - _varCacheTime < 0.5f)
+            if (_varCacheFp == fp && Time.unscaledTime - _varCacheTime < 0.5f)
             {
                 return _varCacheNames;
             }
@@ -254,7 +254,7 @@ namespace Assets.Scripts.Vizzy
             }
             _varCacheFp = fp;
             _varCacheNames = names;
-            _varCacheTime = Time.time;
+            _varCacheTime = Time.unscaledTime;
             return names;
         }
 
