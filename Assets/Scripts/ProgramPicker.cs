@@ -2,12 +2,19 @@ namespace Assets.Scripts
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using Assets.Scripts.Craft.Parts.Modifiers;
     using ModApi.Ui.Inspector;
+    using UnityEngine;
 
     /// <summary>The choice between a craft's programs, in the game's own inspector panel.</summary>
     public static class ProgramPicker
     {
+        private const int MinWidth = 300;
+        private const int WidthPerCharacter = 12;
+        private const int LabelMargin = 70;
+        private const int MaxScreenHeightPercent = 90;
+
         private static IInspectorPanel _panel;
         private static Action _onDismissed;
 
@@ -34,6 +41,10 @@ namespace Assets.Scripts
             {
                 StartPosition = InspectorPanelCreationInfo.InspectorStartPosition.Center,
                 Resizable = false,
+
+                // Wide enough for the longest label on one line, and as tall as the list needs.
+                PanelWidth = Mathf.Max(MinWidth, (programs.Max(data => Label(data).Length) * WidthPerCharacter) + LabelMargin),
+                PanelMaxHeight = MaxScreenHeightPercent,
             };
             _panel = Game.Instance.UserInterface.CreateInspectorPanel(model, info);
             _panel.Closed += OnPanelClosed;

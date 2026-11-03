@@ -14,7 +14,7 @@ carries on from where it was, so you can repeat quickload, edit, fly to tune thi
 - **Harmony is required**, from the Juno Harmony mod, and never inside the mod file. Without it the mod logs
   an error, shows one message and stays off. Patches: auto-fill keys, coloring on each Funk field, and the
   Matrix category in the toolbox; each has no public alternative, and each applies on its own.
-- **In the designer**, only auto-fill, coloring, the Matrix category and the Clean Variables button differ
+- **In the designer**, only auto-fill, coloring, the Matrix blocks and the Clean Variables button differ
   from stock.
 - **Other mods stay unaffected.** Only an editor this mod opens gets its Apply and Cancel replaced,
   so another mod that opens the stock editor in flight keeps the stock buttons.
@@ -120,8 +120,8 @@ Code by Oxeter and Torifune, UI textures by QiQi, merged with their agreement.
   `TMP_Text.OnPreRenderText`. Names come from `FunkNames`, shared with auto-fill.
 - **Flight buttons** (`FlightButtons`): Edit Vizzy opens the selected part's program, otherwise it acts like
   the shortcut. Restart Vizzy asks first, and isn't offered for MFD programs. Show Flight Buttons turns them off.
-- **Matrix blocks** (`MatrixBlocks`): registered in the serializer's private tables, and added to the toolbox
-  by a patch, which is what needs Harmony. `IsModRequiredForCraft` is true only for a craft that uses one.
+- **Matrix blocks** (`MatrixBlocks`): registered in the serializer's private tables, and added to the bottom
+  of the toolbox's Operators category by a patch, which is what needs Harmony. `IsModRequiredForCraft` is true only for a craft that uses one.
 - **MFD programs:** custom ones are editable. Stock ones are excluded, because the game reloads them.
 
 Known risk to test: widgets belong to `MfdScript` and survive an Apply, so widgets from deleted blocks can

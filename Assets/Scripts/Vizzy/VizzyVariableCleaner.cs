@@ -78,26 +78,29 @@ namespace Assets.Scripts.Vizzy
         {
             var used = new HashSet<string>(StringComparer.Ordinal);
             var unreadable = false;
-            foreach (var root in AllRoots(program))
+            foreach (var root in FunkNames.AllRoots(program))
             {
-                ProgramNode.ExecuteActionOnTree<VariableExpression>(root, variable =>
+                FunkNames.Walk(root, node =>
                 {
                     // Locals aren't in GlobalVariables.
-                    if (!variable.IsLocal && !string.IsNullOrEmpty(variable.VariableName))
+                    if (node is VariableExpression variable && !variable.IsLocal && !string.IsNullOrEmpty(variable.VariableName))
                     {
                         used.Add(variable.VariableName);
                     }
-                });
-
-                ProgramNode.ExecuteActionOnTree<EvaluationExpression>(root, funk =>
-                {
-                    if (funk.GetExpression(0) is ConstantExpression text)
+                    else if (FunkNames.TypedVariableName(node) is string typed)
                     {
-                        used.UnionWith(FunkCompletion.NamesIn(text.ExpressionResult.TextValue));
+                        used.Add(typed);
                     }
-                    else
+                    else if (node is EvaluationExpression funk)
                     {
-                        unreadable = true;
+                        if (funk.GetExpression(0) is ConstantExpression text)
+                        {
+                            used.UnionWith(FunkCompletion.NamesIn(text.ExpressionResult.TextValue));
+                        }
+                        else
+                        {
+                            unreadable = true;
+                        }
                     }
                 });
             }
@@ -107,14 +110,6 @@ namespace Assets.Scripts.Vizzy
                 .Select(variable => variable.Name)
                 .Where(name => !used.Contains(name))
                 .ToList();
-        }
-
-        private static IEnumerable<ProgramNode> AllRoots(FlightProgram program)
-        {
-            return program.RootInstructions.Cast<ProgramNode>()
-                .Concat(program.RootExpressions)
-                .Concat(program.CustomInstructions)
-                .Concat(program.CustomExpressions);
         }
     }
 }

@@ -74,12 +74,14 @@ namespace Assets.Scripts
             try
             {
                 XNamespace ns = XmlLayoutConstants.XmlNamespace;
-                FindButton(request, "OnButtonLoadClicked();").AddAfterSelf(
+                var gridRow = request.XmlDocument.Descendants(ns + "Toggle")
+                    .First(toggle => (string)toggle.Attribute("id") == "grid-toggle").Parent.Parent;
+                gridRow.AddAfterSelf(
                     new XElement(ns + "Button",
                         new XAttribute("id", CleanButtonId),
                         new XAttribute("class", "btn"),
                         new XAttribute("tooltip", "Removes global variables this program doesn't use, after asking."),
-                        new XElement(ns + "TextMeshPro", new XAttribute("text", "Clean Variables"))));
+                        new XElement(ns + "TextMeshPro", new XAttribute("text", "CLEAN VARIABLES"))));
 
                 request.AddOnLayoutRebuiltAction(controller =>
                 {

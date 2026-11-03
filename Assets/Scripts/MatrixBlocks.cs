@@ -60,13 +60,12 @@ namespace Assets.Scripts
         }
     }
 
-    /// <summary>Adds the Matrix category, its styles and blocks to the Vizzy toolbox.</summary>
+    /// <summary>Adds the Matrix styles and blocks to the Vizzy toolbox.</summary>
     [HarmonyPatch(typeof(VizzyToolbox))]
     [HarmonyPatch(MethodType.Constructor)]
     [HarmonyPatch(new Type[] { typeof(XElement), typeof(bool) })]
     public static class MatrixToolboxPatch
     {
-        private const string CategoryName = "Matrix";
         private const string ColorId = "MatrixNodeColor";
 
         private static void Prefix(ref XElement xml, ref bool showMfdCategory)
@@ -94,31 +93,17 @@ namespace Assets.Scripts
                     xml.Add(stylesElement);
                 }
                 stylesElement.Add(Style(ns, "Matrix3x3Mul", "Matrix Multiply A=(0), B=(1)",
-                    "3x3 matrix multiplication. Both inputs are 9-element row-major lists [m00..m22]."));
+                    "3x3 matrix multiplication. Both inputs are 9-element row-major lists [m00..m22].\nVizzy Studio mod required"));
                 stylesElement.Add(Style(ns, "Matrix3x3GetElement", "Get Matrix Element M=(0), Row=(1:Number), Col=(2:Number)",
-                    "Returns element M[row][col]. Row and col are 0-based."));
+                    "Returns element M[row][col]. Row and col are 0-based.\nVizzy Studio mod required"));
                 stylesElement.Add(Style(ns, "Matrix3x3SetElement", "Set Matrix Element M=(0), Row=(1:Number), Col=(2:Number), Value=(3:Number)",
-                    "Returns a copy of M with element [row][col] replaced by Value."));
+                    "Returns a copy of M with element [row][col] replaced by Value.\nVizzy Studio mod required"));
                 stylesElement.Add(Style(ns, "Matrix3x3Normalize", "Normalize Matrix M=(0), Mode=(1:Number)",
-                    "Mode 0: normalize columns, 1: normalize rows, 2: Frobenius scale to length 1."));
+                    "Mode 0: normalize columns, 1: normalize rows, 2: Frobenius scale to length 1.\nVizzy Studio mod required"));
 
-                // Category
-                XElement categoriesElement = xml.Element(ns + "Categories");
-                if (categoriesElement == null)
-                {
-                    categoriesElement = new XElement(ns + "Categories");
-                    xml.Add(categoriesElement);
-                }
-                XElement category = categoriesElement.Elements(ns + "Category")
-                    .FirstOrDefault(x => (string)x.Attribute("name") == CategoryName);
-                if (category == null)
-                {
-                    category = new XElement(ns + "Category",
-                        new XAttribute("name", CategoryName),
-                        new XAttribute("displayName", CategoryName + " (using these requires Vizzy Studio mod)"),
-                        new XAttribute("icon", "Ui/Vizzy/ToolboxIconOperators"));
-                    categoriesElement.Add(category);
-                }
+                // At the bottom of Operators, below the false block.
+                XElement category = xml.Element(ns + "Categories").Elements(ns + "Category")
+                    .First(x => (string)x.Attribute("name") == "Operators");
 
                 // Nodes. Default inputs: an identity matrix ListOp constant, and the number constant 0.
                 category.Add(

@@ -71,13 +71,9 @@ namespace Assets.Scripts
                 AddVariableOf(block.Node, names);
             }
 
-            var roots = program.RootInstructions.Cast<ProgramNode>()
-                .Concat(program.RootExpressions)
-                .Concat(program.CustomInstructions)
-                .Concat(program.CustomExpressions);
-            foreach (var root in roots)
+            foreach (var root in AllRoots(program))
             {
-                ProgramNode.ExecuteActionOnTree<ProgramNode>(root, node => AddVariableOf(node, names));
+                Walk(root, node => AddVariableOf(node, names));
             }
 
             foreach (var custom in program.CustomInstructions)
@@ -94,6 +90,51 @@ namespace Assets.Scripts
             return names;
         }
 
+        /// <summary>The roots of everything a program runs.</summary>
+        public static IEnumerable<ProgramNode> AllRoots(FlightProgram program)
+        {
+            return program.RootInstructions.Cast<ProgramNode>()
+                .Concat(program.RootExpressions)
+                .Concat(program.CustomInstructions)
+                .Concat(program.CustomExpressions);
+        }
+
+        /// <summary>
+        /// Visits a node and everything under and after it. Not ProgramNode.ExecuteActionOnTree: that throws on a
+        /// node without an expression list.
+        /// </summary>
+        public static void Walk(ProgramNode node, Action<ProgramNode> visit)
+        {
+            if (node == null)
+            {
+                return;
+            }
+
+            visit(node);
+            if (node.Expressions != null)
+            {
+                foreach (var expression in node.Expressions)
+                {
+                    Walk(expression, visit);
+                }
+            }
+
+            if (node is ProgramInstruction instruction)
+            {
+                Walk(instruction.FirstChild, visit);
+                Walk(instruction.Next, visit);
+            }
+        }
+
+        /// <summary>A variable name typed into a set, change or user input block's name slot, or null.</summary>
+        public static string TypedVariableName(ProgramNode node)
+        {
+            var typed = node is SetVariableInstruction || node is ChangeVariableInstruction || node is UserInputInstruction;
+            return typed && node.Expressions != null && node.Expressions.Count > 0 && node.Expressions[0] is ConstantExpression name
+                ? name.ExpressionResult.TextValue
+                : null;
+        }
+
         private static void AddVariableOf(ProgramNode node, HashSet<string> names)
         {
             if (node is VariableExpression variable && variable.VariableName != null)
@@ -103,6 +144,10 @@ namespace Assets.Scripts
             else if (node is ForInstruction loop && loop.VariableName != null)
             {
                 names.Add(loop.VariableName);
+            }
+            else if (TypedVariableName(node) != null)
+            {
+                names.Add(TypedVariableName(node));
             }
         }
 
