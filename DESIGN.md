@@ -13,7 +13,7 @@ carries on from where it was, so you can repeat quickload, edit, fly to tune thi
 - **Only crafts with a Matrix block need the mod.** No part modifiers; other programs stay ordinary stock XML.
 - **Harmony is required**, from the Juno Harmony mod, and never inside the mod file. Without it the mod logs
   an error, shows one message and stays off. Patches: auto-fill keys, coloring on each Funk field, and the
-  Matrix category in the toolbox; each has no public alternative, and each applies on its own.
+  Matrix blocks in the toolbox; each has no public alternative, and each applies on its own.
 - **In the designer**, only auto-fill, coloring, the Matrix blocks and the Clean Variables button differ
   from stock.
 - **Other mods stay unaffected.** Only an editor this mod opens gets its Apply and Cancel replaced,
@@ -140,4 +140,3 @@ Vizzy Exporter and MFD Runtime Editor are planned later; neither may bring its o
 
 ## Testing
 
-`python3 tools/compile_check.py` and `python3 tools/run_tests.py`. Only the game proves behaviour.

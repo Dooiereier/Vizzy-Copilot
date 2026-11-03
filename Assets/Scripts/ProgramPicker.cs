@@ -13,7 +13,7 @@ namespace Assets.Scripts
         private const int MinWidth = 300;
         private const int WidthPerCharacter = 12;
         private const int LabelMargin = 70;
-        private const int MaxScreenHeightPercent = 90;
+        private const float MaxScreenHeight = 0.9f;
 
         private static IInspectorPanel _panel;
         private static Action _onDismissed;
@@ -44,7 +44,7 @@ namespace Assets.Scripts
 
                 // Wide enough for the longest label on one line, and as tall as the list needs.
                 PanelWidth = Mathf.Max(MinWidth, (programs.Max(data => Label(data).Length) * WidthPerCharacter) + LabelMargin),
-                PanelMaxHeight = MaxScreenHeightPercent,
+                PanelMaxHeight = MaxScreenHeight,
             };
             _panel = Game.Instance.UserInterface.CreateInspectorPanel(model, info);
             _panel.Closed += OnPanelClosed;
