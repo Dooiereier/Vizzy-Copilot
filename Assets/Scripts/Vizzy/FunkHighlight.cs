@@ -51,7 +51,7 @@ namespace Assets.Scripts.Vizzy
         private static readonly Color32 ColorPart = FromHex("#808080");     // part selector: gray
         private static readonly Color32 ColorFlightData = FromHex("#F48FB1"); // FD. and OD. data: rose
         private static readonly Color32 ColorDataSlot = FromHex("#4EC9B0"); // data slot: teal
-        private static readonly Color32 ColorGroup = FromHex("#C586C0");    // bracket: purple
+        private static readonly Color32 ColorGroup = FromHex("#D4D4D4");    // bracket: light gray
         private static readonly Color32 ColorVector = FromHex("#4EC9B0");   // v: vector prefix: teal
         private static readonly Color32 ColorError = FromHex("#FF4D4D");    // syntax error: red
 
