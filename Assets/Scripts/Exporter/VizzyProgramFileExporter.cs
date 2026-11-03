@@ -155,6 +155,8 @@ namespace Assets.Scripts.Exporter
                     CustomInstructionsCreated = AddMissingCustomInstructions(root, snippet.ReferencedCustomInstructionBlocks, anchorX, anchorY),
                 };
 
+                AssignMissingIds(root);
+
                 // Only replaces the file once the new one is complete.
                 string temporaryPath = targetFilePath + ".tmp";
                 try
@@ -295,6 +297,16 @@ namespace Assets.Scripts.Exporter
         /// arrive with a pre-assigned id either, so the game should be able to assign new
         /// ones on its own next load/save.
         /// </summary>
+        /// <summary>Exported blocks get ids unused in the target, so the file has the same form as one the game saved.</summary>
+        private static void AssignMissingIds(XElement root)
+        {
+            int next = root.Descendants().Select(e => (int?)e.Attribute("id") ?? -1).DefaultIfEmpty(-1).Max() + 1;
+            foreach (XElement block in root.Descendants("Instructions").Elements().Where(e => e.Attribute("id") == null))
+            {
+                block.SetAttributeValue("id", next++);
+            }
+        }
+
         private static void StripIds(XElement node)
         {
             node.Attribute("id")?.Remove();

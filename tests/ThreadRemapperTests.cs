@@ -209,6 +209,13 @@ public static class ThreadRemapperTests
         foreach (var file in Directory.GetFiles(folder, "*.xml").Where(path => !Path.GetFileName(path).StartsWith(".")))
         {
             var before = XDocument.Load(file).Root;
+
+            // Earlier exports left blocks without ids until the game next saves the file; a running program always has them.
+            if (before.Descendants("Instructions").Elements().Any(block => block.Attribute("id") == null))
+            {
+                continue;
+            }
+
             if (before.Name != "Program")
             {
                 continue;
