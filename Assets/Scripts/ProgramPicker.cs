@@ -47,15 +47,6 @@ namespace Assets.Scripts
                 Buttons.Add(model.Add(new TextButtonModel(Label(data), _ => pick())));
             }
 
-            _selected = -1;
-            for (var i = 0; i < programs.Count; i++)
-            {
-                if (CraftPrograms.Key(programs[i]) == selectedKey)
-                {
-                    Select(i);
-                }
-            }
-
             var info = new InspectorPanelCreationInfo
             {
                 StartPosition = InspectorPanelCreationInfo.InspectorStartPosition.Center,
@@ -67,6 +58,15 @@ namespace Assets.Scripts
             };
             _panel = Game.Instance.UserInterface.CreateInspectorPanel(model, info);
             _panel.Closed += OnPanelClosed;
+
+            _selected = -1;
+            for (var i = 0; i < programs.Count; i++)
+            {
+                if (CraftPrograms.Key(programs[i]) == selectedKey)
+                {
+                    Select(i);
+                }
+            }
         }
 
         /// <summary>Each frame: Up and Down move the selection, Enter opens the selected program.</summary>
