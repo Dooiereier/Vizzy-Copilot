@@ -7,6 +7,7 @@ namespace Assets.Scripts
     using ModApi.Ui.Inspector;
     using TMPro;
     using UnityEngine;
+    using UnityEngine.UI;
 
     /// <summary>The choice between a craft's programs, in the game's own inspector panel.</summary>
     public static class ProgramPicker
@@ -16,12 +17,16 @@ namespace Assets.Scripts
         private const int LabelMargin = 70;
         private const float MaxScreenHeight = 0.9f;
 
+        // The game's Primary and PrimaryHover colors.
+        private static readonly Color SelectedColor = new Color32(0x00, 0xB7, 0xED, 0xFF);
+        private static readonly Color SelectedHoverColor = new Color32(0x00, 0xA1, 0xF2, 0xFF);
+
         private static IInspectorPanel _panel;
         private static Action _onDismissed;
         private static readonly List<TextButtonModel> Buttons = new List<TextButtonModel>();
         private static readonly List<Action> Picks = new List<Action>();
+        private static readonly Dictionary<int, (ColorBlock, Color)> OriginalColors = new Dictionary<int, (ColorBlock, Color)>();
         private static int _selected = -1;
-        private static float _fontSize;
 
         public static bool IsOpen => _panel != null;
 
@@ -34,6 +39,7 @@ namespace Assets.Scripts
             Close();
             _onDismissed = onDismissed;
             Buttons.Clear();
+            OriginalColors.Clear();
             Picks.Clear();
 
             var model = new InspectorModel("VizzyStudioPicker", "Select vizzy");
@@ -62,7 +68,6 @@ namespace Assets.Scripts
             _panel.Closed += OnPanelClosed;
 
             _selected = -1;
-            _fontSize = Buttons.Count > 0 && ButtonText(0) != null ? ButtonText(0).fontSize : 0f;
             for (var i = 0; i < programs.Count; i++)
             {
                 if (CraftPrograms.Key(programs[i]) == selectedKey)
@@ -75,13 +80,7 @@ namespace Assets.Scripts
         /// <summary>Each frame: Up and Down move the selection, Enter opens the selected program.</summary>
         public static void HandleKeys()
         {
-            if (_panel == null)
-            {
-                return;
-            }
-
-            KeepFontSize();
-            if (Game.Instance.UserInterface.IsTextInputFocused)
+            if (_panel == null || Game.Instance.UserInterface.IsTextInputFocused)
             {
                 return;
             }
@@ -108,45 +107,51 @@ namespace Assets.Scripts
             Dismissed();
         }
 
+        /// <summary>
+        /// Colors the row directly: switching a row to the game's primary button style makes its text smaller.
+        /// </summary>
         private static void Select(int index)
         {
-            for (var i = 0; i < Buttons.Count; i++)
+            if (_selected >= 0)
             {
-                if (i == _selected || i == index)
-                {
-                    Buttons[i].Style = i == index ? ButtonModel.ButtonStyle.Primary : ButtonModel.ButtonStyle.Default;
-                    Buttons[i].Update();
-                    var text = ButtonText(i);
-                    if (text != null && _fontSize > 0f)
-                    {
-                        text.enableAutoSizing = false;
-                        text.fontSize = _fontSize;
-                    }
-                }
+                Paint(_selected, false);
             }
 
+            Paint(index, true);
             _selected = index;
+        }
+
+        private static void Paint(int index, bool selected)
+        {
+            var row = Buttons[index].ItemElement?.GameObject;
+            var button = row == null ? null : row.GetComponentInChildren<Selectable>(true);
+            var text = row == null ? null : row.GetComponentInChildren<TMP_Text>(true);
+            if (button == null || text == null)
+            {
+                return;
+            }
+
+            if (!OriginalColors.ContainsKey(index))
+            {
+                OriginalColors[index] = (button.colors, text.color);
+            }
+
+            var original = OriginalColors[index];
+            var colors = original.Item1;
+            if (selected)
+            {
+                colors.normalColor = SelectedColor;
+                colors.highlightedColor = SelectedHoverColor;
+                colors.selectedColor = SelectedColor;
+            }
+
+            button.colors = colors;
+            text.color = selected ? Color.white : original.Item2;
         }
 
         private static string Label(FlightProgramData data)
         {
             return data.Part.DisplayName;
-        }
-
-        private static TMP_Text ButtonText(int index)
-        {
-            return Buttons[index].ItemElement?.GameObject?.GetComponentInChildren<TMP_Text>(true);
-        }
-
-        /// <summary>The game's primary button style uses a smaller font, which would make the selected row look different.</summary>
-        private static void KeepFontSize()
-        {
-            var text = _selected >= 0 ? ButtonText(_selected) : null;
-            if (text != null && _fontSize > 0f && text.fontSize != _fontSize)
-            {
-                text.enableAutoSizing = false;
-                text.fontSize = _fontSize;
-            }
         }
 
         private static void OnPanelClosed(object sender)
