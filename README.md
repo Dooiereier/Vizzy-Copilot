@@ -38,7 +38,7 @@ These work in the designer and in flight.
 - **Funk auto-fill:** suggests functions, variables, `FD.` and `OD.` data as you type. Up and Down choose, Enter or a click accepts, Esc closes. Variables known to hold a vector come with `v:`.
 - **Funk coloring:** colors each kind of name and marks errors in red.
 - **Matrix blocks:** four 3×3 matrix blocks at the bottom of Operators.
-- **Clean Variables:** in the menu, removes global variables the program doesn't use, after listing them. Another part's program or an Input modifier could still read them by name.
+- **Clean Variables:** in the menu, removes global variables the program doesn't use, after listing them. Another part's program or an InputController could still read them by name.
 - **Export Block:** in the menu. Click a block, then press this to copy it to another saved program, with the variables and custom blocks it needs. An instruction brings the blocks below it.
 - **Jump To:** on the left bar. Start a comment with `//` to tag the blocks after it, such as `//Launch` or `//Launch/Pitch Program`, then select the tag to move the view there. Tags are plain comments.
 

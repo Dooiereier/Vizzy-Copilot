@@ -100,7 +100,7 @@ namespace Assets.Scripts
                     new XElement(ns + "Button",
                         new XAttribute("id", CleanButtonId),
                         new XAttribute("class", "btn"),
-                        new XAttribute("tooltip", "Removes global variables this program doesn't use, after asking. Another part's program or an Input modifier could still read them by name."),
+                        new XAttribute("tooltip", "Removes global variables this program doesn't use, after asking. Another part's program or an InputController could still read them by name."),
                         new XElement(ns + "TextMeshPro", new XAttribute("text", "CLEAN VARIABLES"))));
                 if (ModSettings.Instance.ExportMenu.Value)
                 {
