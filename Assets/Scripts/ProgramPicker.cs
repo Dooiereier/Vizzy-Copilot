@@ -17,24 +17,43 @@ namespace Assets.Scripts
 
         private static IInspectorPanel _panel;
         private static Action _onDismissed;
+        private static readonly List<TextButtonModel> Buttons = new List<TextButtonModel>();
+        private static readonly List<Action> Picks = new List<Action>();
+        private static int _selected = -1;
 
         public static bool IsOpen => _panel != null;
 
-        /// <summary>Calls onDismissed instead of onPicked if the panel closes without a choice.</summary>
-        public static void Show(string title, IList<FlightProgramData> programs, Action<FlightProgramData> onPicked, Action onDismissed)
+        /// <summary>
+        /// Calls onDismissed instead of onPicked if the panel closes without a choice. The program with
+        /// the selected key starts out blue, for Enter to open.
+        /// </summary>
+        public static void Show(string title, IList<FlightProgramData> programs, Action<FlightProgramData> onPicked, Action onDismissed, string selectedKey = null)
         {
             Close();
             _onDismissed = onDismissed;
+            Buttons.Clear();
+            Picks.Clear();
 
             var model = new InspectorModel("VizzyStudioPicker", title);
             foreach (var data in programs)
             {
-                model.Add(new TextButtonModel(Label(data), _ =>
+                Action pick = () =>
                 {
                     _onDismissed = null;
                     Close();
                     onPicked(data);
-                }));
+                };
+                Picks.Add(pick);
+                Buttons.Add(model.Add(new TextButtonModel(Label(data), _ => pick())));
+            }
+
+            _selected = -1;
+            for (var i = 0; i < programs.Count; i++)
+            {
+                if (CraftPrograms.Key(programs[i]) == selectedKey)
+                {
+                    Select(i);
+                }
             }
 
             var info = new InspectorPanelCreationInfo
@@ -50,12 +69,48 @@ namespace Assets.Scripts
             _panel.Closed += OnPanelClosed;
         }
 
+        /// <summary>Each frame: Up and Down move the selection, Enter opens the selected program.</summary>
+        public static void HandleKeys()
+        {
+            if (_panel == null || Game.Instance.UserInterface.IsTextInputFocused)
+            {
+                return;
+            }
+
+            if (UnityEngine.Input.GetKeyDown(KeyCode.DownArrow))
+            {
+                Select((_selected + 1) % Buttons.Count);
+            }
+            else if (UnityEngine.Input.GetKeyDown(KeyCode.UpArrow))
+            {
+                Select(_selected <= 0 ? Buttons.Count - 1 : _selected - 1);
+            }
+            else if (_selected >= 0 && (UnityEngine.Input.GetKeyDown(KeyCode.Return) || UnityEngine.Input.GetKeyDown(KeyCode.KeypadEnter)))
+            {
+                Picks[_selected]();
+            }
+        }
+
         public static void Close()
         {
             var panel = _panel;
             _panel = null;
             panel?.Close();
             Dismissed();
+        }
+
+        private static void Select(int index)
+        {
+            for (var i = 0; i < Buttons.Count; i++)
+            {
+                if (i == _selected || i == index)
+                {
+                    Buttons[i].Style = i == index ? ButtonModel.ButtonStyle.Primary : ButtonModel.ButtonStyle.Default;
+                    Buttons[i].Update();
+                }
+            }
+
+            _selected = index;
         }
 
         private static string Label(FlightProgramData data)

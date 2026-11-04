@@ -44,6 +44,7 @@ namespace Assets.Scripts
             }
 
             FlightPause.Enforce();
+            RunGuarded("Couldn't handle the picker's keys: ", ProgramPicker.HandleKeys);
             this.Session?.Update();
 
             if (_openRequestFrame >= 0 && Time.frameCount > _openRequestFrame)
@@ -153,7 +154,7 @@ namespace Assets.Scripts
                 else
                 {
                     FlightPause.Hold();
-                    ProgramPicker.Show("Restart Vizzy", programs, data => RunGuarded("Couldn't restart the program: ", () => AskToRestart(data)), FlightPause.Release);
+                    ProgramPicker.Show("Restart Vizzy", programs, data => RunGuarded("Couldn't restart the program: ", () => AskToRestart(data)), FlightPause.Release, _lastOpenedKey);
                 }
             });
         }
@@ -239,9 +240,12 @@ namespace Assets.Scripts
             else
             {
                 FlightPause.Hold();
-                ProgramPicker.Show("Edit Vizzy", programs, data => RunGuarded("Couldn't open the editor: ", () => OpenProgram(data)), FlightPause.Release);
+                ProgramPicker.Show("Edit Vizzy", programs, data => RunGuarded("Couldn't open the editor: ", () => OpenProgram(data)), FlightPause.Release, _lastOpenedKey);
             }
         }
+
+        // Survives a quickload, for the tuning loop: load, open the same program, fly.
+        private static string _lastOpenedKey;
 
         private void OpenProgram(FlightProgramData data)
         {
@@ -252,6 +256,7 @@ namespace Assets.Scripts
             }
             else
             {
+                _lastOpenedKey = CraftPrograms.Key(data);
                 this.Session = EditorSession.Open(data);
             }
         }

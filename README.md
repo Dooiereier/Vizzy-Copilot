@@ -17,7 +17,7 @@ Crafts don't need the mod, unless a program on them uses a Matrix block.
 
 Press **Shift+O**, use **Edit Vizzy** in the flight menu, or use the Vizzy button at the bottom of the right-hand bar. The flight pauses while you edit.
 
-- With a part selected, its program opens straight away. Otherwise you choose from the craft's programs, or the only one opens.
+- With a part selected, its program opens straight away. Otherwise you choose from the craft's programs, or the only one opens. In the list, the one you opened last is blue: Up and Down move the selection, Enter opens it.
 - **Shift+O** in the editor applies your edit and returns to flight, and the editor reopens where you left it.
 - **Shift+Alt+O** returns to the quicksave's program.
 - **Restart Vizzy**, on the same button, is the only thing that restarts a program, and it asks first.
