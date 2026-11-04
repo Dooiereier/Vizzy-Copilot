@@ -80,7 +80,18 @@ namespace Assets.Scripts
         /// <summary>Each frame: Up and Down move the selection, Enter opens the selected program.</summary>
         public static void HandleKeys()
         {
-            if (_panel == null || Game.Instance.UserInterface.IsTextInputFocused)
+            if (_panel == null)
+            {
+                return;
+            }
+
+            // The panel can build its rows after it opens, and building can reset their colors.
+            if (_selected >= 0)
+            {
+                Paint(_selected, true);
+            }
+
+            if (Game.Instance.UserInterface.IsTextInputFocused)
             {
                 return;
             }
