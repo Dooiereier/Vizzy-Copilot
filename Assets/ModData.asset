@@ -16,7 +16,7 @@ MonoBehaviour:
   - Vizzy Studio.dll
   _author: Dooiereier, Oxeter and Torifune
   _description: Edit a running craft's Vizzy program in the stock editor in flight,
-    with Funk auto-fill and coloring. Press Shift+O or use Edit Vizzy in the flight
+    with Funk auto-fill and coloring. Press Shift+A or use Edit Vizzy in the flight
     menu. Code by Dooiereier, Oxeter and Torifune. UI textures by QiQi. Needs Juno
     Harmony.
   _loadPriority: 10

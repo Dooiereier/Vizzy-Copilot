@@ -120,7 +120,7 @@ namespace Assets.Scripts
         {
             this.Key = this.CreateEnum<EditorKey>("Editor Key", "Key")
                 .SetDescription("Opens the Vizzy editor in flight. In the editor it applies the edit and returns to flight. With Alt it returns to the quicksave's program.")
-                .SetDefault(EditorKey.O);
+                .SetDefault(EditorKey.A);
 
             this.DebugLogging = this.CreateBool("Debug Logging", "DebugLogging")
                 .SetDescription("Writes thread positions and other details to Player.log.")
