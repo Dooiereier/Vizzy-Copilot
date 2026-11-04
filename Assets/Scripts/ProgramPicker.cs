@@ -5,6 +5,7 @@ namespace Assets.Scripts
     using System.Linq;
     using Assets.Scripts.Craft.Parts.Modifiers;
     using ModApi.Ui.Inspector;
+    using TMPro;
     using UnityEngine;
 
     /// <summary>The choice between a craft's programs, in the game's own inspector panel.</summary>
@@ -20,6 +21,7 @@ namespace Assets.Scripts
         private static readonly List<TextButtonModel> Buttons = new List<TextButtonModel>();
         private static readonly List<Action> Picks = new List<Action>();
         private static int _selected = -1;
+        private static float _fontSize;
 
         public static bool IsOpen => _panel != null;
 
@@ -27,14 +29,14 @@ namespace Assets.Scripts
         /// Calls onDismissed instead of onPicked if the panel closes without a choice. The program with
         /// the selected key starts out blue, for Enter to open.
         /// </summary>
-        public static void Show(string title, IList<FlightProgramData> programs, Action<FlightProgramData> onPicked, Action onDismissed, string selectedKey = null)
+        public static void Show(IList<FlightProgramData> programs, Action<FlightProgramData> onPicked, Action onDismissed, string selectedKey = null)
         {
             Close();
             _onDismissed = onDismissed;
             Buttons.Clear();
             Picks.Clear();
 
-            var model = new InspectorModel("VizzyStudioPicker", title);
+            var model = new InspectorModel("VizzyStudioPicker", "Select vizzy");
             foreach (var data in programs)
             {
                 Action pick = () =>
@@ -60,6 +62,7 @@ namespace Assets.Scripts
             _panel.Closed += OnPanelClosed;
 
             _selected = -1;
+            _fontSize = Buttons.Count > 0 && ButtonText(0) != null ? ButtonText(0).fontSize : 0f;
             for (var i = 0; i < programs.Count; i++)
             {
                 if (CraftPrograms.Key(programs[i]) == selectedKey)
@@ -72,7 +75,13 @@ namespace Assets.Scripts
         /// <summary>Each frame: Up and Down move the selection, Enter opens the selected program.</summary>
         public static void HandleKeys()
         {
-            if (_panel == null || Game.Instance.UserInterface.IsTextInputFocused)
+            if (_panel == null)
+            {
+                return;
+            }
+
+            KeepFontSize();
+            if (Game.Instance.UserInterface.IsTextInputFocused)
             {
                 return;
             }
@@ -107,6 +116,12 @@ namespace Assets.Scripts
                 {
                     Buttons[i].Style = i == index ? ButtonModel.ButtonStyle.Primary : ButtonModel.ButtonStyle.Default;
                     Buttons[i].Update();
+                    var text = ButtonText(i);
+                    if (text != null && _fontSize > 0f)
+                    {
+                        text.enableAutoSizing = false;
+                        text.fontSize = _fontSize;
+                    }
                 }
             }
 
@@ -115,8 +130,23 @@ namespace Assets.Scripts
 
         private static string Label(FlightProgramData data)
         {
-            var program = (string)data.FlightProgramXml.Attribute("name");
-            return string.IsNullOrEmpty(program) ? data.Part.DisplayName : data.Part.DisplayName + " – " + program;
+            return data.Part.DisplayName;
+        }
+
+        private static TMP_Text ButtonText(int index)
+        {
+            return Buttons[index].ItemElement?.GameObject?.GetComponentInChildren<TMP_Text>(true);
+        }
+
+        /// <summary>The game's primary button style uses a smaller font, which would make the selected row look different.</summary>
+        private static void KeepFontSize()
+        {
+            var text = _selected >= 0 ? ButtonText(_selected) : null;
+            if (text != null && _fontSize > 0f && text.fontSize != _fontSize)
+            {
+                text.enableAutoSizing = false;
+                text.fontSize = _fontSize;
+            }
         }
 
         private static void OnPanelClosed(object sender)

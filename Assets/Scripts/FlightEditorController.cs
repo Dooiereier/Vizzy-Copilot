@@ -154,7 +154,7 @@ namespace Assets.Scripts
                 else
                 {
                     FlightPause.Hold();
-                    ProgramPicker.Show("Restart Vizzy", programs, data => RunGuarded("Couldn't restart the program: ", () => AskToRestart(data)), FlightPause.Release, _lastOpenedKey);
+                    ProgramPicker.Show(programs, data => RunGuarded("Couldn't restart the program: ", () => AskToRestart(data)), FlightPause.Release, _lastOpenedKey);
                 }
             });
         }
@@ -240,7 +240,7 @@ namespace Assets.Scripts
             else
             {
                 FlightPause.Hold();
-                ProgramPicker.Show("Edit Vizzy", programs, data => RunGuarded("Couldn't open the editor: ", () => OpenProgram(data)), FlightPause.Release, _lastOpenedKey);
+                ProgramPicker.Show(programs, data => RunGuarded("Couldn't open the editor: ", () => OpenProgram(data)), FlightPause.Release, _lastOpenedKey);
             }
         }
 
