@@ -85,9 +85,17 @@ public static class ThreadRemapperTests
 
     private static void IndentsFromAFileDontLookLikeEdits()
     {
-        var program = Program(Stack(1, Event(0, "One"), Loop(1, "x", Wait(2, "a"), Wait(3, "b")), Wait(4, "c")), Stack(2, Event(5, "Two"), Wait(6, "d"), Wait(7, "e")));
+        // A message event has its text inside it, like the stacks whose threads ended in game.
+        var message = new XElement("Event", new XAttribute("event", "ReceiveMessage"), new XAttribute("id", 5), new XElement("Constant", new XAttribute("text", "Go")));
+        var program = Program(Stack(1, Event(0, "One"), Loop(1, "x", Wait(2, "a"), Wait(3, "b")), Wait(4, "c")), Stack(2, message, Wait(6, "d"), Wait(7, "e")));
         var fromFile = XElement.Parse(program.ToString(), LoadOptions.PreserveWhitespace);
         var result = ThreadRemapper.Remap(fromFile, program, Process(Thread(3, Frame(), Frame(returnId: 1)), Thread(7, Frame())));
+        Check("indents: both threads stay", result.Process.Elements("Thread").Count() == 2);
+        if (result.Process.Elements("Thread").Count() != 2)
+        {
+            return;
+        }
+
         CheckNext("indents: the thread in a loop stays", result, 0, 3);
         CheckNext("indents: the other stack's thread stays", result, 1, 7);
         Check("indents: no thread ends", result.Notes.All(note => !note.Contains("deleted")));

@@ -35,8 +35,9 @@ namespace Assets.Scripts
             var result = new Result { Process = new XElement(process) };
             var oldBlocks = new Dictionary<int, Block>();
             var newBlocks = new Dictionary<int, Block>();
-            var oldStacks = ReadStacks(oldProgram, oldBlocks);
-            var newStacks = ReadStacks(newProgram, newBlocks);
+            // Once per program here, not per block: a block's copy holds everything nested in it.
+            var oldStacks = ReadStacks(WithoutWhitespace(oldProgram), oldBlocks);
+            var newStacks = ReadStacks(WithoutWhitespace(newProgram), newBlocks);
 
             MatchBlocks(oldStacks, newStacks, result.Ids);
 
@@ -394,13 +395,8 @@ namespace Assets.Scripts
         public static XElement WithoutWhitespace(XElement element)
         {
             var copy = new XElement(element);
-            RemoveWhitespace(copy);
+            copy.DescendantNodes().OfType<XText>().Where(text => string.IsNullOrWhiteSpace(text.Value)).ToList().ForEach(text => text.Remove());
             return copy;
-        }
-
-        private static void RemoveWhitespace(XElement element)
-        {
-            element.DescendantNodes().OfType<XText>().Where(text => string.IsNullOrWhiteSpace(text.Value)).ToList().ForEach(text => text.Remove());
         }
 
         private static string ChainKey(List<Block> chain)
@@ -436,7 +432,6 @@ namespace Assets.Scripts
 
                 var own = new XElement(element);
                 own.Elements("Instructions").Remove();
-                RemoveWhitespace(own);
                 foreach (var part in own.DescendantsAndSelf())
                 {
                     part.Attribute("id")?.Remove();
