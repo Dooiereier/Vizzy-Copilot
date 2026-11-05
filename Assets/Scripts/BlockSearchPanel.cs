@@ -7,15 +7,17 @@ namespace Assets.Scripts
     using System.Xml.Linq;
     using Assets.Scripts.Exporter;
     using Assets.Scripts.Vizzy.UI;
+    using Assets.Scripts.Vizzy.UI.Elements;
     using ModApi.Craft.Program;
     using ModApi.Ui;
     using TMPro;
     using UI.Xml;
     using UnityEngine;
+    using UnityEngine.EventSystems;
 
     /// <summary>
     /// Shift+F or the left bar's search button in the Vizzy editor: type part of a block's name, and matching toolbox blocks appear,
-    /// dragged out as usual. Dropdown choices count as their own results, with that choice set.
+    /// dragged out as usual, or double-clicked to appear in the middle of the view. Dropdown choices count as their own results, with that choice set.
     /// </summary>
     public sealed class BlockSearchPanel : MonoBehaviour
     {
@@ -27,7 +29,7 @@ namespace Assets.Scripts
         private const int MaxResults = 30;
         private const float MinWidth = 300f;
         private const float MaxWidth = 600f;
-        private const string Help = "Block Search (Shift+F): type part of a block's name or a dropdown choice, such as + or wait, then drag the block out.";
+        private const string Help = "Block Search (Shift+F): type part of a block's name or a dropdown choice, such as + or wait, then drag the block out or double-click it.";
 
         // Private in the game: it's what makes a block behave as a toolbox block.
         private static readonly MethodInfo LoadNodes = typeof(VizzyUIController).GetMethod("LoadNodes", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -278,7 +280,23 @@ namespace Assets.Scripts
             }
 
             var size = (Vector2)LoadNodes.Invoke(_controller, new object[] { nodes, _results, null, 0f });
+            foreach (var block in _results.GetComponentsInChildren<BlockElementScript>(true))
+            {
+                block.gameObject.AddComponent<ResultClick>().Connect(this, block);
+            }
+
             _flyout.SetAndApplyAttribute("width", Mathf.Clamp(size.x, MinWidth, MaxWidth).ToString());
+        }
+
+        /// <summary>Double click: a copy of the result in the middle of the view, without dragging.</summary>
+        private void PlaceAtCenter(BlockElementScript result)
+        {
+            var root = result.Root;
+            var editor = _controller.VizzyUI;
+            var viewport = (RectTransform)_controller.ProgramContainer.transform;
+            var placed = editor.NodeBuilder.CloneBlock(root, true).First();
+            placed.transform.position = viewport.TransformPoint(viewport.rect.center);
+            editor.CreateUndoStep(null);
         }
 
         private void ClearResults()
@@ -287,6 +305,33 @@ namespace Assets.Scripts
             {
                 child.gameObject.SetActive(false);
                 Destroy(child.gameObject);
+            }
+        }
+
+        private sealed class ResultClick : MonoBehaviour, IPointerClickHandler
+        {
+            private BlockSearchPanel _panel;
+            private BlockElementScript _block;
+
+            public void Connect(BlockSearchPanel panel, BlockElementScript block)
+            {
+                _panel = panel;
+                _block = block;
+            }
+
+            public void OnPointerClick(PointerEventData eventData)
+            {
+                if (eventData.button == PointerEventData.InputButton.Left && eventData.clickCount == 2)
+                {
+                    try
+                    {
+                        _panel.PlaceAtCenter(_block);
+                    }
+                    catch (Exception e)
+                    {
+                        EditorLog.Error("Block search couldn't place a block: " + e);
+                    }
+                }
             }
         }
 
