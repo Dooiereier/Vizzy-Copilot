@@ -18,6 +18,7 @@ namespace Assets.Scripts
         private const string FlyoutId = "vizzy-studio-flyout";
         private const string EditId = "vizzy-studio-edit";
         private const string RestartId = "vizzy-studio-restart";
+        private const string ArrangeMfdId = "vizzy-studio-arrange-mfd";
         private const string ToggledClass = "panel-button-icon-toggled";
         private const int FramesBetweenSearches = 30;
 
@@ -47,6 +48,7 @@ namespace Assets.Scripts
                     return;
                 }
 
+                var arrangeMfd = ModSettings.Instance.ArrangeMfd.Value;
                 bar.Add(new XElement(ns + "ContentButton",
                     new XAttribute("id", ToggleId),
                     new XAttribute("class", "panel-button audio-btn-click"),
@@ -67,13 +69,14 @@ namespace Assets.Scripts
                     new XAttribute("childAlignment", "UpperRight"),
                     new XAttribute("spacing", "0"),
                     new XAttribute("rectAlignment", "UpperRight"),
-                    new XAttribute("width", "100"),
+                    new XAttribute("width", arrangeMfd ? "145" : "100"),
                     new XAttribute("pivot", "1 1"),
                     new XAttribute("contentSizeFitter", "vertical"),
                     new XElement(ns + "HorizontalLayout",
                         new XAttribute("class", "nav-sphere-row"),
                         FlyoutButton(ns, RestartId, "Restart Vizzy", "Ui/Sprites/Flight/IconRetry"),
-                        FlyoutButton(ns, EditId, "Edit Vizzy", "Ui/Sprites/Design/IconButtonEdit"))));
+                        FlyoutButton(ns, EditId, "Edit Vizzy", "Ui/Sprites/Design/IconButtonEdit"),
+                        arrangeMfd ? FlyoutButton(ns, ArrangeMfdId, "Arrange MFD", "Ui/Sprites/Design/IconButtonMovePartTool") : null)));
             }
             catch (Exception e)
             {
@@ -145,6 +148,12 @@ namespace Assets.Scripts
                 EditorLog.Debug("Edit Vizzy clicked.");
                 Hide();
                 FlightEditorController.Current?.EditSelected();
+            });
+            layout.GetElementById(ArrangeMfdId)?.AddOnClickEvent(() =>
+            {
+                EditorLog.Debug("Arrange MFD clicked.");
+                Hide();
+                FlightEditorController.Current?.ArrangeMfd();
             });
             restart.AddOnClickEvent(() =>
             {

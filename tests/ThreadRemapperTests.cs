@@ -45,6 +45,7 @@ public static class ThreadRemapperTests
         ModPageVersionTests.Run(Check);
         BlockSearchTests.Run(Check);
         BlockPlacementTests.Run(Check);
+        MfdFormulaWriterTests.Run(Check);
 
         Console.WriteLine($"{_passed} passed, {_failed} failed.");
         return _failed == 0 ? 0 : 1;

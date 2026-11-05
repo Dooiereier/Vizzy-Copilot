@@ -140,7 +140,16 @@ that mod loads, before later mods. `_loadPriority` is above Juno Harmony's.
   them after asking, as one Undo step. Names in Funk text count as used, and it removes nothing if a Funk block's
   text is built by other blocks. It can't see another part reading a variable through `Part.VZ.Name`.
 
-MFD Runtime Editor is planned later; it may not bring its own copy of Harmony.
+## Arrange MFD
+
+`MfdEditorSession`, from MFD Runtime Editor (source: Dooiereier/MFD-Widget-Arranger), behind the Arrange MFD setting, off by default.
+
+- **Panel:** a stock inspector panel, reached from the flight flyout. Holds the flight with `FlightPause`, so a program can't overwrite values being typed. Widgets come from the private `MfdScript._widgets`: the game has no public list, and if the field goes the panel says so and doesn't open.
+- **Writing:** `MfdFormulaWriter` (XML only, tested offline) changes a plain number, the one number in a Funk formula (`VizzyExpressionSolver`), or a helper custom instruction's argument. It follows a global variable only if one block sets it and, without the override, one thing reads it. Anything else is refused with a reason.
+- **Save:** first the running program through `ProgramSwapper` and `LatestEdits`, as Edit Vizzy's Apply does. Then `MfdCraftFiles` writes `CraftDesigns.EditorCraftId` (the working copy the designer and a relaunch read) and the design named after the craft, through `CraftDesigns.SaveCraft`, which keeps the game's cached working copy right. A file counts only if its root name is the flying craft's and the writer does exactly the same to it as to the running program; otherwise no file changes, and the panel says the save is for this flight.
+- **Outline:** one object moved to the selected widget, with `raycastTarget` off so MFD buttons still work, and `VizzyStudioOverlay.shader` so it doesn't fight with the widget's background.
+
+Lifecycle: paused throughout; warp is refused at opening; closing, a scene end or a craft loss reverts what wasn't saved. Stock MFD programs aren't offered, as the game reloads them. Known limits: a value a program sets every tick jumps back unless it was saved; widgets reading a shared variable only move at the next launch, as Restart isn't available for MFD programs; after a quickload widgets show the quicksave's values until the program sets them again.
 
 ## Block search
 

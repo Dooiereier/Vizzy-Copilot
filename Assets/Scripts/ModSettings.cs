@@ -108,6 +108,8 @@ namespace Assets.Scripts
 
         public BoolSetting BlockSearch { get; private set; }
 
+        public BoolSetting ArrangeMfd { get; private set; }
+
         public BoolSetting FunkAutoFill { get; private set; }
 
         public BoolSetting FunkSyntaxHighlight { get; private set; }
@@ -143,6 +145,10 @@ namespace Assets.Scripts
             this.BlockSearch = this.CreateBool("Block Search", "BlockSearch")
                 .SetDescription("Shift+F or a search button in the Vizzy editor opens a search box: type part of a block's name, then drag it out of the results.")
                 .SetDefault(true);
+
+            this.ArrangeMfd = this.CreateBool("Arrange MFD", "ArrangeMfd")
+                .SetDescription("Adds Arrange MFD to the flight buttons: move, resize and rotate the widgets of a custom MFD program, then save the values into the program. Saving also changes the craft's files, after backing them up. Applies from the next flight.")
+                .SetDefault(false);
 
             this.FunkSyntaxHighlight = this.CreateBool("Funk Syntax Highlight", "FunkSyntaxHighlight")
                 .SetDescription("Colors Funk fields and marks errors in red, in the designer and in flight.")

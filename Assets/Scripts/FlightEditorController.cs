@@ -4,6 +4,7 @@ namespace Assets.Scripts
     using System.Linq;
     using System.Xml.Linq;
     using Assets.Scripts.Craft.Parts.Modifiers;
+    using Assets.Scripts.Mfd;
     using UnityEngine;
 
     /// <summary>
@@ -20,6 +21,8 @@ namespace Assets.Scripts
         public static FlightEditorController Current { get; private set; }
 
         public EditorSession Session { get; private set; }
+
+        private MfdEditorSession _mfdSession;
 
         private void Awake()
         {
@@ -46,6 +49,7 @@ namespace Assets.Scripts
             FlightPause.Enforce();
             RunGuarded("Couldn't handle the picker's keys: ", ProgramPicker.HandleKeys);
             this.Session?.Update();
+            RunGuarded("Couldn't update the MFD panel: ", () => _mfdSession?.Update());
 
             if (_openRequestFrame >= 0 && Time.frameCount > _openRequestFrame)
             {
@@ -96,6 +100,7 @@ namespace Assets.Scripts
         {
             RunGuarded("Couldn't close the picker: ", ProgramPicker.Close);
             RunGuarded("Couldn't close the editor: ", () => this.Session?.Close());
+            RunGuarded("Couldn't close the MFD panel: ", () => _mfdSession?.Close());
             FlightPause.Reset();
             if (Current == this)
             {
@@ -121,6 +126,48 @@ namespace Assets.Scripts
                     OpenProgram(selected);
                 }
             });
+        }
+
+        /// <summary>The Arrange MFD button: the selected part's MFD, otherwise the craft's only one or a choice of them.</summary>
+        public void ArrangeMfd()
+        {
+            RunGuarded("Couldn't open the MFD panel: ", () =>
+            {
+                ProgramPicker.Close();
+                if (!CanStart())
+                {
+                    return;
+                }
+
+                var scene = Game.Instance.FlightScene;
+                var selected = CraftPrograms.Selected(scene);
+                if (selected != null && CraftPrograms.IsMfd(selected))
+                {
+                    this.OpenMfd(selected);
+                    return;
+                }
+
+                var programs = CraftPrograms.Editable(scene.CraftNode.CraftScript).Where(CraftPrograms.IsMfd).ToList();
+                if (programs.Count == 0)
+                {
+                    scene.FlightSceneUI.ShowMessage("No custom MFD program on this craft.");
+                }
+                else if (programs.Count == 1)
+                {
+                    this.OpenMfd(programs[0]);
+                }
+                else
+                {
+                    FlightPause.Hold();
+                    ProgramPicker.Show(programs, data => RunGuarded("Couldn't open the MFD panel: ", () => this.OpenMfd(data)), FlightPause.Release);
+                }
+            });
+        }
+
+        private void OpenMfd(FlightProgramData data)
+        {
+            _mfdSession = new MfdEditorSession(data);
+            _mfdSession.Open();
         }
 
         /// <summary>The Restart Vizzy button: the selected part's program, otherwise a choice of them. Always asks first.</summary>
@@ -199,7 +246,7 @@ namespace Assets.Scripts
         private bool CanStart()
         {
             var ui = Game.Instance.UserInterface;
-            if (ui.AnyDialogsOpen || ui.IsTextInputFocused || this.Session?.IsOpen == true)
+            if (ui.AnyDialogsOpen || ui.IsTextInputFocused || this.Session?.IsOpen == true || _mfdSession?.IsOpen == true)
             {
                 return false;
             }
