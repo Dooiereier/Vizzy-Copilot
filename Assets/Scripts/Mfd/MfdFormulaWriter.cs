@@ -290,7 +290,7 @@ namespace Assets.Scripts.Mfd
                 }
             }
 
-            /// <summary>Whether blocks hold the same value, whatever their ids and places in the editor.</summary>
+            /// <summary>Whether blocks hold the same value, whatever their ids, places in the editor and indents.</summary>
             private static bool AllSameValue(List<XElement> blocks)
             {
                 var first = WithoutPlace(blocks[0]);
@@ -300,6 +300,9 @@ namespace Assets.Scripts.Mfd
             private static XElement WithoutPlace(XElement block)
             {
                 var copy = new XElement(block);
+
+                // A program loaded from a file keeps its line breaks and indents, which differ with nesting.
+                copy.DescendantNodes().OfType<XText>().Where(text => string.IsNullOrWhiteSpace(text.Value)).ToList().ForEach(text => text.Remove());
                 foreach (var element in copy.DescendantsAndSelf())
                 {
                     element.Attribute("id")?.Remove();

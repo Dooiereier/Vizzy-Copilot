@@ -91,6 +91,13 @@ public static class MfdFormulaWriterTests
         check("MFD: and all change", sameTwice.Descendants("Vector").All(item => (string)item.Elements().First().Attribute("number") == "5"));
         check("MFD: ids stay", sameTwice.Descendants("SetCraftProperty").Select(item => (string)item.Attribute("id")).SequenceEqual(new[] { "1", "2" }));
 
+        var indented = XElement.Parse(
+            "<Program><Instructions>\n  " + Set("SetPosition", Vec("1", "2")).Replace("><", ">\n    <")
+            + "\n  <If>\n    <Instructions>\n      " + Set("SetPosition", Vec("1", "2")).Replace("><", ">\n          <")
+            + "\n    </Instructions>\n  </If>\n</Instructions></Program>",
+            LoadOptions.PreserveWhitespace);
+        check("MFD: indents from a file don't make matching blocks differ", Move(indented, 5, 6).Single().Applied);
+
         // As in a real block: -0.46 * x of _Screen's size, 0.455 * y of it.
         var screenSize = "<CraftProperty property=\"Mfd.Size\"><Constant text=\"_Screen\" /></CraftProperty>";
         string Scaled(string number, string axis) => "<BinaryOp op=\"*\"><Constant text=\"" + number + "\" /><VectorOp op=\"" + axis + "\">" + screenSize + "</VectorOp></BinaryOp>";
