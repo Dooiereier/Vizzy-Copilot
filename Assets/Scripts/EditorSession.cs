@@ -2,6 +2,7 @@ namespace Assets.Scripts
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Xml.Linq;
     using Assets.Scripts.Craft.Parts.Modifiers;
     using Assets.Scripts.Vizzy.UI;
@@ -176,6 +177,7 @@ namespace Assets.Scripts
                 }
 
                 var before = _data.FlightProgramXml;
+                LogFunkChanges(before, newProgram);
                 if (XNode.DeepEquals(before, newProgram))
                 {
                     _applied = true;
@@ -194,6 +196,47 @@ namespace Assets.Scripts
             catch (Exception e)
             {
                 EditorLog.Error("Apply failed: " + e);
+            }
+        }
+
+        /// <summary>
+        /// Debug only: Funk texts the edit added or removed, to tell an edit from text the editor changed on
+        /// its own.
+        /// </summary>
+        private static void LogFunkChanges(XElement before, XElement after)
+        {
+            if (!ModSettings.Instance.DebugLogging.Value)
+            {
+                return;
+            }
+
+            List<string> Texts(XElement program) => program.Descendants("EvaluateExpression")
+                .Select(item => (string)item.Elements("Constant").FirstOrDefault()?.Attribute("text"))
+                .Where(text => text != null)
+                .OrderBy(text => text, StringComparer.Ordinal)
+                .ToList();
+
+            var old = Texts(before);
+            var now = Texts(after);
+            var removed = old.ToList();
+            var added = new List<string>();
+            foreach (var text in now)
+            {
+                if (!removed.Remove(text))
+                {
+                    added.Add(text);
+                }
+            }
+
+            EditorLog.Debug("Apply: " + old.Count + " Funk texts before, " + now.Count + " after.");
+            foreach (var text in removed)
+            {
+                EditorLog.Debug("Apply removed Funk text: '" + text + "'");
+            }
+
+            foreach (var text in added)
+            {
+                EditorLog.Debug("Apply added Funk text: '" + text + "'");
             }
         }
 
