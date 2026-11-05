@@ -82,7 +82,41 @@ public static class MfdFormulaWriterTests
         check("MFD: two numbers on an axis are refused", !Move(twoNumbers, 50, 20).Single().Applied && XNode.DeepEquals(twoNumbers, twoBefore));
 
         var twice = Program(Set("SetPosition", Vec("1", "2")) + Set("SetPosition", Vec("3", "4")));
-        check("MFD: two blocks for a widget are refused", !Move(twice, 5, 6).Single().Applied);
+        var twiceBefore = new XElement(twice);
+        check("MFD: two blocks with different values are refused", !Move(twice, 5, 6).Single().Applied && XNode.DeepEquals(twice, twiceBefore));
+
+        var sameTwice = Program(Set("SetPosition", Vec("1", "2")).Replace("<SetCraftProperty ", "<SetCraftProperty id=\"1\" ") + Set("SetPosition", Vec("1", "2")).Replace("<SetCraftProperty ", "<SetCraftProperty id=\"2\" "));
+        var sameLines = Move(sameTwice, 5, 6);
+        check("MFD: blocks with the same value give one line", sameLines.Count == 1 && sameLines[0].Applied && sameLines[0].Detail.Contains("all 2 blocks"));
+        check("MFD: and all change", sameTwice.Descendants("Vector").All(item => (string)item.Elements().First().Attribute("number") == "5"));
+        check("MFD: ids stay", sameTwice.Descendants("SetCraftProperty").Select(item => (string)item.Attribute("id")).SequenceEqual(new[] { "1", "2" }));
+
+        // As in a real block: -0.46 * x of _Screen's size, 0.455 * y of it.
+        var screenSize = "<CraftProperty property=\"Mfd.Size\"><Constant text=\"_Screen\" /></CraftProperty>";
+        string Scaled(string number, string axis) => "<BinaryOp op=\"*\"><Constant text=\"" + number + "\" /><VectorOp op=\"" + axis + "\">" + screenSize + "</VectorOp></BinaryOp>";
+        var scaled = Program(Set("SetPosition", "<Vector>" + Scaled("-0.46", "x") + Scaled("0.455", "y") + "<Constant number=\"0\" /></Vector>"));
+        check("MFD: block formulas on both axes are solved", Move(scaled, 100, 50).Single().Applied);
+        var scaledNumbers = scaled.Descendants("Constant").Select(item => (string)item.Attribute("text") ?? (string)item.Attribute("number")).Where(text => text != "_Screen" && text != "A").ToList();
+        check("MFD: and written as the fraction of the screen", scaledNumbers.SequenceEqual(new[] { "0.5", "0.5", "0" }));
+
+        var mixed = Program(Set("SetPosition", "<Vector>" + Scaled("0.1", "x") + "<Constant number=\"7\" /><Constant number=\"0\" /></Vector>"));
+        check("MFD: a formula and a plain number mix", Move(mixed, 40, 9).Single().Applied && (string)mixed.Descendants("Constant").Last(item => item.Attribute("number") != null && item.Attribute("number").Value != "0").Attribute("number") == "9");
+
+        var divided = Program(Set("SetRotation", "<BinaryOp op=\"/\"><VectorOp op=\"x\">" + screenSize + "</VectorOp><Constant text=\"4\" /></BinaryOp>"));
+        check("MFD: dividing by the number solves for it", Move(divided, 100, 0, false, MfdProperty.Rotation).Single().Applied && (string)divided.Descendants("Constant").Last().Attribute("text") == "2");
+
+        var subtracted = Program(Set("SetRotation", "<BinaryOp op=\"-\"><VectorOp op=\"y\">" + screenSize + "</VectorOp><Constant text=\"4\" /></BinaryOp>"));
+        check("MFD: subtracting the number solves for it", Move(subtracted, 30, 0, false, MfdProperty.Rotation).Single().Applied && (string)subtracted.Descendants("Constant").Last().Attribute("text") == "70");
+
+        var twoInBlocks = Program(Set("SetPosition", "<Vector><BinaryOp op=\"+\"><Constant text=\"1\" /><Constant text=\"2\" /></BinaryOp><Constant number=\"7\" /><Constant number=\"0\" /></Vector>"));
+        var twoInBlocksBefore = new XElement(twoInBlocks);
+        check("MFD: two numbers on an axis in blocks are refused, y isn't written either", !Move(twoInBlocks, 5, 6).Single().Applied && XNode.DeepEquals(twoInBlocks, twoInBlocksBefore));
+
+        var otherOp = Program(Set("SetPosition", "<Vector><BinaryOp op=\"^\"><Constant text=\"2\" /><VectorOp op=\"x\">" + screenSize + "</VectorOp></BinaryOp><Constant number=\"7\" /><Constant number=\"0\" /></Vector>"));
+        check("MFD: other operators are refused", !Move(otherOp, 5, 6).Single().Applied);
+
+        var unknownVector = Program(Set("SetPosition", "<Vector><BinaryOp op=\"*\"><Constant text=\"2\" /><VectorOp op=\"x\"><CraftProperty property=\"Mfd.Position\"><Constant text=\"B\" /></CraftProperty></VectorOp></BinaryOp><Constant number=\"7\" /><Constant number=\"0\" /></Vector>"));
+        check("MFD: another widget's value isn't known, so it's refused", !Move(unknownVector, 5, 6).Single().Applied);
 
         check("MFD: no block for the widget is refused", !Move(Program(Set("SetPosition", Vec("1", "2"), "B")), 5, 6).Single().Applied);
 

@@ -47,8 +47,9 @@ namespace Assets.Scripts.Mfd
 
     /// <summary>
     /// Writes MFD widget values into a program's XML: a block's literal numbers, the one number in a
-    /// Funk formula, or the argument of a helper custom instruction. It refuses rather than guesses:
-    /// nothing else in the program may change, and a formula is only rewritten when one number decides it.
+    /// formula made of blocks or Funk, or the argument of a helper custom instruction. It refuses rather
+    /// than guesses: nothing else in the program may change, and a formula is only rewritten when one
+    /// number decides it. Several blocks setting a widget to the same value change together.
     /// </summary>
     public static class MfdFormulaWriter
     {
@@ -154,15 +155,30 @@ namespace Assets.Scripts.Mfd
                     })
                     .ToList();
 
-                if (direct.Count > 1)
+                if (direct.Count > 1 && !AllSameValue(direct))
                 {
-                    this.Refuse(change, direct.Count + " blocks set this, so there's no single one to change.");
+                    this.Refuse(change, direct.Count + " blocks set this to different values, so there's no single one to change.");
                     return;
                 }
 
-                if (direct.Count == 1)
+                if (direct.Count > 0)
                 {
-                    this.ApplyToValue(change, direct[0].Elements().Skip(1).FirstOrDefault(), string.Empty);
+                    // The same value gives the same outcome in each, so they all change or none do.
+                    var first = this.Lines.Count;
+                    foreach (var setter in direct)
+                    {
+                        this.ApplyToValue(change, setter.Elements().Skip(1).FirstOrDefault(), string.Empty);
+                    }
+
+                    if (direct.Count > 1)
+                    {
+                        this.Lines.RemoveRange(first + 1, this.Lines.Count - first - 1);
+                        if (this.Lines[first].Applied)
+                        {
+                            this.Lines[first].Detail += " (in all " + direct.Count + " blocks that set it)";
+                        }
+                    }
+
                     return;
                 }
 
@@ -232,31 +248,211 @@ namespace Assets.Scripts.Mfd
                 {
                     this.ApplyToFormula(change, value, where, shared);
                 }
-                else if (change.Property == MfdProperty.Rotation && IsPlainNumber(value))
+                else if (change.Property == MfdProperty.Rotation && (IsPlainNumber(value) || value.Name == "BinaryOp"))
                 {
-                    var old = NumberText(value);
-                    SetNumber(value, change.X);
-                    this.Done(change, old + " becomes " + Format(change.X) + where, shared);
+                    if (!this.SolveBlocks(value, change.X, out var number, out var solved, out var failure))
+                    {
+                        this.Refuse(change, failure);
+                        return;
+                    }
+
+                    var old = NumberText(number);
+                    SetNumber(number, solved);
+                    this.Done(change, old + " becomes " + Format(solved) + where, shared);
                 }
                 else if (change.Property != MfdProperty.Rotation && value.Name == "Vector")
                 {
                     // By position: Elements("Constant") would skip a formula in x and write y's number to x.
                     var parts = value.Elements().Take(2).ToList();
-                    if (parts.Count < 2 || !parts.All(IsPlainNumber))
+                    if (parts.Count < 2)
                     {
-                        this.Refuse(change, "The vector's x and y aren't both plain numbers.");
+                        this.Refuse(change, "The vector has fewer than 2 parts.");
                         return;
                     }
 
-                    var old = "(" + NumberText(parts[0]) + ", " + NumberText(parts[1]) + ")";
-                    SetNumber(parts[0], change.X);
-                    SetNumber(parts[1], change.Y);
-                    this.Done(change, old + " becomes (" + Format(change.X) + ", " + Format(change.Y) + ")" + where, shared);
+                    // Both axes or neither.
+                    var xSolved = this.SolveBlocks(parts[0], change.X, out var xNumber, out var xValue, out var xFailure);
+                    var ySolved = this.SolveBlocks(parts[1], change.Y, out var yNumber, out var yValue, out var yFailure);
+                    if (!xSolved || !ySolved)
+                    {
+                        this.Refuse(change, "x: " + (xFailure ?? "fine") + " y: " + (yFailure ?? "fine"));
+                        return;
+                    }
+
+                    var old = "(" + NumberText(xNumber) + ", " + NumberText(yNumber) + ")";
+                    SetNumber(xNumber, xValue);
+                    SetNumber(yNumber, yValue);
+                    this.Done(change, old + " becomes (" + Format(xValue) + ", " + Format(yValue) + ")" + where, shared);
                 }
                 else
                 {
-                    this.Refuse(change, "The value is built from " + value.Name + " blocks, which can't be rewritten. Funk formulas and plain numbers can.");
+                    this.Refuse(change, "The value is built from " + value.Name + " blocks, which can't be rewritten. Numbers, + - * / blocks and Funk formulas can.");
                 }
+            }
+
+            /// <summary>Whether blocks hold the same value, whatever their ids and places in the editor.</summary>
+            private static bool AllSameValue(List<XElement> blocks)
+            {
+                var first = WithoutPlace(blocks[0]);
+                return blocks.Skip(1).All(block => XNode.DeepEquals(first, WithoutPlace(block)));
+            }
+
+            private static XElement WithoutPlace(XElement block)
+            {
+                var copy = new XElement(block);
+                foreach (var element in copy.DescendantsAndSelf())
+                {
+                    element.Attribute("id")?.Remove();
+                    element.Attribute("pos")?.Remove();
+                }
+
+                return copy;
+            }
+
+            /// <summary>
+            /// For a plain number, or + - * / blocks over numbers and known sizes: finds the one number in
+            /// it and what that number must be for the whole to give the target.
+            /// </summary>
+            private bool SolveBlocks(XElement value, double target, out XElement number, out double solved, out string failure)
+            {
+                number = null;
+                solved = 0;
+                failure = null;
+                var numbers = value.DescendantsAndSelf("Constant").Where(IsPlainNumber).ToList();
+                if (numbers.Count != 1)
+                {
+                    failure = "It needs exactly one number to change, and this has " + numbers.Count + ".";
+                    return false;
+                }
+
+                number = numbers[0];
+                var result = this.SolveFor(value, number, target);
+                if (result == null || double.IsNaN(result.Value) || double.IsInfinity(result.Value))
+                {
+                    failure = "Only + - * / blocks, numbers and known sizes can be solved.";
+                    return false;
+                }
+
+                solved = result.Value;
+                return true;
+            }
+
+            private double? SolveFor(XElement node, XElement number, double target)
+            {
+                if (node == number)
+                {
+                    return target;
+                }
+
+                var arguments = node.Elements().ToList();
+                if (node.Name != "BinaryOp" || arguments.Count != 2)
+                {
+                    return null;
+                }
+
+                var op = (string)node.Attribute("op");
+                var inLeft = arguments[0].DescendantsAndSelf().Contains(number);
+                var otherKnown = this.TryEvaluateBlocks(arguments[inLeft ? 1 : 0], out var other);
+                if (!otherKnown)
+                {
+                    return null;
+                }
+
+                double next;
+                switch (op)
+                {
+                    case "+":
+                        next = target - other;
+                        break;
+                    case "-":
+                        next = inLeft ? target + other : other - target;
+                        break;
+                    case "*":
+                        if (other == 0)
+                        {
+                            return null;
+                        }
+
+                        next = target / other;
+                        break;
+                    case "/":
+                        if (inLeft)
+                        {
+                            next = target * other;
+                        }
+                        else if (target == 0)
+                        {
+                            return null;
+                        }
+                        else
+                        {
+                            next = other / target;
+                        }
+
+                        break;
+                    default:
+                        return null;
+                }
+
+                return this.SolveFor(arguments[inLeft ? 0 : 1], number, next);
+            }
+
+            private bool TryEvaluateBlocks(XElement node, out double value)
+            {
+                value = 0;
+                if (node.Name == "BinaryOp")
+                {
+                    var arguments = node.Elements().ToList();
+                    if (arguments.Count != 2 || !this.TryEvaluateBlocks(arguments[0], out var left) || !this.TryEvaluateBlocks(arguments[1], out var right))
+                    {
+                        return false;
+                    }
+
+                    switch ((string)node.Attribute("op"))
+                    {
+                        case "+":
+                            value = left + right;
+                            return true;
+                        case "-":
+                            value = left - right;
+                            return true;
+                        case "*":
+                            value = left * right;
+                            return true;
+                        case "/":
+                            value = left / right;
+                            return right != 0;
+                        default:
+                            return false;
+                    }
+                }
+
+                if (node.Name == "VectorOp")
+                {
+                    var op = (string)node.Attribute("op");
+                    var source = node.Elements().FirstOrDefault();
+                    if ((op != "x" && op != "y" && op != "z") || source == null || !this.TryKnownVector(source, out var x, out var y, out var z))
+                    {
+                        return false;
+                    }
+
+                    value = op == "x" ? x : op == "y" ? y : z;
+                    return true;
+                }
+
+                // Only ever another number: SolveBlocks has already found there's one to change.
+                return false;
+            }
+
+            private bool TryKnownVector(XElement source, out double x, out double y, out double z)
+            {
+                x = y = z = 0;
+                if (source.Name == "Variable")
+                {
+                    return (string)source.Attribute("local") != "true" && _globals.TryResolve((string)source.Attribute("variableName"), out x, out y, out z);
+                }
+
+                return _globals.TryKnownBlock(source, out x, out y, out z);
             }
 
             private void ApplyToFormula(MfdChange change, XElement formula, string where, bool shared)
@@ -589,6 +785,21 @@ namespace Assets.Scripts.Mfd
                 _screenHeight = screenHeight;
             }
 
+            /// <summary>A block whose vector is known without running: the size of _Screen.</summary>
+            public bool TryKnownBlock(XElement block, out double x, out double y, out double z)
+            {
+                x = y = z = 0;
+                if (block.Name != "CraftProperty" || (string)block.Attribute("property") != "Mfd.Size"
+                    || (string)block.Elements("Constant").FirstOrDefault()?.Attribute("text") != "_Screen")
+                {
+                    return false;
+                }
+
+                x = _screenWidth;
+                y = _screenHeight;
+                return true;
+            }
+
             public bool TryResolve(string name, out double x, out double y, out double z)
             {
                 x = y = z = 0;
@@ -630,10 +841,9 @@ namespace Assets.Scripts.Mfd
                     return null;
                 }
 
-                if (value.Name == "CraftProperty" && (string)value.Attribute("property") == "Mfd.Size"
-                    && (string)value.Elements("Constant").FirstOrDefault()?.Attribute("text") == "_Screen")
+                if (this.TryKnownBlock(value, out var screenX, out var screenY, out var screenZ))
                 {
-                    return new[] { _screenWidth, _screenHeight, 0d };
+                    return new[] { screenX, screenY, screenZ };
                 }
 
                 var text = value.Name == "EvaluateExpression" ? (string)value.Elements("Constant").FirstOrDefault()?.Attribute("text") : null;
