@@ -54,7 +54,8 @@ namespace Assets.Scripts
         private TMP_InputField _input;
         private List<BlockEntry> _entries;
         private string _shownText;
-        private int _clearTypedKeyFrame = -1;
+        private string _keepText = string.Empty;
+        private int _keepTextUntilFrame = -1;
         private readonly List<BlockElementScript> _shownBlocks = new List<BlockElementScript>();
         private int _selected = -1;
         private RectTransform _highlight;
@@ -207,10 +208,16 @@ namespace Assets.Scripts
                     return;
                 }
 
-                // The key that opened the search can land in the box a moment later.
-                if (Time.frameCount <= _clearTypedKeyFrame && _input.text.Length > 0)
+                // The cursor left the box, for example by clicking a block: the shortcut brings it back.
+                if (shift && UnityEngine.Input.GetKeyDown(KeyCode.F) && !_input.isFocused && !OtherFieldHasFocus())
                 {
-                    _input.text = string.Empty;
+                    Focus(_input.text);
+                }
+
+                // The shortcut's key can land in the box a moment later.
+                if (Time.frameCount <= _keepTextUntilFrame && _input.text != _keepText)
+                {
+                    _input.text = _keepText;
                 }
 
                 WatchDrag();
@@ -219,10 +226,7 @@ namespace Assets.Scripts
                     ShowResults(_input.text);
                 }
 
-                // Another text field, such as a block's, keeps its own keys. This asks what's selected rather than
-                // isFocused: Enter can end the box's editing earlier this frame, and the box stays selected.
-                var selected = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
-                if (!Game.Instance.UserInterface.IsTextInputFocused || selected == _input.gameObject)
+                if (!OtherFieldHasFocus())
                 {
                     HandleKeys();
                 }
@@ -232,6 +236,25 @@ namespace Assets.Scripts
                 EditorLog.Error("Block search failed: " + e);
                 Close();
             }
+        }
+
+        /// <summary>
+        /// Another text field, such as a block's, keeps its own keys. This asks what's selected rather than isFocused:
+        /// Enter can end the box's editing earlier this frame, and the box stays selected.
+        /// </summary>
+        private bool OtherFieldHasFocus()
+        {
+            var selected = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
+            return Game.Instance.UserInterface.IsTextInputFocused && selected != _input.gameObject;
+        }
+
+        /// <summary>Puts the cursor in the box, without letting the shortcut's key change the text.</summary>
+        private void Focus(string text)
+        {
+            _keepText = text;
+            _keepTextUntilFrame = Time.frameCount + 2;
+            _input.Select();
+            _input.ActivateInputField();
         }
 
         /// <summary>After the input field has handled the same keys this frame.</summary>
@@ -390,9 +413,7 @@ namespace Assets.Scripts
             _shownText = string.Empty;
             _wasDragging = false;
             ClearResults();
-            _clearTypedKeyFrame = Time.frameCount + 2;
-            _input.Select();
-            _input.ActivateInputField();
+            Focus(string.Empty);
         }
 
         private List<BlockEntry> BuildEntries()
