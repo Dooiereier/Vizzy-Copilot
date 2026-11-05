@@ -15,11 +15,12 @@ Crafts don't need the mod, unless a program on them uses a Matrix block.
 
 ## Editing in flight
 
-Press **Shift+A**, use **Edit Vizzy** in the flight menu, or use the Vizzy button at the bottom of the right-hand bar. The flight pauses while you edit.
+Press **Option+A** (Alt+A on Windows), use **Edit Vizzy** in the flight menu, or use the Vizzy button at the bottom of the right-hand bar. The flight pauses while you edit.
 
 - With a part selected, its program opens straight away. Otherwise you choose from the craft's programs, or the only one opens. In the list, the one you opened last is blue: Up and Down move the selection, Enter opens it.
-- **Shift+A** in the editor applies your edit and returns to flight, and the editor reopens where you left it.
-- **Shift+Alt+A** returns to the quicksave's program.
+- **Option+A** in the editor applies your edit and returns to flight, and the editor reopens where you left it.
+- **Option+Shift+A** returns to the quicksave's program.
+- The letter and the modifier are settings. Shift and Ctrl also change the throttle in the game's flight controls, which is why Option/Alt is the default.
 - **Restart Vizzy**, on the same button, restarts a program, and it asks first. For an MFD it also removes the widgets, so the program builds its screen again.
 - Custom MFD programs can be edited. Stock ones can't, because the game reloads them in flight.
 

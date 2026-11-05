@@ -59,16 +59,16 @@ namespace Assets.Scripts
             }
 
             var settings = ModSettings.Instance;
-            var shift = UnityEngine.Input.GetKey(KeyCode.LeftShift) || UnityEngine.Input.GetKey(KeyCode.RightShift);
-            if (shift && UnityEngine.Input.GetKeyDown(settings.KeyCode)
+            var modifier = settings.Modifier.Value;
+            if (ModSettings.IsHeld(modifier) && UnityEngine.Input.GetKeyDown(settings.KeyCode)
                 && !Game.Instance.UserInterface.IgnoreKeyboardInputs)
             {
-                var alt = UnityEngine.Input.GetKey(KeyCode.LeftAlt) || UnityEngine.Input.GetKey(KeyCode.RightAlt);
+                var revert = ModSettings.IsHeld(ModSettings.RevertModifier(modifier));
                 if (this.Session?.IsOpen == true)
                 {
                     this.Session.ApplyFromShortcut();
                 }
-                else if (alt)
+                else if (revert)
                 {
                     RunGuarded("Couldn't revert: ", RevertToLoadedProgram);
                 }
@@ -365,7 +365,7 @@ namespace Assets.Scripts
                     message = ProgramSwapper.Prepare(data, latest);
                 }
 
-                _restoreMessage = message ?? "Kept your latest Vizzy edit. Alt+" + ModSettings.Instance.ShortcutText + " goes back to the quicksave's program.";
+                _restoreMessage = message ?? "Kept your latest Vizzy edit. " + ModSettings.Instance.RevertShortcutText + " goes back to the quicksave's program.";
             }
         }
 

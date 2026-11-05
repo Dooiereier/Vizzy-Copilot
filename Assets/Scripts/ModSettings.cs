@@ -3,86 +3,102 @@ namespace Assets.Scripts
     using ModApi.Settings.Core;
     using UnityEngine;
 
-    /// <summary>The letter keys the editor shortcut can use, always with Shift.</summary>
+    /// <summary>The letter keys the editor shortcut can use, with the chosen modifier.</summary>
     public enum EditorKey
     {
-        [EnumOption("Shift - A")]
+        [EnumOption("A")]
         A,
 
-        [EnumOption("Shift - B")]
+        [EnumOption("B")]
         B,
 
-        [EnumOption("Shift - C")]
+        [EnumOption("C")]
         C,
 
-        [EnumOption("Shift - D")]
+        [EnumOption("D")]
         D,
 
-        [EnumOption("Shift - E")]
+        [EnumOption("E")]
         E,
 
-        [EnumOption("Shift - F")]
+        [EnumOption("F")]
         F,
 
-        [EnumOption("Shift - G")]
+        [EnumOption("G")]
         G,
 
-        [EnumOption("Shift - H")]
+        [EnumOption("H")]
         H,
 
-        [EnumOption("Shift - I")]
+        [EnumOption("I")]
         I,
 
-        [EnumOption("Shift - J")]
+        [EnumOption("J")]
         J,
 
-        [EnumOption("Shift - K")]
+        [EnumOption("K")]
         K,
 
-        [EnumOption("Shift - L")]
+        [EnumOption("L")]
         L,
 
-        [EnumOption("Shift - M")]
+        [EnumOption("M")]
         M,
 
-        [EnumOption("Shift - N")]
+        [EnumOption("N")]
         N,
 
-        [EnumOption("Shift - O")]
+        [EnumOption("O")]
         O,
 
-        [EnumOption("Shift - P")]
+        [EnumOption("P")]
         P,
 
-        [EnumOption("Shift - Q")]
+        [EnumOption("Q")]
         Q,
 
-        [EnumOption("Shift - R")]
+        [EnumOption("R")]
         R,
 
-        [EnumOption("Shift - S")]
+        [EnumOption("S")]
         S,
 
-        [EnumOption("Shift - T")]
+        [EnumOption("T")]
         T,
 
-        [EnumOption("Shift - U")]
+        [EnumOption("U")]
         U,
 
-        [EnumOption("Shift - V")]
+        [EnumOption("V")]
         V,
 
-        [EnumOption("Shift - W")]
+        [EnumOption("W")]
         W,
 
-        [EnumOption("Shift - X")]
+        [EnumOption("X")]
         X,
 
-        [EnumOption("Shift - Y")]
+        [EnumOption("Y")]
         Y,
 
-        [EnumOption("Shift - Z")]
+        [EnumOption("Z")]
         Z,
+    }
+
+    /// <summary>
+    /// The key held with the editor letter. Shift and Ctrl are the throttle in the game's flight
+    /// controls, so Alt (Option on a Mac) is the default.
+    /// </summary>
+    public enum EditorModifier
+    {
+        [EnumOption("Option / Alt")]
+        Alt,
+
+        [EnumOption("Ctrl")]
+        Control,
+
+        [EnumOption("Shift")]
+        Shift,
     }
 
     /// <summary>The mod's settings (Settings → Mods → Vizzy Studio).</summary>
@@ -97,6 +113,8 @@ namespace Assets.Scripts
         public static ModSettings Instance => _instance ?? (_instance = Game.Instance.Settings.ModSettings.GetCategory<ModSettings>());
 
         public EnumSetting<EditorKey> Key { get; private set; }
+
+        public EnumSetting<EditorModifier> Modifier { get; private set; }
 
         public BoolSetting DebugLogging { get; private set; }
 
@@ -117,14 +135,53 @@ namespace Assets.Scripts
         public KeyCode KeyCode => KeyCode.A + (int)this.Key.Value;
 
         /// <summary>Gets the shortcut as text, for messages.</summary>
-        public string ShortcutText => "Shift+" + (char)('A' + (int)this.Key.Value);
+        public string ShortcutText => ModifierName(this.Modifier.Value) + "+" + (char)('A' + (int)this.Key.Value);
+
+        /// <summary>Gets the shortcut that goes back to the quicksave's program, as text.</summary>
+        public string RevertShortcutText => ModifierName(this.Modifier.Value) + "+" + ModifierName(RevertModifier(this.Modifier.Value)) + "+" + (char)('A' + (int)this.Key.Value);
+
+        /// <summary>The extra key that makes the shortcut a revert: Shift, or Alt when Shift is the modifier.</summary>
+        public static EditorModifier RevertModifier(EditorModifier modifier)
+        {
+            return modifier == EditorModifier.Shift ? EditorModifier.Alt : EditorModifier.Shift;
+        }
+
+        public static bool IsHeld(EditorModifier modifier)
+        {
+            switch (modifier)
+            {
+                case EditorModifier.Alt:
+                    return UnityEngine.Input.GetKey(KeyCode.LeftAlt) || UnityEngine.Input.GetKey(KeyCode.RightAlt);
+                case EditorModifier.Control:
+                    return UnityEngine.Input.GetKey(KeyCode.LeftControl) || UnityEngine.Input.GetKey(KeyCode.RightControl);
+                default:
+                    return UnityEngine.Input.GetKey(KeyCode.LeftShift) || UnityEngine.Input.GetKey(KeyCode.RightShift);
+            }
+        }
+
+        public static string ModifierName(EditorModifier modifier)
+        {
+            switch (modifier)
+            {
+                case EditorModifier.Alt:
+                    return Application.platform == RuntimePlatform.OSXPlayer || Application.platform == RuntimePlatform.OSXEditor ? "Option" : "Alt";
+                case EditorModifier.Control:
+                    return "Ctrl";
+                default:
+                    return "Shift";
+            }
+        }
 
         // XML names are given explicitly: the game derives them from the display name otherwise.
         protected override void InitializeSettings()
         {
             this.Key = this.CreateEnum<EditorKey>("Editor Key", "Key")
-                .SetDescription("Opens the Vizzy editor in flight. In the editor it applies the edit and returns to flight. With Alt it returns to the quicksave's program.")
+                .SetDescription("With the Editor Key Modifier, opens the Vizzy editor in flight. In the editor it applies the edit and returns to flight. Adding Shift, or Option / Alt when Shift is the modifier, returns to the quicksave's program.")
                 .SetDefault(EditorKey.A);
+
+            this.Modifier = this.CreateEnum<EditorModifier>("Editor Key Modifier", "Modifier")
+                .SetDescription("The key held with the Editor Key. In the game's flight controls Shift and Ctrl change the throttle, so pressing them also moves it.")
+                .SetDefault(EditorModifier.Alt);
 
             this.DebugLogging = this.CreateBool("Debug Logging", "DebugLogging")
                 .SetDescription("Writes thread positions and other details to Player.log.")
