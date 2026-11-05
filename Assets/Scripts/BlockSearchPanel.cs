@@ -124,6 +124,16 @@ namespace Assets.Scripts
             _flyout = layout.GetElementById(FlyoutId);
             _results = layout.GetElementById(ResultsId).rectTransform;
             _input = layout.GetElementById(InputId).GetComponentInChildren<TMP_InputField>(true);
+
+            // The input's default text color is close to this panel's background.
+            _input.textComponent.color = Color.white;
+            _input.customCaretColor = true;
+            _input.caretColor = Color.white;
+            if (_input.placeholder != null)
+            {
+                _input.placeholder.color = new Color32(0xAB, 0xB4, 0xBE, 0xFF);
+            }
+
             layout.GetElementById(CloseId).AddOnClickEvent(Close);
             _button = layout.GetElementById(ButtonId);
             _button.AddOnClickEvent(() =>
