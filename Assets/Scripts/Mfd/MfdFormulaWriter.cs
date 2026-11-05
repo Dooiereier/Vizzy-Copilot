@@ -82,6 +82,16 @@ namespace Assets.Scripts.Mfd
             return run.Lines;
         }
 
+        /// <summary>
+        /// What a program's own blocks give for a widget's property, for showing how a change reaches other
+        /// widgets: (x, y), or rotation in x, or null when it can't be worked out. Reuse it for one program.
+        /// </summary>
+        public static Func<string, MfdProperty, double[]> Evaluator(XElement program, double screenWidth, double screenHeight)
+        {
+            var run = new Run(program, screenWidth, screenHeight, false, true);
+            return (widget, property) => run.Evaluate(widget, property);
+        }
+
         public static string BlockProperty(MfdProperty property)
         {
             switch (property)
@@ -237,15 +247,7 @@ namespace Assets.Scripts.Mfd
                 }
 
                 var block = BlockProperty(change.Property);
-                var direct = _program.Descendants("SetCraftProperty")
-                    .Where(item => (string)item.Attribute("property") == block)
-                    .Where(item =>
-                    {
-                        var name = item.Elements().FirstOrDefault();
-                        return name != null && name.Name == "Constant" && (string)name.Attribute("text") == change.Widget;
-                    })
-                    .Where(this.Reachable)
-                    .ToList();
+                var direct = this.DirectSetters(change.Widget, block);
 
                 var calls = new List<(Helper Helper, XElement Call)>();
                 foreach (var helper in this.FindHelpers(block))
@@ -300,6 +302,95 @@ namespace Assets.Scripts.Mfd
                 {
                     this.ApplyToCallArguments(change, axes, calls[0].Helper, calls[0].Call);
                 }
+            }
+
+            /// <summary>Blocks in stacks that can run, setting the property for the widget by its literal name.</summary>
+            private List<XElement> DirectSetters(string widget, string block)
+            {
+                return _program.Descendants("SetCraftProperty")
+                    .Where(item => (string)item.Attribute("property") == block)
+                    .Where(item =>
+                    {
+                        var name = item.Elements().FirstOrDefault();
+                        return name != null && name.Name == "Constant" && (string)name.Attribute("text") == widget;
+                    })
+                    .Where(this.Reachable)
+                    .ToList();
+            }
+
+            /// <summary>What the widget's own block gives, through global variables; null when it can't be worked out.</summary>
+            public double[] Evaluate(string widget, MfdProperty property)
+            {
+                var direct = this.DirectSetters(widget, BlockProperty(property));
+                if (direct.Count == 0 || (direct.Count > 1 && !AllSameValue(direct)))
+                {
+                    return null;
+                }
+
+                var value = direct[0].Elements().Skip(1).FirstOrDefault();
+                for (var depth = 0; value != null && value.Name == "Variable" && depth <= MaxVariableChain; depth++)
+                {
+                    value = this.VariableValue(value);
+                }
+
+                if (value == null || value.Name == "Variable")
+                {
+                    return null;
+                }
+
+                var rotation = property == MfdProperty.Rotation;
+                if (value.Name == "EvaluateExpression")
+                {
+                    var text = (string)value.Elements("Constant").FirstOrDefault()?.Attribute("text");
+                    VizzyExpressionSolver.Node root;
+                    try
+                    {
+                        root = text == null ? null : VizzyExpressionSolver.Parse(text);
+                    }
+                    catch (FormatException)
+                    {
+                        return null;
+                    }
+
+                    if (root == null)
+                    {
+                        return null;
+                    }
+
+                    if (rotation)
+                    {
+                        return VizzyExpressionSolver.TryEvaluate(root, _globals.TryResolve, out var angle) ? new[] { angle, 0d } : null;
+                    }
+
+                    var vec = root as VizzyExpressionSolver.FuncCallNode;
+                    return vec != null && vec.Name == "vec" && vec.Args.Count >= 2
+                        && VizzyExpressionSolver.TryEvaluate(vec.Args[0], _globals.TryResolve, out var vx)
+                        && VizzyExpressionSolver.TryEvaluate(vec.Args[1], _globals.TryResolve, out var vy) ? new[] { vx, vy } : null;
+                }
+
+                if (rotation)
+                {
+                    return this.TryEvaluateBlocks(value, out var angle) ? new[] { angle, 0d } : null;
+                }
+
+                var parts = value.Name == "Vector" ? value.Elements().Take(2).ToList() : null;
+                return parts != null && parts.Count == 2 && this.TryEvaluateBlocks(parts[0], out var x) && this.TryEvaluateBlocks(parts[1], out var y) ? new[] { x, y } : null;
+            }
+
+            /// <summary>The value one reachable Set Variable gives a global variable, or null.</summary>
+            private XElement VariableValue(XElement variable)
+            {
+                var name = (string)variable.Attribute("variableName");
+                if ((string)variable.Attribute("local") == "true" || OtherWrites(_program, name))
+                {
+                    return null;
+                }
+
+                var sets = _program.Descendants("SetVariable")
+                    .Where(item => (string)item.Elements("Variable").FirstOrDefault()?.Attribute("variableName") == name)
+                    .Where(this.Reachable)
+                    .ToList();
+                return sets.Count == 1 ? sets[0].Elements().Skip(1).FirstOrDefault() : null;
             }
 
             private static List<Axis> ChangedAxes(MfdChange change)
@@ -1050,6 +1141,12 @@ namespace Assets.Scripts.Mfd
                 if (this.TryKnownBlock(value, out var screenX, out var screenY, out var screenZ))
                 {
                     return new[] { screenX, screenY, screenZ };
+                }
+
+                if (value.Name == "Vector")
+                {
+                    var numbers = value.Elements().Take(3).Select(item => TryNumber(item, out var number) && item.Name == "Constant" ? number : (double?)null).ToList();
+                    return numbers.Count >= 2 && numbers.All(item => item.HasValue) ? new[] { numbers[0].Value, numbers[1].Value, numbers.Count > 2 ? numbers[2].Value : 0d } : null;
                 }
 
                 var text = value.Name == "EvaluateExpression" ? (string)value.Elements("Constant").FirstOrDefault()?.Attribute("text") : null;

@@ -23,6 +23,7 @@ namespace Assets.Scripts.Mfd
         private const int LabelLineHeight = 22;
         private const int LabelCharactersPerLine = 40;
         private const float MinSize = 1f;
+        private const double CascadeTolerance = 0.01;
         private static readonly string[] Steps = { "0.2", "2", "20" };
 
         // Rotation's degrees need bigger clicks than position and size.
@@ -46,6 +47,7 @@ namespace Assets.Scripts.Mfd
         private float _step = 2f;
         private bool _allowShared;
         private string _message;
+        private int _cascaded;
 
         public MfdEditorSession(FlightProgramData data)
         {
@@ -388,6 +390,7 @@ namespace Assets.Scripts.Mfd
             {
                 action();
                 _message = null;
+                this.UpdateCascade();
                 foreach (var value in _selectedValues)
                 {
                     value.Update();
@@ -398,6 +401,61 @@ namespace Assets.Scripts.Mfd
             catch (Exception e)
             {
                 EditorLog.Error("Couldn't change the widget: " + e);
+            }
+        }
+
+        /// <summary>
+        /// With the shared override on, moves the other widgets that read a changed shared variable to where
+        /// their own blocks would put them, by the difference, so the effect shows before saving. Widgets whose
+        /// blocks can't be worked out stay until a restart.
+        /// </summary>
+        private void UpdateCascade()
+        {
+            foreach (var row in _rows.Where(item => item.IsAlive))
+            {
+                row.ClearCascade();
+            }
+
+            _cascaded = 0;
+            var changes = this.PendingChanges();
+            if (!_allowShared || changes.Count == 0)
+            {
+                return;
+            }
+
+            this.ScreenSize(out var width, out var height);
+            var preview = new XElement(_data.FlightProgramXml);
+            if (!MfdFormulaWriter.Apply(preview, changes, width, height, true).Any(line => line.Applied && line.Shared))
+            {
+                return;
+            }
+
+            var before = MfdFormulaWriter.Evaluator(_data.FlightProgramXml, width, height);
+            var after = MfdFormulaWriter.Evaluator(preview, width, height);
+            var edited = new HashSet<(string, MfdProperty)>(changes.Select(change => (change.Widget, change.Property)));
+            foreach (var row in _rows.Where(item => item.IsAlive))
+            {
+                var moved = false;
+                foreach (var property in new[] { MfdProperty.Position, MfdProperty.Size, MfdProperty.Rotation })
+                {
+                    if (edited.Contains((row.Name, property)))
+                    {
+                        continue;
+                    }
+
+                    var was = before(row.Name, property);
+                    var now = was == null ? null : after(row.Name, property);
+                    if (now != null && (Math.Abs(now[0] - was[0]) > CascadeTolerance || Math.Abs(now[1] - was[1]) > CascadeTolerance))
+                    {
+                        row.ApplyCascade(property, (float)(now[0] - was[0]), (float)(now[1] - was[1]));
+                        moved = true;
+                    }
+                }
+
+                if (moved)
+                {
+                    _cascaded++;
+                }
             }
         }
 
@@ -442,9 +500,14 @@ namespace Assets.Scripts.Mfd
                     value =>
                     {
                         _allowShared = value;
+                        this.UpdateCascade();
                         this.ReplaceChangesGroup();
                     },
-                    "A shared variable moves everything that reads it, at the next launch."));
+                    "A shared variable moves everything that reads it. Widgets the panel can work out move on screen now."));
+                if (_cascaded > 0)
+                {
+                    this.AddWrappedTo(group, "Moved " + _cascaded + " other " + (_cascaded == 1 ? "widget" : "widgets") + " on screen to show it.");
+                }
             }
 
             group.Add(new TextButtonModel("Save", _ => this.Save()));
@@ -508,16 +571,20 @@ namespace Assets.Scripts.Mfd
                 LatestEdits.Remember(CraftPrograms.Key(_data), before, program);
                 _message = MfdCraftFiles.Write(_data, changes, lines, width, height, _allowShared);
 
-                if (lines.Any(line => line.Shared))
+                if (lines.Any(line => line.Applied && line.Shared))
                 {
-                    _message += " Other widgets reading the shared variable move at the next launch.";
+                    _message += " Other widgets reading the shared variable that the panel couldn't move here move after a restart.";
                 }
 
-                // What couldn't be saved stays listed, so it can still be reverted.
+                // What couldn't be saved stays listed, so it can still be reverted. Widgets moved to show a
+                // shared change are where the program now puts them.
                 foreach (var row in _rows.Where(item => item.IsAlive))
                 {
+                    row.AcceptCascade();
                     row.AcceptSaved(lines);
                 }
+
+                _cascaded = 0;
 
                 this.ClassifyAll();
                 this.RefreshList();
@@ -592,6 +659,7 @@ namespace Assets.Scripts.Mfd
         /// <summary>One widget, and its values when the panel opened or last saved.</summary>
         private sealed class Row
         {
+            private readonly HashSet<MfdProperty> _cascade = new HashSet<MfdProperty>();
             private Vector2 _position;
             private Vector2 _size;
             private float _rotation;
@@ -643,9 +711,70 @@ namespace Assets.Scripts.Mfd
 
             public void Revert()
             {
+                _cascade.Clear();
                 this.Widget.LocalPosition = _position;
                 this.Widget.Size = _size;
                 this.Widget.LocalRotation = _rotation;
+            }
+
+            /// <summary>Moves a property from where it was by a shared change's effect; it isn't a change of its own.</summary>
+            public void ApplyCascade(MfdProperty property, float dx, float dy)
+            {
+                _cascade.Add(property);
+                switch (property)
+                {
+                    case MfdProperty.Position:
+                        this.Widget.LocalPosition = _position + new Vector2(dx, dy);
+                        break;
+                    case MfdProperty.Size:
+                        this.Widget.Size = new Vector2(Mathf.Max(MinSize, _size.x + dx), Mathf.Max(MinSize, _size.y + dy));
+                        break;
+                    default:
+                        this.Widget.LocalRotation = _rotation + dx;
+                        break;
+                }
+            }
+
+            public void ClearCascade()
+            {
+                foreach (var property in _cascade)
+                {
+                    switch (property)
+                    {
+                        case MfdProperty.Position:
+                            this.Widget.LocalPosition = _position;
+                            break;
+                        case MfdProperty.Size:
+                            this.Widget.Size = _size;
+                            break;
+                        default:
+                            this.Widget.LocalRotation = _rotation;
+                            break;
+                    }
+                }
+
+                _cascade.Clear();
+            }
+
+            /// <summary>After a save the program puts it here, so this is the new starting point.</summary>
+            public void AcceptCascade()
+            {
+                if (_cascade.Contains(MfdProperty.Position))
+                {
+                    _position = this.Widget.LocalPosition;
+                }
+
+                if (_cascade.Contains(MfdProperty.Size))
+                {
+                    _size = this.Widget.Size;
+                }
+
+                if (_cascade.Contains(MfdProperty.Rotation))
+                {
+                    _rotation = this.Widget.LocalRotation;
+                }
+
+                _cascade.Clear();
             }
 
             /// <summary>A small move of every axis from where it was, for a dry run that finds out what could be saved.</summary>
@@ -659,17 +788,17 @@ namespace Assets.Scripts.Mfd
 
             public IEnumerable<MfdChange> PendingChanges()
             {
-                if (this.Widget.LocalPosition != _position)
+                if (!_cascade.Contains(MfdProperty.Position) && this.Widget.LocalPosition != _position)
                 {
                     yield return this.Change(MfdProperty.Position);
                 }
 
-                if (this.Widget.Size != _size)
+                if (!_cascade.Contains(MfdProperty.Size) && this.Widget.Size != _size)
                 {
                     yield return this.Change(MfdProperty.Size);
                 }
 
-                if (!Mathf.Approximately(this.Widget.LocalRotation, _rotation))
+                if (!_cascade.Contains(MfdProperty.Rotation) && !Mathf.Approximately(this.Widget.LocalRotation, _rotation))
                 {
                     yield return this.Change(MfdProperty.Rotation);
                 }

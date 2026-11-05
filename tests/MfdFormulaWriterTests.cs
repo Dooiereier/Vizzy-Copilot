@@ -253,6 +253,16 @@ public static class MfdFormulaWriterTests
         var unknownVector = Program(Set("SetPosition", "<Vector><BinaryOp op=\"*\"><Constant text=\"2\" /><VectorOp op=\"x\"><CraftProperty property=\"Mfd.Position\"><Constant text=\"B\" /></CraftProperty></VectorOp></BinaryOp><Constant number=\"7\" /><Constant number=\"0\" /></Vector>"));
         check("MFD: another widget's value isn't known, so it's refused", Refused(Move(unknownVector, 0, 7, 5, 6)));
 
+        // A shared variable moves its other readers: the evaluator shows by how much.
+        var cascade = Program(Assign("P", Vec("1", "2")) + Set("SetPosition", Global("P")) + Set("SetPosition", Funk("vec(x(v:P) + 10, y(v:P), 0)"), "B"));
+        var before = MfdFormulaWriter.Evaluator(cascade, ScreenWidth, ScreenHeight)("B", MfdProperty.Position);
+        var preview = new XElement(cascade);
+        Move(preview, 1, 2, 5, 6, true);
+        var after = MfdFormulaWriter.Evaluator(preview, ScreenWidth, ScreenHeight)("B", MfdProperty.Position);
+        check("MFD: another reader's value is worked out before", before != null && before[0] == 11 && before[1] == 2);
+        check("MFD: and after the shared change", after != null && after[0] == 15 && after[1] == 6);
+        check("MFD: a widget without its own block can't be worked out", MfdFormulaWriter.Evaluator(cascade, ScreenWidth, ScreenHeight)("C", MfdProperty.Position) == null);
+
         RealPrograms(check);
     }
 
