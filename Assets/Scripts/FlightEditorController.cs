@@ -28,6 +28,7 @@ namespace Assets.Scripts
         {
             Current = this;
             FlightPause.Reset();
+            Game.Instance.SceneManager.SceneTransitionStarted += this.OnSceneTransitionStarted;
             RestoreLatestEdits();
         }
 
@@ -96,8 +97,15 @@ namespace Assets.Scripts
             _openRequestFrame = Time.frameCount;
         }
 
+        /// <summary>While the flight still exists: by OnDestroy the panel and the widgets are being torn down.</summary>
+        private void OnSceneTransitionStarted(object sender, ModApi.Scenes.Events.SceneTransitionEventArgs e)
+        {
+            RunGuarded("Couldn't close the MFD panel: ", () => _mfdSession?.Close());
+        }
+
         private void OnDestroy()
         {
+            Game.Instance.SceneManager.SceneTransitionStarted -= this.OnSceneTransitionStarted;
             RunGuarded("Couldn't close the picker: ", ProgramPicker.Close);
             RunGuarded("Couldn't close the editor: ", () => this.Session?.Close());
             RunGuarded("Couldn't close the MFD panel: ", () => _mfdSession?.Close());
