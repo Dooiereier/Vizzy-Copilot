@@ -36,9 +36,12 @@ namespace Assets.Scripts
         // Results start this far in (LoadNodes), so as much room on the other side.
         private const float SideMargin = 25f;
         private const float HighlightPadding = 3f;
+
+        // Room above the first result, whose highlight would otherwise touch the list's top.
+        private const float TopMargin = 8f;
         private const float RepeatDelay = 0.35f;
         private const float RepeatInterval = 0.06f;
-        private const string Help = "Block Search (Shift+F): type part of a block's name or a dropdown choice, such as + or wait, then drag the block out or double-click it. Up and Down select a block, Enter places it in the middle of the view.";
+        private const string Help = "Block Search (Shift+F)";
 
         // Private in the game: it's what makes a block behave as a toolbox block.
         private static readonly MethodInfo LoadNodes = typeof(VizzyUIController).GetMethod("LoadNodes", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -488,7 +491,7 @@ namespace Assets.Scripts
                 }
             }
 
-            var size = (Vector2)LoadNodes.Invoke(_controller, new object[] { nodes, _results, null, 0f });
+            var size = (Vector2)LoadNodes.Invoke(_controller, new object[] { nodes, _results, null, TopMargin });
             foreach (var block in _results.GetComponentsInChildren<BlockElementScript>(true))
             {
                 block.gameObject.AddComponent<ResultClick>().Connect(this, block);
