@@ -62,6 +62,7 @@ namespace Assets.Scripts
         private float _nextRepeat;
         private int _refocusUntilFrame = -1;
         private BlockElementScript _lastPlaced;
+        private bool _wasDragging;
 
         public bool IsOpen => _flyout != null && _flyout.gameObject.activeSelf;
 
@@ -212,6 +213,7 @@ namespace Assets.Scripts
                     _input.text = string.Empty;
                 }
 
+                WatchDrag();
                 if (_input.text != _shownText)
                 {
                     ShowResults(_input.text);
@@ -386,6 +388,7 @@ namespace Assets.Scripts
             _flyout.Show();
             _input.text = string.Empty;
             _shownText = string.Empty;
+            _wasDragging = false;
             ClearResults();
             _clearTypedKeyFrame = Time.frameCount + 2;
             _input.Select();
@@ -552,6 +555,35 @@ namespace Assets.Scripts
             placed.transform.position = new Vector3(box.XMin + (pivot.x * size.x), box.YMax - ((1f - pivot.y) * size.y), placed.transform.position.z);
             _lastPlaced = placed;
             editor.CreateUndoStep(null);
+            ClearSearch();
+        }
+
+        /// <summary>A result dragged onto the canvas: the source block stays the one dragging, so a new search can follow on its release.</summary>
+        private void WatchDrag()
+        {
+            if (_shownBlocks.Any(block => block != null && block.IsDragging))
+            {
+                _wasDragging = true;
+            }
+            else if (_wasDragging)
+            {
+                _wasDragging = false;
+
+                // Let go over the panel: nothing was added, so the search stays.
+                var canvas = _flyout.GetComponentInParent<Canvas>();
+                var camera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null;
+                if (!RectTransformUtility.RectangleContainsScreenPoint(_flyout.rectTransform, UnityEngine.Input.mousePosition, camera))
+                {
+                    ClearSearch();
+                }
+            }
+        }
+
+        /// <summary>Ready for the next search. The results go on the next update, and clicking or dragging took the focus from the box.</summary>
+        private void ClearSearch()
+        {
+            _input.text = string.Empty;
+            _refocusUntilFrame = Time.frameCount + 2;
         }
 
         /// <summary>The canvas's own area, less what the flyout covers.</summary>
