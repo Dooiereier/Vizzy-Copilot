@@ -170,7 +170,7 @@ namespace Assets.Scripts
             _mfdSession.Open();
         }
 
-        /// <summary>The Restart Vizzy button: the selected part's program, otherwise a choice of them. Always asks first.</summary>
+        /// <summary>The Restart Vizzy button: the selected part's program, otherwise a choice of them, MFDs included. Always asks first.</summary>
         public void RestartSelected()
         {
             RunGuarded("Couldn't restart the program: ", () =>
@@ -189,7 +189,7 @@ namespace Assets.Scripts
                     return;
                 }
 
-                var programs = CraftPrograms.Editable(scene.CraftNode.CraftScript).Where(data => !CraftPrograms.IsMfd(data)).ToList();
+                var programs = CraftPrograms.Editable(scene.CraftNode.CraftScript);
                 if (programs.Count == 0)
                 {
                     scene.FlightSceneUI.ShowMessage("No Vizzy program to restart on this craft.");
@@ -210,13 +210,6 @@ namespace Assets.Scripts
         {
             var scene = Game.Instance.FlightScene;
 
-            // Its widgets would stay, and each creation block would log an error.
-            if (CraftPrograms.IsMfd(data))
-            {
-                scene.FlightSceneUI.ShowMessage("Restart isn't available for MFD programs.");
-                return;
-            }
-
             if (data.Script == null)
             {
                 FlightPause.Release();
@@ -227,14 +220,16 @@ namespace Assets.Scripts
             FlightPause.Hold();
             var dialog = Game.Instance.UserInterface.CreateMessageDialog(ModApi.Ui.MessageDialogType.OkayCancel, null, true);
             dialog.UseDangerButtonStyle = true;
-            dialog.MessageText = "Restart " + data.Part.DisplayName + "'s Vizzy program from the top? Its threads and variables reset. Other programs keep running.";
+            dialog.MessageText = CraftPrograms.IsMfd(data)
+                ? MfdRestart.Question(data)
+                : "Restart " + data.Part.DisplayName + "'s Vizzy program from the top? Its threads and variables reset. Other programs keep running.";
             dialog.Closed += _ => FlightPause.Release();
             dialog.OkayClicked += _ =>
             {
                 dialog.Close();
                 RunGuarded("Couldn't restart the program: ", () =>
                 {
-                    if (!ProgramSwapper.Restart(data))
+                    if (!(CraftPrograms.IsMfd(data) ? MfdRestart.Run(data) : ProgramSwapper.Restart(data)))
                     {
                         scene.FlightSceneUI.ShowMessage("The Vizzy program didn't load: see Player.log.");
                     }

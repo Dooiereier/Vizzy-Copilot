@@ -74,9 +74,9 @@ namespace Assets.Scripts
                     new XAttribute("contentSizeFitter", "vertical"),
                     new XElement(ns + "HorizontalLayout",
                         new XAttribute("class", "nav-sphere-row"),
+                        arrangeMfd ? FlyoutButton(ns, ArrangeMfdId, "Arrange MFD", "VizzyStudio/Sprites/IconMfd") : null,
                         FlyoutButton(ns, RestartId, "Restart Vizzy", "Ui/Sprites/Flight/IconRetry"),
-                        FlyoutButton(ns, EditId, "Edit Vizzy", "Ui/Sprites/Design/IconButtonEdit"),
-                        arrangeMfd ? FlyoutButton(ns, ArrangeMfdId, "Arrange MFD", "Ui/Sprites/Design/IconButtonMovePartTool") : null)));
+                        FlyoutButton(ns, EditId, "Edit Vizzy", "Ui/Sprites/Design/IconButtonEdit"))));
             }
             catch (Exception e)
             {

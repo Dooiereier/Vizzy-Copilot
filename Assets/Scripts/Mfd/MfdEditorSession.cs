@@ -3,7 +3,6 @@ namespace Assets.Scripts.Mfd
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using System.Reflection;
     using System.Xml.Linq;
     using Assets.Scripts.Craft.Parts.Modifiers;
     using Assets.Scripts.Craft.Parts.Modifiers.Mfd;
@@ -19,7 +18,6 @@ namespace Assets.Scripts.Mfd
     /// </summary>
     public sealed class MfdEditorSession
     {
-        private const string ScreenWidgetName = "_Screen";
         private const int PanelWidth = 440;
         private const float MaxScreenHeight = 0.9f;
         private const int WidgetsClassifiedPerFrame = 3;
@@ -27,9 +25,6 @@ namespace Assets.Scripts.Mfd
         private const int LabelCharactersPerLine = 52;
         private const float MinSize = 1f;
         private static readonly string[] Steps = { "1", "10", "100" };
-
-        // Private: the game only offers lookups by name, and no list of a screen's widgets.
-        private static readonly FieldInfo WidgetsField = typeof(MfdScript).GetField("_widgets", BindingFlags.Instance | BindingFlags.NonPublic);
 
         private readonly FlightProgramData _data;
         private readonly MfdWidgetOutline _outline = new MfdWidgetOutline();
@@ -61,7 +56,7 @@ namespace Assets.Scripts.Mfd
         public void Open()
         {
             _mfd = _data.Part.PartScript.GetModifier<MfdScript>();
-            var widgets = WidgetsField?.GetValue(_mfd) as IDictionary<string, IMfdWidget>;
+            var widgets = MfdRestart.Widgets(_mfd);
             var scene = Game.Instance.FlightScene;
             if (widgets == null)
             {
@@ -84,7 +79,7 @@ namespace Assets.Scripts.Mfd
 
         private void BuildPanel(IDictionary<string, IMfdWidget> widgets)
         {
-            foreach (var pair in widgets.Where(item => item.Key != ScreenWidgetName && item.Value?.Transform != null).OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase))
+            foreach (var pair in widgets.Where(item => item.Key != MfdRestart.ScreenWidgetName && item.Value?.Transform != null).OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase))
             {
                 _rows.Add(new Row(pair.Value));
             }
@@ -262,7 +257,7 @@ namespace Assets.Scripts.Mfd
 
         private void ScreenSize(out double width, out double height)
         {
-            var screen = _mfd.GetWidget(ScreenWidgetName);
+            var screen = _mfd.GetWidget(MfdRestart.ScreenWidgetName);
             width = screen?.Size.x ?? 0;
             height = screen?.Size.y ?? 0;
         }
@@ -411,6 +406,7 @@ namespace Assets.Scripts.Mfd
                     group.Add(new LabelModel("Nothing changed yet.", ElementAlignment.Left));
                 }
 
+                group.Add(new TextButtonModel("Restart MFD", _ => this.AskToRestart()));
                 return group;
             }
 
@@ -436,6 +432,7 @@ namespace Assets.Scripts.Mfd
 
             group.Add(new TextButtonModel("Save", _ => this.Save()));
             group.Add(new TextButtonModel("Revert", _ => this.Run(this.RevertAll)));
+            group.Add(new TextButtonModel("Restart MFD", _ => this.AskToRestart()));
             return group;
         }
 
@@ -515,6 +512,30 @@ namespace Assets.Scripts.Mfd
                 _message = "Saving failed: see Player.log.";
                 this.ReplaceChangesGroup();
             }
+        }
+
+        /// <summary>The panel stays until the answer, so the flight stays held. Then it closes: the program can't build anything while paused.</summary>
+        private void AskToRestart()
+        {
+            var dialog = Game.Instance.UserInterface.CreateMessageDialog(ModApi.Ui.MessageDialogType.OkayCancel, null, true);
+            dialog.UseDangerButtonStyle = true;
+            dialog.MessageText = MfdRestart.Question(_data) + " Changes that aren't saved are lost.";
+            dialog.OkayClicked += _ =>
+            {
+                dialog.Close();
+                try
+                {
+                    this.Close();
+                    if (!MfdRestart.Run(_data))
+                    {
+                        Game.Instance.FlightScene.FlightSceneUI.ShowMessage("The MFD program didn't restart: see Player.log.");
+                    }
+                }
+                catch (Exception e)
+                {
+                    EditorLog.Error("Couldn't restart the MFD program: " + e);
+                }
+            };
         }
 
         private void OnPanelClosed(object sender)
