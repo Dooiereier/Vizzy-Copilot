@@ -40,6 +40,7 @@ These work in the designer and in flight.
 - **Matrix blocks:** four 3×3 matrix blocks at the bottom of Operators.
 - **Clean Variables:** in the menu, removes global variables the program doesn't use, after listing them. Another part's program or an InputController could still read them by name.
 - **Export Block:** in the menu. Click a block, then press this to copy it to another saved program, with the variables and custom blocks it needs. An instruction brings the blocks below it.
+- **Block Search:** press **Shift+F**, type part of a block's name or a dropdown choice, such as `+`, `wait` or `agl`, and drag the block out of the results.
 - **Jump To:** on the left bar. Start a comment with `//` to tag the blocks after it, such as `//Launch` or `//Launch/Pitch Program`, then select the tag to move the view there. Tags are plain comments.
 
 ## Settings

@@ -43,6 +43,7 @@ public static class ThreadRemapperTests
 
         FunkCompletionTests.Run(Check);
         ModPageVersionTests.Run(Check);
+        BlockSearchTests.Run(Check);
 
         Console.WriteLine($"{_passed} passed, {_failed} failed.");
         return _failed == 0 ? 0 : 1;

@@ -106,6 +106,8 @@ namespace Assets.Scripts
 
         public BoolSetting CheckForUpdates { get; private set; }
 
+        public BoolSetting BlockSearch { get; private set; }
+
         public BoolSetting FunkAutoFill { get; private set; }
 
         public BoolSetting FunkSyntaxHighlight { get; private set; }
@@ -136,6 +138,10 @@ namespace Assets.Scripts
 
             this.CheckForUpdates = this.CreateBool("Check For Updates", "CheckForUpdates")
                 .SetDescription("At game start, reads the latest version from the mod's SimpleRockets.com page and, if it's newer, offers to open the page. Nothing is downloaded automatically.")
+                .SetDefault(true);
+
+            this.BlockSearch = this.CreateBool("Block Search", "BlockSearch")
+                .SetDescription("Shift+F in the Vizzy editor opens a search box: type part of a block's name, then drag it out of the results.")
                 .SetDefault(true);
 
             this.FunkSyntaxHighlight = this.CreateBool("Funk Syntax Highlight", "FunkSyntaxHighlight")

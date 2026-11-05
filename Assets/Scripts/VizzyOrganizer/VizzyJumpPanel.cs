@@ -147,9 +147,18 @@ namespace Assets.Scripts.VizzyOrganizer
             }
 
             _controller.OnClosePanelClicked();
+            GetComponent<BlockSearchPanel>()?.Close();
             _button.AddClass("toggle-button-toggled");
             _flyout.Show();
             Refresh();
+        }
+
+        public void Close()
+        {
+            if (_flyout != null && _flyout.gameObject.activeSelf)
+            {
+                HideFlyout();
+            }
         }
 
         private void HideFlyout()

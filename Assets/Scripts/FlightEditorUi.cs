@@ -72,6 +72,15 @@ namespace Assets.Scripts
                 EditorLog.Warning("Couldn't add the Jump To flyout: " + e);
             }
 
+            try
+            {
+                BlockSearchPanel.AddTo(request);
+            }
+            catch (Exception e)
+            {
+                EditorLog.Warning("Couldn't add the block search: " + e);
+            }
+
             if (BuildingOurEditor)
             {
                 ReplaceApplyAndCancel(request);
