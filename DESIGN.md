@@ -140,6 +140,8 @@ that mod loads, before later mods. `_loadPriority` is above Juno Harmony's.
   them after asking, as one Undo step. Names in Funk text count as used, and it removes nothing if a Funk block's
   text is built by other blocks. It can't see another part reading a variable through `Part.VZ.Name`.
 
+**Funk error log** (`FunkErrorLogPatch`): a Harmony finalizer on `CraftService.GetInputExpression`, active only with Debug Logging, logs the Funk text the game fails to parse, once per text, and leaves the exception as it was. The game's own error names only the kind of block, so a failing Funk block can't otherwise be found.
+
 ## Arrange MFD
 
 `MfdEditorSession`, from MFD Runtime Editor (source: Dooiereier/MFD-Widget-Arranger), behind the Arrange MFD setting, off by default.
