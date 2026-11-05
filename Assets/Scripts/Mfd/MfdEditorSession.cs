@@ -462,6 +462,30 @@ namespace Assets.Scripts.Mfd
             }
         }
 
+        /// <summary>
+        /// Whether something reads a changed widget's position or size where the preview can't follow it: in a
+        /// block whose widget name is built while running, in a custom instruction call, or in a variable. A shared
+        /// variable's change counts too, as its readers may be anywhere.
+        /// </summary>
+        private bool HasFollowersNotShown(List<MfdChange> changes, List<MfdLine> lines)
+        {
+            if (lines.Any(line => line.Applied && line.Shared))
+            {
+                return true;
+            }
+
+            var names = new HashSet<string>(changes.Where(change => change.Property != MfdProperty.Rotation).Select(change => change.Widget));
+            return _data.FlightProgramXml.Descendants("CraftProperty")
+                .Where(item => (string)item.Attribute("property") == "Mfd.Position" || (string)item.Attribute("property") == "Mfd.Size")
+                .Where(item => names.Contains((string)item.Elements("Constant").FirstOrDefault()?.Attribute("text")))
+                .Any(item =>
+                {
+                    var setter = item.Ancestors("SetCraftProperty").FirstOrDefault();
+                    var name = setter?.Elements().FirstOrDefault();
+                    return name == null || name.Name != "Constant";
+                });
+        }
+
         private List<MfdChange> PendingChanges()
         {
             return _rows.Where(row => row.IsAlive).SelectMany(row => row.PendingChanges()).ToList();
@@ -513,6 +537,11 @@ namespace Assets.Scripts.Mfd
             if (_cascaded > 0)
             {
                 this.AddWrappedTo(group, "Moved " + _cascaded + " other " + (_cascaded == 1 ? "widget that follows" : "widgets that follow") + " on screen to show it.");
+            }
+
+            if (this.HasFollowersNotShown(changes, lines))
+            {
+                this.AddWrappedTo(group, "Some widgets that follow this can't be moved here, such as ones a custom instruction places: Save, then Restart MFD to see them.");
             }
 
             group.Add(new TextButtonModel("Save", _ => this.Save()));
