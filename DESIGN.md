@@ -144,7 +144,7 @@ MFD Runtime Editor is planned later; it may not bring its own copy of Harmony.
 
 ## Block search
 
-`BlockSearchPanel`: Shift+F in any Vizzy editor opens a stock-style flyout with a text box. Results are real toolbox
+`BlockSearchPanel`: Shift+F or a left bar button in any Vizzy editor opens a stock-style flyout with a text box. Results are real toolbox
 blocks, built by the game's private `VizzyUIController.LoadNodes`, so dragging, cloning and tooltips are the game's own
 and no drag starts from code. Entries come from `VizzyToolbox.Categories` and `NodeFormat.Tokenize`. Each choice in a
 block's first dropdown (`GetListItems`) is its own result, built on a copy made with `ProgramSerializer`, so the toolbox's

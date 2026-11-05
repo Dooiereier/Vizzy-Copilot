@@ -141,7 +141,7 @@ namespace Assets.Scripts
                 .SetDefault(true);
 
             this.BlockSearch = this.CreateBool("Block Search", "BlockSearch")
-                .SetDescription("Shift+F in the Vizzy editor opens a search box: type part of a block's name, then drag it out of the results.")
+                .SetDescription("Shift+F or a search button in the Vizzy editor opens a search box: type part of a block's name, then drag it out of the results.")
                 .SetDefault(true);
 
             this.FunkSyntaxHighlight = this.CreateBool("Funk Syntax Highlight", "FunkSyntaxHighlight")

@@ -14,11 +14,12 @@ namespace Assets.Scripts
     using UnityEngine;
 
     /// <summary>
-    /// Shift+F in the Vizzy editor: type part of a block's name, and matching toolbox blocks appear,
+    /// Shift+F or the left bar's search button in the Vizzy editor: type part of a block's name, and matching toolbox blocks appear,
     /// dragged out as usual. Dropdown choices count as their own results, with that choice set.
     /// </summary>
     public sealed class BlockSearchPanel : MonoBehaviour
     {
+        private const string ButtonId = "vizzy-studio-search-button";
         private const string FlyoutId = "vizzy-studio-search";
         private const string CloseId = "vizzy-studio-search-close";
         private const string InputId = "vizzy-studio-search-input";
@@ -26,11 +27,13 @@ namespace Assets.Scripts
         private const int MaxResults = 30;
         private const float MinWidth = 300f;
         private const float MaxWidth = 600f;
+        private const string Help = "Block Search (Shift+F): type part of a block's name or a dropdown choice, such as + or wait, then drag the block out.";
 
         // Private in the game: it's what makes a block behave as a toolbox block.
         private static readonly MethodInfo LoadNodes = typeof(VizzyUIController).GetMethod("LoadNodes", BindingFlags.Instance | BindingFlags.NonPublic);
 
         private VizzyUIController _controller;
+        private XmlElement _button;
         private XmlElement _flyout;
         private RectTransform _results;
         private TMP_InputField _input;
@@ -40,11 +43,30 @@ namespace Assets.Scripts
 
         public bool IsOpen => _flyout != null && _flyout.gameObject.activeSelf;
 
+        /// <summary>Gets whether the left bar has this panel's button, which Jump To's sits above.</summary>
+        public bool HasButton => _button != null;
+
         /// <summary>Adds the flyout to the editor's XML, then connects it once it's built.</summary>
         public static void AddTo(BuildUserInterfaceXmlRequest request)
         {
+            if (!ModSettings.Instance.BlockSearch.Value)
+            {
+                return;
+            }
+
             XNamespace ns = XmlLayoutConstants.XmlNamespace;
-            request.XmlDocument.Descendants(ns + "Panel").First(panel => (string)panel.Attribute("id") == "menu").AddAfterSelf(
+            var panels = request.XmlDocument.Descendants(ns + "Panel").ToList();
+            panels.First(panel => (string)panel.Attribute("id") == "menu-button").Parent.Add(
+                new XElement(ns + "Panel",
+                    new XAttribute("id", ButtonId),
+                    new XAttribute("name", "BlockSearch"),
+                    new XAttribute("class", "toggle-button audio-btn-click"),
+                    new XAttribute("tooltip", Help),
+                    new XElement(ns + "Image",
+                        new XAttribute("class", "toggle-button-icon"),
+                        new XAttribute("sprite", "VizzyStudio/Sprites/IconBlockSearch"))));
+
+            panels.First(panel => (string)panel.Attribute("id") == "menu").AddAfterSelf(
                 new XElement(ns + "Panel",
                     new XAttribute("id", FlyoutId),
                     new XAttribute("class", "panel flyout"),
@@ -53,7 +75,7 @@ namespace Assets.Scripts
                     new XAttribute("active", "false"),
                     new XElement(ns + "Panel",
                         new XAttribute("class", "flyout-header"),
-                        new XElement(ns + "TextMeshPro", new XAttribute("text", "BLOCK SEARCH")),
+                        new XElement(ns + "TextMeshPro", new XAttribute("text", "BLOCK SEARCH"), new XAttribute("tooltip", Help)),
                         new XElement(ns + "Image",
                             new XAttribute("id", CloseId),
                             new XAttribute("class", "flyout-close-button audio-btn-back"),
@@ -62,8 +84,12 @@ namespace Assets.Scripts
                         new XAttribute("id", InputId),
                         new XAttribute("text", string.Empty),
                         new XAttribute("rectAlignment", "UpperCenter"),
+                        new XAttribute("lineType", "SingleLine"),
+                        new XAttribute("width", "90%"),
                         new XAttribute("height", "30"),
-                        new XAttribute("offsetXY", "0 -34")),
+                        new XAttribute("offsetXY", "0 -34"),
+                        new XElement(ns + "TMP_Placeholder", new XAttribute("text", "Type a block name"), new XAttribute("alignment", "Left")),
+                        new XElement(ns + "TMP_Text", new XAttribute("text", string.Empty), new XAttribute("alignment", "Left"))),
                     new XElement(ns + "VerticalScrollView",
                         new XAttribute("class", "no-image"),
                         new XAttribute("offsetMax", "0 -68"),
@@ -86,6 +112,7 @@ namespace Assets.Scripts
         {
             if (IsOpen)
             {
+                _button.RemoveClass("toggle-button-toggled");
                 _flyout.Hide(false, null, false);
             }
         }
@@ -98,6 +125,18 @@ namespace Assets.Scripts
             _results = layout.GetElementById(ResultsId).rectTransform;
             _input = layout.GetElementById(InputId).GetComponentInChildren<TMP_InputField>(true);
             layout.GetElementById(CloseId).AddOnClickEvent(Close);
+            _button = layout.GetElementById(ButtonId);
+            _button.AddOnClickEvent(() =>
+            {
+                if (IsOpen)
+                {
+                    Close();
+                }
+                else
+                {
+                    Open();
+                }
+            });
         }
 
         private void Update()
@@ -107,6 +146,12 @@ namespace Assets.Scripts
                 if (_flyout == null || LoadNodes == null || !ModSettings.Instance.BlockSearch.Value)
                 {
                     return;
+                }
+
+                // The game adds its category buttons after this one is built.
+                if (_button.transform.GetSiblingIndex() != _button.transform.parent.childCount - 1)
+                {
+                    _button.transform.SetAsLastSibling();
                 }
 
                 var shift = UnityEngine.Input.GetKey(KeyCode.LeftShift) || UnityEngine.Input.GetKey(KeyCode.RightShift);
@@ -150,6 +195,7 @@ namespace Assets.Scripts
             _controller.OnClosePanelClicked();
             _controller.GetComponent<VizzyOrganizer.VizzyJumpPanel>()?.Close();
             _entries = BuildEntries();
+            _button.AddClass("toggle-button-toggled");
             _flyout.Show();
             _input.text = string.Empty;
             _shownText = string.Empty;

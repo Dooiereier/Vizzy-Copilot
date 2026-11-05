@@ -127,9 +127,14 @@ namespace Assets.Scripts.VizzyOrganizer
         private void Update()
         {
             // The game adds its category buttons after this one is built.
-            if (_button != null && _button.transform.GetSiblingIndex() != _button.transform.parent.childCount - 1)
+            if (_button != null)
             {
-                _button.transform.SetAsLastSibling();
+                var search = GetComponent<BlockSearchPanel>();
+                var place = _button.transform.parent.childCount - (search != null && search.HasButton ? 2 : 1);
+                if (_button.transform.GetSiblingIndex() != place)
+                {
+                    _button.transform.SetSiblingIndex(place);
+                }
             }
 
             if (_flyout != null && _flyout.gameObject.activeSelf && _controller.SelectedCategoryButton != null)
