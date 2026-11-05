@@ -24,6 +24,7 @@ namespace Assets.Scripts.Mfd
         private const int LabelCharactersPerLine = 40;
         private const float MinSize = 1f;
         private const double CascadeTolerance = 0.01;
+        private const double MatchTolerance = 0.01;
         private static readonly string[] Steps = { "0.2", "2", "20" };
 
         // Rotation's degrees need bigger clicks than position and size.
@@ -443,8 +444,10 @@ namespace Assets.Scripts.Mfd
                         continue;
                     }
 
+                    // Only where its own block still gives where it is: a child placed and then parented, for one,
+                    // already moves with its parent, and moving it as well would move it twice.
                     var was = before(row.Name, property);
-                    var now = was == null ? null : after(row.Name, property);
+                    var now = was == null || !row.IsAt(property, was) ? null : after(row.Name, property);
                     if (now != null && (Math.Abs(now[0] - was[0]) > CascadeTolerance || Math.Abs(now[1] - was[1]) > CascadeTolerance))
                     {
                         row.ApplyCascade(property, (float)(now[0] - was[0]), (float)(now[1] - was[1]));
@@ -717,6 +720,25 @@ namespace Assets.Scripts.Mfd
                 this.Widget.LocalPosition = _position;
                 this.Widget.Size = _size;
                 this.Widget.LocalRotation = _rotation;
+            }
+
+            /// <summary>Whether a value is where the property was when the panel opened or last saved.</summary>
+            public bool IsAt(MfdProperty property, double[] value)
+            {
+                switch (property)
+                {
+                    case MfdProperty.Position:
+                        return Close(value[0], _position.x) && Close(value[1], _position.y);
+                    case MfdProperty.Size:
+                        return Close(value[0], _size.x) && Close(value[1], _size.y);
+                    default:
+                        return Math.Abs(MfdFormulaWriter.DeltaAngle(value[0], _rotation)) <= MatchTolerance;
+                }
+            }
+
+            private static bool Close(double a, double b)
+            {
+                return Math.Abs(a - b) <= MatchTolerance + (1e-5 * Math.Abs(b));
             }
 
             /// <summary>Moves a property from where it was by a shared change's effect; it isn't a change of its own.</summary>
