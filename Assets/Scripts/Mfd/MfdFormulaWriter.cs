@@ -402,6 +402,19 @@ namespace Assets.Scripts.Mfd
                     return new[] { kx, ky };
                 }
 
+                // A number times a known vector, such as 0.97 * the size of another widget.
+                var factors = value.Name == "BinaryOp" && (string)value.Attribute("op") == "*" ? value.Elements().ToList() : null;
+                if (factors != null && factors.Count == 2)
+                {
+                    for (var i = 0; i < 2; i++)
+                    {
+                        if (this.TryEvaluateBlocks(factors[i], out var factor) && _globals.TryKnownBlock(factors[1 - i], out var fx, out var fy, out _))
+                        {
+                            return new[] { factor * fx, factor * fy };
+                        }
+                    }
+                }
+
                 var parts = value.Name == "Vector" ? value.Elements().Take(2).ToList() : null;
                 return parts != null && parts.Count == 2 && this.TryEvaluateBlocks(parts[0], out var x) && this.TryEvaluateBlocks(parts[1], out var y) ? new[] { x, y } : null;
             }

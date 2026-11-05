@@ -464,8 +464,9 @@ namespace Assets.Scripts.Mfd
 
         /// <summary>
         /// Whether something reads a changed widget's position or size where the preview can't follow it: in a
-        /// block whose widget name is built while running, in a custom instruction call, or in a variable. A shared
-        /// variable's change counts too, as its readers may be anywhere.
+        /// block whose widget name is built while running, in a custom instruction call or a variable, or in a
+        /// block whose value the panel can't work out. A shared variable's change counts too, as its readers
+        /// may be anywhere.
         /// </summary>
         private bool HasFollowersNotShown(List<MfdChange> changes, List<MfdLine> lines)
         {
@@ -475,15 +476,33 @@ namespace Assets.Scripts.Mfd
             }
 
             var names = new HashSet<string>(changes.Where(change => change.Property != MfdProperty.Rotation).Select(change => change.Widget));
-            return _data.FlightProgramXml.Descendants("CraftProperty")
-                .Where(item => (string)item.Attribute("property") == "Mfd.Position" || (string)item.Attribute("property") == "Mfd.Size")
-                .Where(item => names.Contains((string)item.Elements("Constant").FirstOrDefault()?.Attribute("text")))
-                .Any(item =>
+            this.ScreenSize(out var width, out var height);
+            Func<string, MfdProperty, double[]> evaluate = null;
+            foreach (var reader in _data.FlightProgramXml.Descendants("CraftProperty"))
+            {
+                var property = (string)reader.Attribute("property");
+                if ((property != "Mfd.Position" && property != "Mfd.Size") || !names.Contains((string)reader.Elements("Constant").FirstOrDefault()?.Attribute("text")))
                 {
-                    var setter = item.Ancestors("SetCraftProperty").FirstOrDefault();
-                    var name = setter?.Elements().FirstOrDefault();
-                    return name == null || name.Name != "Constant";
-                });
+                    continue;
+                }
+
+                var setter = reader.Ancestors("SetCraftProperty").FirstOrDefault();
+                var name = setter?.Elements().FirstOrDefault();
+                if (name == null || name.Name != "Constant")
+                {
+                    return true;
+                }
+
+                var target = (string)setter.Attribute("property");
+                var targetProperty = target == "Mfd.SetPosition" ? MfdProperty.Position : target == "Mfd.SetSize" ? MfdProperty.Size : target == "Mfd.SetRotation" ? MfdProperty.Rotation : (MfdProperty?)null;
+                evaluate ??= MfdFormulaWriter.Evaluator(_data.FlightProgramXml, width, height);
+                if (targetProperty.HasValue && evaluate((string)name.Attribute("text"), targetProperty.Value) == null)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private List<MfdChange> PendingChanges()

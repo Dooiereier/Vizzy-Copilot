@@ -271,6 +271,10 @@ public static class MfdFormulaWriterTests
         check("MFD: a widget placed from another's position follows it", relativeBefore != null && relativeAfter != null && relativeBefore[0] == 15 && relativeAfter[0] == 35 && relativeAfter[1] == 40);
         var copied = MfdFormulaWriter.Evaluator(followed, ScreenWidth, ScreenHeight)("C", MfdProperty.Position);
         check("MFD: a widget set to another's position follows it", copied != null && copied[0] == 30 && copied[1] == 40);
+        var scaledSize = Program(Set("SetSize", Vec("10", "20")) + Set("SetSize", "<BinaryOp op=\"*\"><Constant text=\"0.5\" /><CraftProperty property=\"Mfd.Size\"><Constant text=\"A\" /></CraftProperty></BinaryOp>", "B"));
+        var half = MfdFormulaWriter.Evaluator(scaledSize, ScreenWidth, ScreenHeight)("B", MfdProperty.Size);
+        check("MFD: a number times another widget's size is worked out", half != null && half[0] == 5 && half[1] == 10);
+
         var loop = Program(Set("SetPosition", "<CraftProperty property=\"Mfd.Position\"><Constant text=\"B\" /></CraftProperty>") + Set("SetPosition", "<CraftProperty property=\"Mfd.Position\"><Constant text=\"A\" /></CraftProperty>", "B"));
         check("MFD: widgets placed from each other can't be worked out", MfdFormulaWriter.Evaluator(loop, ScreenWidth, ScreenHeight)("A", MfdProperty.Position) == null);
         check("MFD: a widget without its own block can't be worked out", MfdFormulaWriter.Evaluator(cascade, ScreenWidth, ScreenHeight)("C", MfdProperty.Position) == null);
