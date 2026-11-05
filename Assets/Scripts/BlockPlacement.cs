@@ -7,6 +7,8 @@ namespace Assets.Scripts
     /// <summary>A rectangle with y pointing up, as on the canvas in world space.</summary>
     public struct PlacementBox
     {
+        private const float Tolerance = 0.01f;
+
         public PlacementBox(float xMin, float yMin, float xMax, float yMax)
         {
             XMin = xMin;
@@ -33,6 +35,8 @@ namespace Assets.Scripts
 
         public bool Overlaps(PlacementBox other, float gap)
         {
+            // A spot exactly one gap away is meant to count as clear, and rounding mustn't change that.
+            gap = Math.Max(0f, gap - Tolerance);
             return XMin < other.XMax + gap && other.XMin < XMax + gap && YMin < other.YMax + gap && other.YMin < YMax + gap;
         }
 
@@ -83,7 +87,7 @@ namespace Assets.Scripts
             }
 
             var free = FreeSpotNearTarget(view, targetX, targetY, width, height, gap, IsNear, IsFree, Distance);
-            return free ?? LeftOfNearestColumn(view, blocks, last, targetX, targetY, width, height, gap);
+            return free ?? LeftOfNearestColumn(view, blocks, columns, last, targetX, targetY, width, height, gap);
         }
 
         private static PlacementBox? FreeSpotNearTarget(PlacementBox view, float targetX, float targetY, float width, float height, float gap, Func<PlacementBox, bool> isNear, Func<PlacementBox, bool> isFree, Func<PlacementBox, float> distance)
@@ -113,15 +117,23 @@ namespace Assets.Scripts
         }
 
         /// <summary>A very full view: overlapping can't be avoided, so somewhere predictable, shifted down if the last block is exactly there.</summary>
-        private static PlacementBox LeftOfNearestColumn(PlacementBox view, IList<PlacementBox> blocks, PlacementBox? last, float targetX, float targetY, float width, float height, float gap)
+        private static PlacementBox LeftOfNearestColumn(PlacementBox view, IList<PlacementBox> blocks, IList<PlacementBox> columns, PlacementBox? last, float targetX, float targetY, float width, float height, float gap)
         {
-            var visible = blocks.Where(block => block.Overlaps(view, 0f) && !(last != null && block.Equals(last.Value))).ToList();
+            // Real columns first: a view full of loose blocks has none to line up with.
+            bool IsCandidate(PlacementBox block) => block.Overlaps(view, 0f) && !(last != null && block.Equals(last.Value));
+            var visible = columns.Where(IsCandidate).ToList();
+            if (visible.Count == 0)
+            {
+                visible = blocks.Where(IsCandidate).ToList();
+            }
+
             var left = visible.Count == 0
                 ? targetX - (width / 2f)
                 : visible.OrderBy(block => Math.Abs(block.XMin - targetX)).First().XMin - gap - width;
             left = Math.Max(view.XMin + gap, left);
 
-            var top = targetY + (height / 2f);
+            // A block taller than the view shows its top.
+            var top = Math.Min(targetY + (height / 2f), view.YMax);
             while (blocks.Any(block => Math.Abs(block.XMin - left) < 1f && Math.Abs(block.YMax - top) < 1f) && top - height - (height + gap) >= view.YMin)
             {
                 top -= height + gap;

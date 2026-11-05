@@ -44,6 +44,30 @@ public static class BlockPlacementTests
         var beside = Find(new List<PlacementBox> { lonely }, none);
         check("a lone block, no column: a free spot near the target", !beside.Overlaps(lonely, Gap - 0.01f) && Math.Abs(beside.CenterX - 1000f) < 500f);
 
+        var alwaysUsed = true;
+        for (var i = 0; i < 500; i++)
+        {
+            var bottom = 700f + (i * 0.137f);
+            var rounded = new PlacementBox(900.3f, bottom, 1300f, 1000f);
+            var spot = BlockPlacement.Find(View, new List<PlacementBox> { rounded }, new List<PlacementBox> { rounded }, 103.7f, 41.3f, 19.37f);
+            alwaysUsed &= Math.Abs(spot.YMax - (bottom - 19.37f)) < 0.01f;
+        }
+
+        check("rounding doesn't reject the spot below a column", alwaysUsed);
+
+        var tall = BlockPlacement.Find(View, none, none, W, 1500f, Gap);
+        check("a block taller than the view shows its top", tall.YMax <= View.YMax);
+
+        var wall = new List<PlacementBox>();
+        for (var x = 500f; x < 2000f; x += 300f)
+        {
+            wall.Add(new PlacementBox(x, 0f, x + 280f, 1200f));
+        }
+
+        var realColumn = new PlacementBox(1400f, 0f, 1680f, 1200f);
+        var linedUp = BlockPlacement.Find(View, wall, new List<PlacementBox> { realColumn }, W, H, Gap);
+        check("a full view lines up with a real column before a loose block", linedUp.XMax == 1400f - Gap);
+
         var full = new List<PlacementBox>();
         for (var x = 500f; x < 2000f; x += 300f)
         {

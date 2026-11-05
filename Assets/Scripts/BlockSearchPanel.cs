@@ -536,6 +536,13 @@ namespace Assets.Scripts
         private void Place(BlockElementScript result)
         {
             var editor = _controller.VizzyUI;
+
+            // A read-only editor: results can't be dragged out there either.
+            if (!editor.Interactable)
+            {
+                return;
+            }
+
             var (blocks, columns, last) = MeasureCanvas();
             var placed = editor.NodeBuilder.CloneBlock(result.Root, true).First();
             var scale = editor.ProgramTransform.lossyScale.x;
