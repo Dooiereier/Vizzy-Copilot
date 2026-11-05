@@ -212,6 +212,13 @@ namespace Assets.Scripts.Mfd
         private void ShowList()
         {
             var shown = _rows.Where(row => row.CanArrange).ToList();
+            this.ScreenSize(out var width, out var height);
+            EditorLog.Debug("MFD list: " + shown.Count + " of " + _rows.Count + " widgets listed, screen " + width + " x " + height + ".");
+            foreach (var row in _rows.Where(item => !item.CanArrange))
+            {
+                EditorLog.Debug("MFD widget " + row.Name + " not listed: " + (row.Tooltip ?? "it's gone"));
+            }
+
             var signature = string.Join("\n", shown.Select(row => row.Label));
             if (signature == _shownList)
             {
