@@ -20,7 +20,7 @@ namespace Assets.Scripts
 
     /// <summary>
     /// Shift+F or the left bar's search button in the Vizzy editor: type part of a block's name, and matching toolbox blocks appear,
-    /// dragged out as usual, or double-clicked to appear in the middle of the view. Arrow keys move a frame through the results, and Enter places the framed one in the middle of the view. Dropdown choices count as their own results, with that choice set, as do this program's variables, lists and custom blocks.
+    /// dragged out as usual, or double-clicked to appear in the middle of the view. Arrow keys move a highlight through the results, and Enter places the highlighted one in the middle of the view. Dropdown choices count as their own results, with that choice set, as do this program's variables, lists and custom blocks.
     /// </summary>
     public sealed class BlockSearchPanel : MonoBehaviour
     {
@@ -33,10 +33,9 @@ namespace Assets.Scripts
         private const float MinWidth = 300f;
         private const float MaxWidth = 600f;
 
-        // Results start this far in (LoadNodes), so room for the frame on the other side too.
+        // Results start this far in (LoadNodes), so as much room on the other side.
         private const float SideMargin = 25f;
-        private const float FramePadding = 3f;
-        private const float FrameThickness = 2f;
+        private const float HighlightPadding = 3f;
         private const float RepeatDelay = 0.35f;
         private const float RepeatInterval = 0.06f;
         private const string Help = "Block Search (Shift+F): type part of a block's name or a dropdown choice, such as + or wait, then drag the block out or double-click it. Up and Down select a block, Enter places it in the middle of the view.";
@@ -54,7 +53,7 @@ namespace Assets.Scripts
         private int _clearTypedKeyFrame = -1;
         private readonly List<BlockElementScript> _shownBlocks = new List<BlockElementScript>();
         private int _selected = -1;
-        private RectTransform _frame;
+        private RectTransform _highlight;
         private ScrollRect _scroll;
         private float _nextRepeat;
         private int _refocusUntilFrame = -1;
@@ -213,8 +212,10 @@ namespace Assets.Scripts
                     ShowResults(_input.text);
                 }
 
-                // Another text field, such as a block's, keeps its own keys.
-                if (!Game.Instance.UserInterface.IsTextInputFocused || _input.isFocused)
+                // Another text field, such as a block's, keeps its own keys. This asks what's selected rather than
+                // isFocused: Enter can end the box's editing earlier this frame, and the box stays selected.
+                var selected = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
+                if (!Game.Instance.UserInterface.IsTextInputFocused || selected == _input.gameObject)
                 {
                     HandleKeys();
                 }
@@ -249,7 +250,7 @@ namespace Assets.Scripts
                     _input.ActivateInputField();
                 }
 
-                PositionFrame();
+                PositionHighlight();
             }
             catch (Exception e)
             {
@@ -302,29 +303,30 @@ namespace Assets.Scripts
             }
 
             _selected = BlockSearch.MoveSelection(_selected, delta, _shownBlocks.Count, pressed);
-            PositionFrame();
+            PositionHighlight();
             ScrollToSelected();
         }
 
-        /// <summary>Follows the selected block each frame: a block's size can settle after it's built.</summary>
-        private void PositionFrame()
+        /// <summary>Follows the selected block each frame, as the list's width can change.</summary>
+        private void PositionHighlight()
         {
-            if (_frame == null)
+            if (_highlight == null)
             {
                 return;
             }
 
             var block = _selected >= 0 && _selected < _shownBlocks.Count ? _shownBlocks[_selected] : null;
-            _frame.gameObject.SetActive(block != null);
+            _highlight.gameObject.SetActive(block != null);
             if (block == null)
             {
                 return;
             }
 
-            // LoadNodes pins a result by its top left corner and spaces results by Size.
-            var topLeft = block.RectTransform.localPosition;
-            _frame.localPosition = new Vector3(topLeft.x - FramePadding, topLeft.y - block.Size.y - FramePadding, 0f);
-            _frame.sizeDelta = block.Size + (Vector2.one * 2f * FramePadding);
+            // LoadNodes pins a result by its top left corner and spaces results by Size. The row is as wide as the list.
+            var view = (RectTransform)(_scroll != null && _scroll.viewport != null ? _scroll.viewport : _results.parent);
+            var top = block.RectTransform.localPosition.y;
+            _highlight.localPosition = new Vector3(0f, top - block.Size.y - HighlightPadding, 0f);
+            _highlight.sizeDelta = new Vector2(view.rect.width, block.Size.y + (2f * HighlightPadding));
         }
 
         private void ScrollToSelected()
@@ -337,7 +339,7 @@ namespace Assets.Scripts
             var view = new Vector3[4];
             ((RectTransform)(_scroll.viewport != null ? _scroll.viewport : _scroll.transform)).GetWorldCorners(view);
             var selected = _shownBlocks[_selected];
-            var margin = (FramePadding + FrameThickness) * _results.lossyScale.y;
+            var margin = HighlightPadding * _results.lossyScale.y;
             var top = selected.RectTransform.position.y;
             var bottom = top - (selected.Size.y * _results.lossyScale.y);
 
@@ -356,31 +358,17 @@ namespace Assets.Scripts
             _scroll.content.position += new Vector3(0f, shift, 0f);
         }
 
-        /// <summary>A plain frame on top of the results. It takes no clicks, so blocks can still be dragged through it.</summary>
-        private void BuildFrame()
+        /// <summary>A row behind the selected result, the color the game's dropdowns use on the row under the mouse.</summary>
+        private void BuildHighlight()
         {
-            _frame = (RectTransform)new GameObject("SelectedResultFrame", typeof(RectTransform)).transform;
-            _frame.SetParent(_results, false);
-            _frame.anchorMin = _frame.anchorMax = new Vector2(0f, 1f);
-            _frame.pivot = Vector2.zero;
-            AddFrameSide(new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, FrameThickness));
-            AddFrameSide(new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, FrameThickness));
-            AddFrameSide(new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(FrameThickness, 0f));
-            AddFrameSide(new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(FrameThickness, 0f));
-        }
-
-        private void AddFrameSide(Vector2 anchorMin, Vector2 anchorMax, Vector2 size)
-        {
-            var side = new GameObject("Side", typeof(RectTransform), typeof(Image));
-            var rect = (RectTransform)side.transform;
-            rect.SetParent(_frame, false);
-            rect.anchorMin = anchorMin;
-            rect.anchorMax = anchorMax;
-            rect.pivot = anchorMin;
-            rect.anchoredPosition = Vector2.zero;
-            rect.sizeDelta = size;
-            var image = side.GetComponent<Image>();
-            image.color = new Color32(0xE0, 0xE0, 0xE0, 0xFF);
+            var row = new GameObject("SelectedResultHighlight", typeof(RectTransform), typeof(Image));
+            _highlight = (RectTransform)row.transform;
+            _highlight.SetParent(_results, false);
+            _highlight.SetAsFirstSibling();
+            _highlight.anchorMin = _highlight.anchorMax = new Vector2(0f, 1f);
+            _highlight.pivot = Vector2.zero;
+            var image = row.GetComponent<Image>();
+            image.color = new Color32(0x5F, 0x61, 0x60, 0xFF);
             image.raycastTarget = false;
         }
 
@@ -520,8 +508,8 @@ namespace Assets.Scripts
             }
 
             _selected = _shownBlocks.Count > 0 ? 0 : -1;
-            BuildFrame();
-            PositionFrame();
+            BuildHighlight();
+            PositionHighlight();
             if (_scroll != null)
             {
                 _scroll.velocity = Vector2.zero;
@@ -529,7 +517,7 @@ namespace Assets.Scripts
             }
         }
 
-        /// <summary>A click on a result selects it, so the frame stays with what was last used.</summary>
+        /// <summary>A click on a result selects it, so the highlight stays with what was last used.</summary>
         private void SelectResult(BlockElementScript result)
         {
             var index = _shownBlocks.IndexOf(result.Root);
@@ -562,7 +550,7 @@ namespace Assets.Scripts
         {
             _shownBlocks.Clear();
             _selected = -1;
-            _frame = null;
+            _highlight = null;
             foreach (Transform child in _results)
             {
                 child.gameObject.SetActive(false);
