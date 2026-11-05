@@ -158,16 +158,6 @@ namespace Assets.Scripts.Mfd
             return value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
         }
 
-        private static string ShortName(MfdProperty property)
-        {
-            switch (property)
-            {
-                case MfdProperty.Position: return "position";
-                case MfdProperty.Size: return "size";
-                default: return "rotation";
-            }
-        }
-
         /// <summary>Works out over several frames what each widget can save, as a large program takes a moment per widget.</summary>
         private void ClassifySome()
         {
@@ -183,7 +173,7 @@ namespace Assets.Scripts.Mfd
                 {
                     var lines = this.Classify(row);
                     row.CanArrange = lines.Any(line => line.Property != MfdProperty.Rotation && (line.Applied || line.NeedsSharedOverride));
-                    row.Label = row.Name + "  -  " + StatusText(lines);
+                    row.Label = row.Name + StatusSuffix(lines);
                     row.Tooltip = string.Join("\n", lines.Select(line => line.ToString()));
                 }
                 else
@@ -236,23 +226,26 @@ namespace Assets.Scripts.Mfd
             return MfdFormulaWriter.Apply(_classifyProgram, row.AllChanges(), width, height, false);
         }
 
-        private static string StatusText(List<MfdLine> lines)
+        /// <summary>Nothing when position and size both save: only the exceptions need saying. The tooltip has the details.</summary>
+        private static string StatusSuffix(List<MfdLine> lines)
         {
+            bool Saves(MfdProperty property) => lines.Any(line => line.Property == property && (line.Applied || line.NeedsSharedOverride));
             var parts = new List<string>();
-            foreach (var property in new[] { MfdProperty.Position, MfdProperty.Size, MfdProperty.Rotation })
+            if (!Saves(MfdProperty.Size))
             {
-                var own = lines.Where(line => line.Property == property).ToList();
-                if (own.Any(line => line.Applied))
-                {
-                    parts.Add(ShortName(property));
-                }
-                else if (own.Any(line => line.NeedsSharedOverride))
-                {
-                    parts.Add(ShortName(property) + " (shared)");
-                }
+                parts.Add("only position");
+            }
+            else if (!Saves(MfdProperty.Position))
+            {
+                parts.Add("only size");
             }
 
-            return parts.Count == 0 ? "can't save" : "saves " + string.Join(", ", parts);
+            if (lines.Any(line => line.Property != MfdProperty.Rotation && line.NeedsSharedOverride))
+            {
+                parts.Add("shared");
+            }
+
+            return parts.Count == 0 ? string.Empty : " (" + string.Join(", ", parts) + ")";
         }
 
         private void ScreenSize(out double width, out double height)
