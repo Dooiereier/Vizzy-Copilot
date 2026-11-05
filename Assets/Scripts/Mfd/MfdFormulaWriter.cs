@@ -225,7 +225,7 @@ namespace Assets.Scripts.Mfd
                 _program = program;
                 _allowShared = allowShared;
                 _dryRun = dryRun;
-                _globals = new GlobalVectors(program, screenWidth, screenHeight, this.Reachable);
+                _globals = new GlobalVectors(program, screenWidth, screenHeight, this.Reachable, this.EvaluateOnce);
             }
 
             public List<MfdLine> Lines { get; } = new List<MfdLine>();
@@ -318,7 +318,31 @@ namespace Assets.Scripts.Mfd
                     .ToList();
             }
 
-            /// <summary>What the widget's own block gives, through global variables; null when it can't be worked out.</summary>
+            private readonly HashSet<string> _evaluating = new HashSet<string>();
+
+            /// <summary>For "get widget … position" inside a formula: the other widget's own block, once per chain.</summary>
+            private double[] EvaluateOnce(string widget, MfdProperty property)
+            {
+                var key = widget + "|" + property;
+                if (!_evaluating.Add(key))
+                {
+                    return null;
+                }
+
+                try
+                {
+                    return this.Evaluate(widget, property);
+                }
+                finally
+                {
+                    _evaluating.Remove(key);
+                }
+            }
+
+            /// <summary>
+            /// What the widget's own block gives, through global variables and other widgets' blocks; null when
+            /// it can't be worked out.
+            /// </summary>
             public double[] Evaluate(string widget, MfdProperty property)
             {
                 var direct = this.DirectSetters(widget, BlockProperty(property));
@@ -371,6 +395,11 @@ namespace Assets.Scripts.Mfd
                 if (rotation)
                 {
                     return this.TryEvaluateBlocks(value, out var angle) ? new[] { angle, 0d } : null;
+                }
+
+                if (_globals.TryKnownBlock(value, out var kx, out var ky, out _))
+                {
+                    return new[] { kx, ky };
                 }
 
                 var parts = value.Name == "Vector" ? value.Elements().Take(2).ToList() : null;
@@ -1072,27 +1101,53 @@ namespace Assets.Scripts.Mfd
             private readonly HashSet<string> _working = new HashSet<string>();
 
             private readonly Func<XElement, bool> _reachable;
+            private readonly Func<string, MfdProperty, double[]> _widget;
 
-            public GlobalVectors(XElement program, double screenWidth, double screenHeight, Func<XElement, bool> reachable)
+            public GlobalVectors(XElement program, double screenWidth, double screenHeight, Func<XElement, bool> reachable, Func<string, MfdProperty, double[]> widget)
             {
                 _program = program;
                 _reachable = reachable;
+                _widget = widget;
                 _screenWidth = screenWidth;
                 _screenHeight = screenHeight;
             }
 
-            /// <summary>A block whose vector is known without running: the size of _Screen.</summary>
+            /// <summary>
+            /// A block whose vector is known without running: the size of _Screen, or another widget's position or
+            /// size as its own block sets it.
+            /// </summary>
             public bool TryKnownBlock(XElement block, out double x, out double y, out double z)
             {
                 x = y = z = 0;
-                if (block.Name != "CraftProperty" || (string)block.Attribute("property") != "Mfd.Size"
-                    || (string)block.Elements("Constant").FirstOrDefault()?.Attribute("text") != "_Screen")
+                var property = (string)block.Attribute("property");
+                var name = block.Elements().FirstOrDefault();
+                if (block.Name != "CraftProperty" || (property != "Mfd.Size" && property != "Mfd.Position")
+                    || name == null || name.Name != "Constant" || (string)name.Attribute("text") == null)
                 {
                     return false;
                 }
 
-                x = _screenWidth;
-                y = _screenHeight;
+                var widget = (string)name.Attribute("text");
+                if (widget == "_Screen")
+                {
+                    if (property != "Mfd.Size")
+                    {
+                        return false;
+                    }
+
+                    x = _screenWidth;
+                    y = _screenHeight;
+                    return true;
+                }
+
+                var value = _widget?.Invoke(widget, property == "Mfd.Size" ? MfdProperty.Size : MfdProperty.Position);
+                if (value == null)
+                {
+                    return false;
+                }
+
+                x = value[0];
+                y = value[1];
                 return true;
             }
 

@@ -261,6 +261,18 @@ public static class MfdFormulaWriterTests
         var after = MfdFormulaWriter.Evaluator(preview, ScreenWidth, ScreenHeight)("B", MfdProperty.Position);
         check("MFD: another reader's value is worked out before", before != null && before[0] == 11 && before[1] == 2);
         check("MFD: and after the shared change", after != null && after[0] == 15 && after[1] == 6);
+        // Placed relative to another widget with "get widget A position": it follows A.
+        var relative = Program(Set("SetPosition", Vec("10", "20")) + Set("SetPosition", "<Vector><BinaryOp op=\"+\"><Constant number=\"5\" /><VectorOp op=\"x\"><CraftProperty property=\"Mfd.Position\"><Constant text=\"A\" /></CraftProperty></VectorOp></BinaryOp><VectorOp op=\"y\"><CraftProperty property=\"Mfd.Position\"><Constant text=\"A\" /></CraftProperty></VectorOp><Constant number=\"0\" /></Vector>", "B")
+            + Set("SetPosition", "<CraftProperty property=\"Mfd.Position\"><Constant text=\"A\" /></CraftProperty>", "C"));
+        var relativeBefore = MfdFormulaWriter.Evaluator(relative, ScreenWidth, ScreenHeight)("B", MfdProperty.Position);
+        var followed = new XElement(relative);
+        Move(followed, 10, 20, 30, 40);
+        var relativeAfter = MfdFormulaWriter.Evaluator(followed, ScreenWidth, ScreenHeight)("B", MfdProperty.Position);
+        check("MFD: a widget placed from another's position follows it", relativeBefore != null && relativeAfter != null && relativeBefore[0] == 15 && relativeAfter[0] == 35 && relativeAfter[1] == 40);
+        var copied = MfdFormulaWriter.Evaluator(followed, ScreenWidth, ScreenHeight)("C", MfdProperty.Position);
+        check("MFD: a widget set to another's position follows it", copied != null && copied[0] == 30 && copied[1] == 40);
+        var loop = Program(Set("SetPosition", "<CraftProperty property=\"Mfd.Position\"><Constant text=\"B\" /></CraftProperty>") + Set("SetPosition", "<CraftProperty property=\"Mfd.Position\"><Constant text=\"A\" /></CraftProperty>", "B"));
+        check("MFD: widgets placed from each other can't be worked out", MfdFormulaWriter.Evaluator(loop, ScreenWidth, ScreenHeight)("A", MfdProperty.Position) == null);
         check("MFD: a widget without its own block can't be worked out", MfdFormulaWriter.Evaluator(cascade, ScreenWidth, ScreenHeight)("C", MfdProperty.Position) == null);
 
         RealPrograms(check);

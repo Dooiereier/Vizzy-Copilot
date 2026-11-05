@@ -45,7 +45,7 @@ namespace Assets.Scripts.Mfd
         private string _shownList;
         private Row _selected;
         private float _step = 2f;
-        private bool _allowShared;
+        private bool _allowShared = true;
         private string _message;
         private int _cascaded;
 
@@ -405,9 +405,9 @@ namespace Assets.Scripts.Mfd
         }
 
         /// <summary>
-        /// With the shared override on, moves the other widgets that read a changed shared variable to where
-        /// their own blocks would put them, by the difference, so the effect shows before saving. Widgets whose
-        /// blocks can't be worked out stay until a restart.
+        /// Moves the other widgets that follow a change, through "get widget … position" or a shared variable
+        /// when that's allowed, to where their own blocks would put them, by the difference, so the effect
+        /// shows before saving. Widgets whose blocks can't be worked out stay until a restart.
         /// </summary>
         private void UpdateCascade()
         {
@@ -418,14 +418,14 @@ namespace Assets.Scripts.Mfd
 
             _cascaded = 0;
             var changes = this.PendingChanges();
-            if (!_allowShared || changes.Count == 0)
+            if (changes.Count == 0)
             {
                 return;
             }
 
             this.ScreenSize(out var width, out var height);
             var preview = new XElement(_data.FlightProgramXml);
-            if (!MfdFormulaWriter.Apply(preview, changes, width, height, true).Any(line => line.Applied && line.Shared))
+            if (!MfdFormulaWriter.Apply(preview, changes, width, height, _allowShared).Any(line => line.Applied))
             {
                 return;
             }
@@ -492,7 +492,8 @@ namespace Assets.Scripts.Mfd
                 this.AddWrappedTo(group, (line.Applied ? string.Empty : "Won't save: ") + line);
             }
 
-            if (_allowShared || lines.Any(line => line.NeedsSharedOverride))
+            // On by default, so it's only shown when a shared variable is involved.
+            if (lines.Any(line => line.Shared || line.NeedsSharedOverride))
             {
                 group.Add(new ToggleModel(
                     "Also change shared variables",
@@ -504,10 +505,11 @@ namespace Assets.Scripts.Mfd
                         this.ReplaceChangesGroup();
                     },
                     "A shared variable moves everything that reads it. Widgets the panel can work out move on screen now."));
-                if (_cascaded > 0)
-                {
-                    this.AddWrappedTo(group, "Moved " + _cascaded + " other " + (_cascaded == 1 ? "widget" : "widgets") + " on screen to show it.");
-                }
+            }
+
+            if (_cascaded > 0)
+            {
+                this.AddWrappedTo(group, "Moved " + _cascaded + " other " + (_cascaded == 1 ? "widget that follows" : "widgets that follow") + " on screen to show it.");
             }
 
             group.Add(new TextButtonModel("Save", _ => this.Save()));
