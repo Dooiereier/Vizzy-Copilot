@@ -41,6 +41,7 @@ namespace Assets.Scripts.Mfd
         private GroupModel _selectedGroup;
         private GroupModel _changesGroup;
         private GroupModel _listGroup;
+        private LabelModel _checkingLabel;
         private string _shownList;
         private Row _selected;
         private XElement _classifyProgram;
@@ -93,7 +94,7 @@ namespace Assets.Scripts.Mfd
             _changesGroup = this.BuildChangesGroup();
             model.AddGroup(_changesGroup);
             _listGroup = new GroupModel("Widgets");
-            _listGroup.Add(new LabelModel("Checking the widgets...", ElementAlignment.Left));
+            _checkingLabel = _listGroup.Add(new LabelModel("Checking the widgets...", ElementAlignment.Left));
             model.AddGroup(_listGroup);
 
             var info = new InspectorPanelCreationInfo
@@ -113,7 +114,16 @@ namespace Assets.Scripts.Mfd
             var panel = _panel;
             if (panel != null)
             {
-                panel.Close();
+                try
+                {
+                    panel.Close();
+                }
+                catch (Exception e)
+                {
+                    // At the game's end the panel may already be gone.
+                    EditorLog.Debug("MFD panel not closed: " + e.Message);
+                }
+
                 this.Finish();
             }
         }
@@ -164,6 +174,13 @@ namespace Assets.Scripts.Mfd
         /// <summary>Works out over several frames what each widget can save, as a large program takes a moment per widget.</summary>
         private void ClassifySome()
         {
+            // The panel builds its elements in its Start. A group replaced before that leaves a dead element
+            // behind, which throws in the panel's update every frame and stops the rows after it from updating.
+            if (_checkingLabel != null && _checkingLabel.ItemElement == null)
+            {
+                return;
+            }
+
             if (_classifyNext >= _rows.Count && _shownList != null)
             {
                 return;
@@ -202,6 +219,7 @@ namespace Assets.Scripts.Mfd
             }
 
             _shownList = signature;
+            _checkingLabel = null;
             var group = new GroupModel("Widgets");
             foreach (var row in _rows)
             {
