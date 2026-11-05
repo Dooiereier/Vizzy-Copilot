@@ -34,5 +34,17 @@ public static class BlockSearchTests
         check("nothing typed shows nothing", Titles("  ").Length == 0);
         check("no match shows nothing", Titles("xyzzy").Length == 0);
         check("the limit holds", Titles("a", 2).Length == 2);
+
+        var mixed = new[]
+        {
+            new BlockEntry("Pitch list", "list", "Lists", null, BlockGroup.List),
+            new BlockEntry("Pitch step", "custom instruction", "Custom Instructions", null, BlockGroup.CustomInstruction),
+            new BlockEntry("Pitch value", "custom expression", "Custom Expressions", null, BlockGroup.CustomExpression),
+            new BlockEntry("Pitch", "variable", "Variables", null, BlockGroup.Variable),
+            new BlockEntry("my pitch", "variable", "Variables", null, BlockGroup.Variable),
+            new BlockEntry("set pitch", "set-pitch", "Craft Instructions", null),
+        };
+        var order = BlockSearch.Find("pitch", mixed, 30).Select(entry => entry.Title).ToArray();
+        check("groups come in order: blocks, variables, custom expressions, custom instructions, lists", order.SequenceEqual(new[] { "set pitch", "Pitch", "my pitch", "Pitch value", "Pitch step", "Pitch list" }));
     }
 }

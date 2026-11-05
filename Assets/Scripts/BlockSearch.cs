@@ -5,15 +5,28 @@ namespace Assets.Scripts
     using System.Linq;
     using System.Text.RegularExpressions;
 
+    /// <summary>The groups of search results, in the order they are shown.</summary>
+    public enum BlockGroup
+    {
+        Block,
+        Variable,
+        CustomExpression,
+        CustomInstruction,
+        List,
+    }
+
     /// <summary>One thing the block search can offer: a toolbox block, with a dropdown choice if it has one.</summary>
     public sealed class BlockEntry
     {
-        public BlockEntry(string title, string styleId, string category, object source)
+        public BlockEntry(string title, string styleId, string category, object source, BlockGroup group = BlockGroup.Block)
         {
+            Group = group;
             Title = BlockSearch.PlainText(title);
             Terms = (Title + " " + styleId + " " + category + " " + BlockSearch.AliasesFor(styleId)).ToLowerInvariant();
             Source = source;
         }
+
+        public BlockGroup Group { get; }
 
         public string Title { get; }
 
@@ -48,7 +61,7 @@ namespace Assets.Scripts
             return styleId != null && Aliases.TryGetValue(styleId, out var aliases) ? aliases : string.Empty;
         }
 
-        /// <summary>Every word has to match. Closer matches come first, then toolbox order.</summary>
+        /// <summary>Every word has to match. Results go by group, closer matches first within a group, then toolbox order.</summary>
         public static List<BlockEntry> Find(string query, IEnumerable<BlockEntry> entries, int limit)
         {
             var words = (query ?? string.Empty).ToLowerInvariant().Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
@@ -60,7 +73,8 @@ namespace Assets.Scripts
             var whole = string.Join(" ", words);
             return entries
                 .Where(entry => words.All(entry.Terms.Contains))
-                .OrderBy(entry => Rank(entry.Title.ToLowerInvariant(), whole))
+                .OrderBy(entry => entry.Group)
+                .ThenBy(entry => Rank(entry.Title.ToLowerInvariant(), whole))
                 .Take(limit)
                 .ToList();
         }

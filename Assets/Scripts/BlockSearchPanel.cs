@@ -249,21 +249,21 @@ namespace Assets.Scripts
             {
                 var isList = variable.IsList;
                 var name = variable.Name;
-                entries.Add(new BlockEntry(name, isList ? "list" : "variable", isList ? "Lists" : "Variables", new Func<ProgramNode>(() => new VariableExpression(isList) { VariableName = name })));
+                entries.Add(new BlockEntry(name, isList ? "list" : "variable", isList ? "Lists" : "Variables", new Func<ProgramNode>(() => new VariableExpression(isList) { VariableName = name }), isList ? BlockGroup.List : BlockGroup.Variable));
             }
 
             foreach (var custom in program.CustomExpressions)
             {
                 var name = custom.Name;
                 var format = custom.CallFormat;
-                entries.Add(new BlockEntry(name, "custom expression", "Custom Expressions", new Func<ProgramNode>(() => WithEmptySlots(new CallCustomExpression { Call = name, Style = "call-custom-expression" }, format))));
+                entries.Add(new BlockEntry(name, "custom expression", "Custom Expressions", new Func<ProgramNode>(() => WithEmptySlots(new CallCustomExpression { Call = name, Style = "call-custom-expression" }, format)), BlockGroup.CustomExpression));
             }
 
             foreach (var custom in program.CustomInstructions)
             {
                 var name = custom.Name;
                 var format = custom.CallFormat;
-                entries.Add(new BlockEntry(name, "custom instruction", "Custom Instructions", new Func<ProgramNode>(() => WithEmptySlots(new CallCustomInstruction { Call = name, Style = "call-custom-instruction" }, format))));
+                entries.Add(new BlockEntry(name, "custom instruction", "Custom Instructions", new Func<ProgramNode>(() => WithEmptySlots(new CallCustomInstruction { Call = name, Style = "call-custom-instruction" }, format)), BlockGroup.CustomInstruction));
             }
         }
 
