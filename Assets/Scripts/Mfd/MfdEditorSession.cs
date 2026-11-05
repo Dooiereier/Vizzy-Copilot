@@ -20,7 +20,6 @@ namespace Assets.Scripts.Mfd
     {
         private const int PanelWidth = 340;
         private const float MaxScreenHeight = 0.9f;
-        private const int WidgetsClassifiedPerFrame = 3;
         private const int LabelLineHeight = 22;
         private const int LabelCharactersPerLine = 40;
         private const float MinSize = 1f;
@@ -43,7 +42,6 @@ namespace Assets.Scripts.Mfd
         private GroupModel _listGroup;
         private string _shownList;
         private Row _selected;
-        private XElement _classifyProgram;
         private float _step = 2f;
         private bool _allowShared;
         private string _message;
@@ -58,15 +56,13 @@ namespace Assets.Scripts.Mfd
         public void Open()
         {
             _mfd = _data.Part.PartScript.GetModifier<MfdScript>();
-            var widgets = MfdRestart.Widgets(_mfd);
-            var scene = Game.Instance.FlightScene;
-            if (widgets == null)
+            if (_mfd == null)
             {
-                EditorLog.Error("Couldn't read the MFD's widgets: MfdScript._widgets has changed.");
-                scene.FlightSceneUI.ShowMessage("Arrange MFD doesn't work with this game version.");
+                Game.Instance.FlightScene.FlightSceneUI.ShowMessage("This part has no MFD.");
                 return;
             }
 
+            var widgets = MfdRestart.Widgets(_mfd);
             FlightPause.Hold();
             try
             {
@@ -79,11 +75,11 @@ namespace Assets.Scripts.Mfd
             }
         }
 
-        private void BuildPanel(IDictionary<string, IMfdWidget> widgets)
+        private void BuildPanel(List<IMfdWidget> widgets)
         {
-            foreach (var pair in widgets.Where(item => item.Key != MfdRestart.ScreenWidgetName && item.Value?.Transform != null).OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase))
+            foreach (var widget in widgets.Where(item => item.Name != MfdRestart.ScreenWidgetName).OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase))
             {
-                _rows.Add(new Row(pair.Value));
+                _rows.Add(new Row(widget));
             }
 
             var model = new InspectorModel("VizzyStudioArrangeMfd", "Arrange MFD");
@@ -94,7 +90,6 @@ namespace Assets.Scripts.Mfd
 
             // Before the panel exists: replacing a group before its Start leaves a dead element behind,
             // which throws in the panel's update every frame and stops the rows after it from updating.
-            _classifyProgram = new XElement(_data.FlightProgramXml);
             this.ClassifyAll();
             _listGroup = this.BuildListGroup();
             model.AddGroup(_listGroup);
@@ -233,7 +228,7 @@ namespace Assets.Scripts.Mfd
         private List<MfdLine> Classify(Row row)
         {
             this.ScreenSize(out var width, out var height);
-            return MfdFormulaWriter.Apply(_classifyProgram, row.AllChanges(), width, height, false);
+            return MfdFormulaWriter.Apply(_data.FlightProgramXml, row.ProbeChanges(), width, height, false, true);
         }
 
         /// <summary>Nothing when position and size both save: only the exceptions need saying. The tooltip has the details.</summary>
@@ -414,7 +409,7 @@ namespace Assets.Scripts.Mfd
             }
 
             this.ScreenSize(out var width, out var height);
-            var lines = MfdFormulaWriter.Apply(new XElement(_data.FlightProgramXml), changes, width, height, _allowShared);
+            var lines = MfdFormulaWriter.Apply(_data.FlightProgramXml, changes, width, height, _allowShared, true);
             foreach (var line in lines)
             {
                 this.AddWrappedTo(group, (line.Applied ? string.Empty : "Won't save: ") + line);
@@ -505,7 +500,6 @@ namespace Assets.Scripts.Mfd
                     row.AcceptSaved(lines);
                 }
 
-                _classifyProgram = new XElement(program);
                 this.ClassifyAll();
                 this.RefreshList();
                 this.ReplaceChangesGroup();
@@ -635,12 +629,13 @@ namespace Assets.Scripts.Mfd
                 this.Widget.LocalRotation = _rotation;
             }
 
-            /// <summary>Every property at its current value, for finding out what could be saved.</summary>
-            public IEnumerable<MfdChange> AllChanges()
+            /// <summary>A small move of every axis from where it was, for a dry run that finds out what could be saved.</summary>
+            public IEnumerable<MfdChange> ProbeChanges()
             {
-                yield return this.Change(MfdProperty.Position);
-                yield return this.Change(MfdProperty.Size);
-                yield return this.Change(MfdProperty.Rotation);
+                const float probe = 1f;
+                yield return new MfdChange { Widget = this.Name, Property = MfdProperty.Position, X = _position.x + probe, Y = _position.y + probe, FromX = _position.x, FromY = _position.y };
+                yield return new MfdChange { Widget = this.Name, Property = MfdProperty.Size, X = _size.x + probe, Y = _size.y + probe, FromX = _size.x, FromY = _size.y };
+                yield return new MfdChange { Widget = this.Name, Property = MfdProperty.Rotation, X = _rotation + probe, FromX = _rotation };
             }
 
             public IEnumerable<MfdChange> PendingChanges()
@@ -661,6 +656,7 @@ namespace Assets.Scripts.Mfd
                 }
             }
 
+            /// <summary>What was saved becomes the new starting point; an axis that wasn't stays changed, so it can still be reverted.</summary>
             public void AcceptSaved(IEnumerable<MfdLine> lines)
             {
                 foreach (var line in lines.Where(item => item.Applied && item.Widget == this.Name))
@@ -668,10 +664,10 @@ namespace Assets.Scripts.Mfd
                     switch (line.Property)
                     {
                         case MfdProperty.Position:
-                            _position = this.Widget.LocalPosition;
+                            _position = Accept(_position, this.Widget.LocalPosition, line.Axis);
                             break;
                         case MfdProperty.Size:
-                            _size = this.Widget.Size;
+                            _size = Accept(_size, this.Widget.Size, line.Axis);
                             break;
                         default:
                             _rotation = this.Widget.LocalRotation;
@@ -680,16 +676,21 @@ namespace Assets.Scripts.Mfd
                 }
             }
 
+            private static Vector2 Accept(Vector2 start, Vector2 now, string axis)
+            {
+                return axis == "x" ? new Vector2(now.x, start.y) : axis == "y" ? new Vector2(start.x, now.y) : now;
+            }
+
             private MfdChange Change(MfdProperty property)
             {
                 switch (property)
                 {
                     case MfdProperty.Position:
-                        return new MfdChange { Widget = this.Name, Property = property, X = this.Widget.LocalPosition.x, Y = this.Widget.LocalPosition.y };
+                        return new MfdChange { Widget = this.Name, Property = property, X = this.Widget.LocalPosition.x, Y = this.Widget.LocalPosition.y, FromX = _position.x, FromY = _position.y };
                     case MfdProperty.Size:
-                        return new MfdChange { Widget = this.Name, Property = property, X = this.Widget.Size.x, Y = this.Widget.Size.y };
+                        return new MfdChange { Widget = this.Name, Property = property, X = this.Widget.Size.x, Y = this.Widget.Size.y, FromX = _size.x, FromY = _size.y };
                     default:
-                        return new MfdChange { Widget = this.Name, Property = property, X = this.Widget.LocalRotation };
+                        return new MfdChange { Widget = this.Name, Property = property, X = this.Widget.LocalRotation, FromX = _rotation };
                 }
             }
         }

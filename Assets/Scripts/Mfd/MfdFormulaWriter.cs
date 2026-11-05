@@ -14,13 +14,15 @@ namespace Assets.Scripts.Mfd
         Rotation,
     }
 
-    /// <summary>A widget's new value. Rotation only uses X.</summary>
+    /// <summary>A widget's value when the panel opened (From) and now. Rotation only uses X.</summary>
     public sealed class MfdChange
     {
         public string Widget;
         public MfdProperty Property;
         public double X;
         public double Y;
+        public double FromX;
+        public double FromY;
     }
 
     /// <summary>What happened to one property, or one axis of it.</summary>
@@ -28,6 +30,10 @@ namespace Assets.Scripts.Mfd
     {
         public string Widget;
         public MfdProperty Property;
+
+        /// <summary>"x" or "y" when the line is about one axis only, otherwise null.</summary>
+        public string Axis;
+
         public bool Applied;
 
         /// <summary>Whether the change reaches other readers of a shared variable.</summary>
@@ -41,24 +47,33 @@ namespace Assets.Scripts.Mfd
 
         public override string ToString()
         {
-            return this.Widget + " " + this.Property.ToString().ToLowerInvariant() + ": " + this.Detail;
+            return this.Widget + " " + this.Property.ToString().ToLowerInvariant() + (this.Axis != null ? " " + this.Axis : string.Empty) + ": " + this.Detail;
         }
     }
 
     /// <summary>
     /// Writes MFD widget values into a program's XML: a block's literal numbers, the one number in a
     /// formula made of blocks or Funk, or the argument of a helper custom instruction. It refuses rather
-    /// than guesses: nothing else in the program may change, and a formula is only rewritten when one
-    /// number decides it. Several blocks setting a widget to the same value change together.
+    /// than guesses: nothing else in the program may change, a formula is only rewritten when one number
+    /// decides it, and only when the block still gives where the widget was when the panel opened, so no
+    /// other block (a later Set Parent, an anchor, another setter) moves it. Several blocks setting a
+    /// widget to the same value change together. Only stacks that can run count.
     /// </summary>
     public static class MfdFormulaWriter
     {
         private const int MaxVariableChain = 4;
 
-        /// <summary>Changes the given program element and says what it did for each change.</summary>
-        public static List<MfdLine> Apply(XElement program, IEnumerable<MfdChange> changes, double screenWidth, double screenHeight, bool allowSharedVariables)
+        // Widget values are floats, and the game works some out from the screen's size.
+        private const double AbsoluteTolerance = 0.01;
+        private const double RelativeTolerance = 1e-5;
+
+        /// <summary>
+        /// Says what it would do for each change, and does it unless dryRun. An axis that didn't change
+        /// is left alone and gives no line.
+        /// </summary>
+        public static List<MfdLine> Apply(XElement program, IEnumerable<MfdChange> changes, double screenWidth, double screenHeight, bool allowSharedVariables, bool dryRun = false)
         {
-            var run = new Run(program, screenWidth, screenHeight, allowSharedVariables);
+            var run = new Run(program, screenWidth, screenHeight, allowSharedVariables, dryRun);
             foreach (var change in changes)
             {
                 run.ApplyOne(change);
@@ -77,20 +92,37 @@ namespace Assets.Scripts.Mfd
             }
         }
 
+        /// <summary>The signed smallest turn from a to b, in degrees: the game reads rotation back in [0, 360).</summary>
+        public static double DeltaAngle(double a, double b)
+        {
+            var d = (b - a) % 360;
+            if (d > 180)
+            {
+                d -= 360;
+            }
+            else if (d < -180)
+            {
+                d += 360;
+            }
+
+            return d;
+        }
+
         private static string Format(double value)
         {
-            return value.ToString("0.######", CultureInfo.InvariantCulture);
+            return VizzyExpressionSolver.FormatNumber(value);
         }
 
         private static bool IsPlainNumber(XElement element)
         {
-            if (element.Name != "Constant")
-            {
-                return false;
-            }
+            return element.Name == "Constant" && TryNumber(element, out _);
+        }
 
-            var attribute = element.Attribute("number") ?? element.Attribute("text");
-            return attribute != null && double.TryParse(attribute.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out _);
+        private static bool TryNumber(XElement constant, out double value)
+        {
+            value = 0;
+            var attribute = constant.Attribute("number") ?? constant.Attribute("text");
+            return attribute != null && double.TryParse(attribute.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
         }
 
         private static string NumberText(XElement constant)
@@ -128,23 +160,82 @@ namespace Assets.Scripts.Mfd
             public XElement Formula;
         }
 
+        /// <summary>One axis that changed: where it was when the panel opened, and where it is now.</summary>
+        private sealed class Axis
+        {
+            public string Name;
+            public int Index;
+            public double From;
+            public double To;
+            public bool IsRotation;
+
+            public bool Matches(double current)
+            {
+                var difference = this.IsRotation ? DeltaAngle(current, this.From) : this.From - current;
+                return Math.Abs(difference) <= AbsoluteTolerance + (RelativeTolerance * Math.Abs(this.From));
+            }
+
+            /// <summary>Rotation adds the turn made, so -30 turned by 10 stays -20 rather than 340.</summary>
+            public double Target(double current)
+            {
+                return this.IsRotation ? current + DeltaAngle(this.From, this.To) : this.To;
+            }
+        }
+
+        /// <summary>What one change would write, worked out before anything is written.</summary>
+        private sealed class Plan
+        {
+            public readonly List<Action> Writes = new List<Action>();
+            public readonly List<string> Parts = new List<string>();
+            public string Failure;
+            public bool NeedsOverride;
+            public bool Shared;
+
+            public bool Ok => this.Failure == null;
+
+            public Plan Fail(string failure, bool needsOverride = false)
+            {
+                this.Failure ??= failure;
+                this.NeedsOverride |= needsOverride;
+                return this;
+            }
+        }
+
         private sealed class Run
         {
+            private const string Moved = "Something else moves this widget: the block doesn't give where it was when the panel opened, for example after a Set Parent or another block that sets it.";
+
             private readonly XElement _program;
             private readonly bool _allowShared;
+            private readonly bool _dryRun;
             private readonly GlobalVectors _globals;
 
-            public Run(XElement program, double screenWidth, double screenHeight, bool allowShared)
+            public Run(XElement program, double screenWidth, double screenHeight, bool allowShared, bool dryRun)
             {
                 _program = program;
                 _allowShared = allowShared;
-                _globals = new GlobalVectors(program, screenWidth, screenHeight);
+                _dryRun = dryRun;
+                _globals = new GlobalVectors(program, screenWidth, screenHeight, this.Reachable);
             }
 
             public List<MfdLine> Lines { get; } = new List<MfdLine>();
 
+            /// <summary>In a stack that can run: one under an event, or a custom instruction's body.</summary>
+            public bool Reachable(XElement block)
+            {
+                var stack = block.Ancestors("Instructions").FirstOrDefault(item => item.Parent == _program);
+                var first = stack?.Elements().FirstOrDefault();
+                return first != null && (first.Name == "Event" || first.Name == "CustomInstruction");
+            }
+
             public void ApplyOne(MfdChange change)
             {
+                var axes = ChangedAxes(change);
+                if (axes.Count == 0)
+                {
+                    return;
+                }
+
                 var block = BlockProperty(change.Property);
                 var direct = _program.Descendants("SetCraftProperty")
                     .Where(item => (string)item.Attribute("property") == block)
@@ -153,34 +244,8 @@ namespace Assets.Scripts.Mfd
                         var name = item.Elements().FirstOrDefault();
                         return name != null && name.Name == "Constant" && (string)name.Attribute("text") == change.Widget;
                     })
+                    .Where(this.Reachable)
                     .ToList();
-
-                if (direct.Count > 1 && !AllSameValue(direct))
-                {
-                    this.Refuse(change, direct.Count + " blocks set this to different values, so there's no single one to change.");
-                    return;
-                }
-
-                if (direct.Count > 0)
-                {
-                    // The same value gives the same outcome in each, so they all change or none do.
-                    var first = this.Lines.Count;
-                    foreach (var setter in direct)
-                    {
-                        this.ApplyToValue(change, setter.Elements().Skip(1).FirstOrDefault(), string.Empty);
-                    }
-
-                    if (direct.Count > 1)
-                    {
-                        this.Lines.RemoveRange(first + 1, this.Lines.Count - first - 1);
-                        if (this.Lines[first].Applied)
-                        {
-                            this.Lines[first].Detail += " (in all " + direct.Count + " blocks that set it)";
-                        }
-                    }
-
-                    return;
-                }
 
                 var calls = new List<(Helper Helper, XElement Call)>();
                 foreach (var helper in this.FindHelpers(block))
@@ -192,102 +257,193 @@ namespace Assets.Scripts.Mfd
                             var name = call.Elements().ElementAtOrDefault(helper.NameParameter);
                             return name != null && name.Name == "Constant" && (string)name.Attribute("text") == change.Widget;
                         })
+                        .Where(this.Reachable)
                         .Select(call => (helper, call)));
                 }
 
-                if (calls.Count == 0)
+                if (direct.Count > 0 && calls.Count > 0)
                 {
-                    this.Refuse(change, "No block sets this by the widget's name.");
+                    this.Refuse(change, null, "Both a block and a custom instruction call set this, so there's no single one to change.");
+                }
+                else if (direct.Count > 1 && !AllSameValue(direct))
+                {
+                    this.Refuse(change, null, direct.Count + " blocks set this to different values, so there's no single one to change.");
+                }
+                else if (direct.Count > 0)
+                {
+                    // The same value gives the same plan in each, so they all change or none do.
+                    var plans = direct.Select(setter => this.PlanValue(axes, setter.Elements().Skip(1).FirstOrDefault())).ToList();
+                    var bad = plans.FirstOrDefault(plan => !plan.Ok);
+                    if (bad != null)
+                    {
+                        this.Refuse(change, null, bad.Failure, bad.NeedsOverride);
+                        return;
+                    }
+
+                    plans.ForEach(this.Write);
+                    this.Done(change, null, string.Join(", ", plans[0].Parts) + (direct.Count > 1 ? " (in all " + direct.Count + " blocks that set it)" : string.Empty), plans[0].Shared);
+                }
+                else if (calls.Count == 0)
+                {
+                    this.Refuse(change, null, "No block sets this by the widget's name.");
                 }
                 else if (calls.Count > 1)
                 {
-                    this.Refuse(change, calls.Count + " custom instruction calls set this, so there's no single one to change.");
+                    this.Refuse(change, null, calls.Count + " custom instruction calls set this, so there's no single one to change.");
                 }
                 else if (calls[0].Helper.ValueParameter >= 0)
                 {
-                    this.ApplyToValue(change, calls[0].Call.Elements().ElementAtOrDefault(calls[0].Helper.ValueParameter), " (in the call to " + calls[0].Helper.Name + ")");
+                    var plan = this.PlanValue(axes, calls[0].Call.Elements().ElementAtOrDefault(calls[0].Helper.ValueParameter));
+                    this.Finish(change, null, plan, " (in the call to " + calls[0].Helper.Name + ")");
                 }
                 else
                 {
-                    this.ApplyToCallArguments(change, calls[0].Helper, calls[0].Call);
+                    this.ApplyToCallArguments(change, axes, calls[0].Helper, calls[0].Call);
                 }
             }
 
-            private void Refuse(MfdChange change, string reason, bool needsOverride = false)
+            private static List<Axis> ChangedAxes(MfdChange change)
             {
-                this.Lines.Add(new MfdLine { Widget = change.Widget, Property = change.Property, Detail = reason, NeedsSharedOverride = needsOverride });
+                var axes = new List<Axis>();
+                if (change.Property == MfdProperty.Rotation)
+                {
+                    var axis = new Axis { Name = "rotation", From = change.FromX, To = change.X, IsRotation = true };
+                    if (!axis.Matches(change.X))
+                    {
+                        axes.Add(axis);
+                    }
+
+                    return axes;
+                }
+
+                var x = new Axis { Name = "x", Index = 0, From = change.FromX, To = change.X };
+                var y = new Axis { Name = "y", Index = 1, From = change.FromY, To = change.Y };
+                if (!x.Matches(change.X))
+                {
+                    axes.Add(x);
+                }
+
+                if (!y.Matches(change.Y))
+                {
+                    axes.Add(y);
+                }
+
+                return axes;
             }
 
-            private void Done(MfdChange change, string detail, bool shared)
+            private void Write(Plan plan)
             {
-                this.Lines.Add(new MfdLine { Widget = change.Widget, Property = change.Property, Applied = true, Detail = detail, Shared = shared });
+                if (!_dryRun)
+                {
+                    plan.Writes.ForEach(write => write());
+                }
             }
 
-            private void ApplyToValue(MfdChange change, XElement value, string where)
+            private void Finish(MfdChange change, string axis, Plan plan, string where)
             {
-                var shared = false;
+                if (!plan.Ok)
+                {
+                    this.Refuse(change, axis, plan.Failure, plan.NeedsOverride);
+                    return;
+                }
+
+                this.Write(plan);
+                this.Done(change, axis, string.Join(", ", plan.Parts) + where, plan.Shared);
+            }
+
+            private void Refuse(MfdChange change, string axis, string reason, bool needsOverride = false)
+            {
+                this.Lines.Add(new MfdLine { Widget = change.Widget, Property = change.Property, Axis = axis, Detail = reason, NeedsSharedOverride = needsOverride });
+            }
+
+            private void Done(MfdChange change, string axis, string detail, bool shared)
+            {
+                this.Lines.Add(new MfdLine { Widget = change.Widget, Property = change.Property, Axis = axis, Applied = true, Detail = detail, Shared = shared });
+            }
+
+            /// <summary>Both changed axes or neither, for one value: a number, a vector, blocks or Funk, maybe behind a variable.</summary>
+            private Plan PlanValue(List<Axis> axes, XElement value)
+            {
+                var plan = new Plan();
                 if (value != null && value.Name == "Variable")
                 {
+                    var shared = false;
                     if (!this.FollowVariable(value, 0, ref shared, out value, out var failure, out var needsOverride))
                     {
-                        this.Refuse(change, failure, needsOverride);
-                        return;
+                        return plan.Fail(failure, needsOverride);
                     }
+
+                    plan.Shared = shared;
                 }
 
-                if (shared)
-                {
-                    where += " (shared variable: everything else reading it changes too)";
-                }
-
+                var rotation = axes[0].IsRotation;
                 if (value == null)
                 {
-                    this.Refuse(change, "The block has no value.");
+                    return plan.Fail("The block has no value.");
                 }
-                else if (value.Name == "EvaluateExpression")
-                {
-                    this.ApplyToFormula(change, value, where, shared);
-                }
-                else if (change.Property == MfdProperty.Rotation && (IsPlainNumber(value) || value.Name == "BinaryOp"))
-                {
-                    if (!this.SolveBlocks(value, change.X, out var number, out var solved, out var failure))
-                    {
-                        this.Refuse(change, failure);
-                        return;
-                    }
 
-                    var old = NumberText(number);
-                    SetNumber(number, solved);
-                    this.Done(change, old + " becomes " + Format(solved) + where, shared);
+                if (value.Name == "EvaluateExpression")
+                {
+                    this.PlanFunk(plan, axes, value);
                 }
-                else if (change.Property != MfdProperty.Rotation && value.Name == "Vector")
+                else if (rotation && (IsPlainNumber(value) || value.Name == "BinaryOp"))
+                {
+                    this.PlanBlocks(plan, axes[0], value);
+                }
+                else if (!rotation && value.Name == "Vector")
                 {
                     // By position: Elements("Constant") would skip a formula in x and write y's number to x.
                     var parts = value.Elements().Take(2).ToList();
                     if (parts.Count < 2)
                     {
-                        this.Refuse(change, "The vector has fewer than 2 parts.");
-                        return;
+                        return plan.Fail("The vector has fewer than 2 parts.");
                     }
 
-                    // Both axes or neither.
-                    var xSolved = this.SolveBlocks(parts[0], change.X, out var xNumber, out var xValue, out var xFailure);
-                    var ySolved = this.SolveBlocks(parts[1], change.Y, out var yNumber, out var yValue, out var yFailure);
-                    if (!xSolved || !ySolved)
+                    foreach (var axis in axes)
                     {
-                        this.Refuse(change, "x: " + (xFailure ?? "fine") + " y: " + (yFailure ?? "fine"));
-                        return;
+                        this.PlanBlocks(plan, axis, parts[axis.Index]);
                     }
-
-                    var old = "(" + NumberText(xNumber) + ", " + NumberText(yNumber) + ")";
-                    SetNumber(xNumber, xValue);
-                    SetNumber(yNumber, yValue);
-                    this.Done(change, old + " becomes (" + Format(xValue) + ", " + Format(yValue) + ")" + where, shared);
                 }
                 else
                 {
-                    this.Refuse(change, "The value is built from " + value.Name + " blocks, which can't be rewritten. Numbers, + - * / blocks and Funk formulas can.");
+                    plan.Fail("The value is built from " + value.Name + " blocks, which can't be rewritten. Numbers, + - * / blocks and Funk formulas can.");
                 }
+
+                if (plan.Ok && plan.Shared)
+                {
+                    plan.Parts.Add("shared variable: everything else reading it changes too");
+                }
+
+                return plan;
+            }
+
+            private void PlanBlocks(Plan plan, Axis axis, XElement node)
+            {
+                if (!this.TryEvaluateBlocks(node, out var current))
+                {
+                    plan.Fail(axis.Name + ": only numbers, + - * / blocks and the screen's size can be worked out.");
+                    return;
+                }
+
+                if (!axis.Matches(current))
+                {
+                    plan.Fail(Moved);
+                    return;
+                }
+
+                if (!this.SolveBlocks(node, axis.Target(current), out var number, out var solved, out var failure))
+                {
+                    plan.Fail(axis.Name + ": " + failure);
+                    return;
+                }
+
+                plan.Parts.Add(Label(axis) + NumberText(number) + " becomes " + Format(solved));
+                plan.Writes.Add(() => SetNumber(number, solved));
+            }
+
+            private static string Label(Axis axis)
+            {
+                return axis.IsRotation ? string.Empty : axis.Name + ": ";
             }
 
             /// <summary>Whether blocks hold the same value, whatever their ids, places in the editor and indents.</summary>
@@ -355,8 +511,7 @@ namespace Assets.Scripts.Mfd
 
                 var op = (string)node.Attribute("op");
                 var inLeft = arguments[0].DescendantsAndSelf().Contains(number);
-                var otherKnown = this.TryEvaluateBlocks(arguments[inLeft ? 1 : 0], out var other);
-                if (!otherKnown)
+                if (!this.TryEvaluateBlocks(arguments[inLeft ? 1 : 0], out var other))
                 {
                     return null;
                 }
@@ -379,19 +534,13 @@ namespace Assets.Scripts.Mfd
                         next = target / other;
                         break;
                     case "/":
-                        if (inLeft)
-                        {
-                            next = target * other;
-                        }
-                        else if (target == 0)
+                        // n / 0 or k / n = 0 can't be solved.
+                        if ((inLeft && other == 0) || (!inLeft && target == 0))
                         {
                             return null;
                         }
-                        else
-                        {
-                            next = other / target;
-                        }
 
+                        next = inLeft ? target * other : other / target;
                         break;
                     default:
                         return null;
@@ -403,6 +552,11 @@ namespace Assets.Scripts.Mfd
             private bool TryEvaluateBlocks(XElement node, out double value)
             {
                 value = 0;
+                if (node.Name == "Constant")
+                {
+                    return TryNumber(node, out value);
+                }
+
                 if (node.Name == "BinaryOp")
                 {
                     var arguments = node.Elements().ToList();
@@ -443,7 +597,6 @@ namespace Assets.Scripts.Mfd
                     return true;
                 }
 
-                // Only ever another number: SolveBlocks has already found there's one to change.
                 return false;
             }
 
@@ -458,71 +611,80 @@ namespace Assets.Scripts.Mfd
                 return _globals.TryKnownBlock(source, out x, out y, out z);
             }
 
-            private void ApplyToFormula(MfdChange change, XElement formula, string where, bool shared)
+            private void PlanFunk(Plan plan, List<Axis> axes, XElement formula)
             {
                 var constant = formula.Elements("Constant").FirstOrDefault();
                 var text = (string)constant?.Attribute("text");
                 if (text == null)
                 {
-                    this.Refuse(change, "The Funk block's text is built by other blocks.");
+                    plan.Fail("The Funk block's text is built by other blocks.");
                     return;
                 }
 
-                string rewritten;
-                if (change.Property == MfdProperty.Rotation)
+                VizzyExpressionSolver.Node root;
+                try
                 {
-                    var result = VizzyExpressionSolver.TrySolve(text, change.X, _globals.TryResolve);
-                    if (!result.Success)
-                    {
-                        this.Refuse(change, result.FailureReason + ": " + text);
-                        return;
-                    }
+                    root = VizzyExpressionSolver.Parse(text);
+                }
+                catch (FormatException e)
+                {
+                    plan.Fail("Couldn't read the formula (" + e.Message + "): " + text);
+                    return;
+                }
 
-                    rewritten = result.RewrittenText;
+                // Each changed axis as (start, end, node) in the text; replaced from the end so earlier places stay valid.
+                var spans = new List<(int Start, int End, VizzyExpressionSolver.Node Node, Axis Axis)>();
+                if (axes[0].IsRotation)
+                {
+                    spans.Add((0, text.Length, root, axes[0]));
                 }
                 else
                 {
-                    VizzyExpressionSolver.FuncCallNode vec;
-                    try
-                    {
-                        vec = VizzyExpressionSolver.Parse(text) as VizzyExpressionSolver.FuncCallNode;
-                    }
-                    catch (FormatException e)
-                    {
-                        this.Refuse(change, "Couldn't read the formula (" + e.Message + "): " + text);
-                        return;
-                    }
-
+                    var vec = root as VizzyExpressionSolver.FuncCallNode;
                     if (vec == null || vec.Name != "vec" || vec.Args.Count < 2)
                     {
-                        this.Refuse(change, "The formula isn't a plain vec(x, y, z): " + text);
+                        plan.Fail("The formula isn't a plain vec(x, y, z): " + text);
                         return;
                     }
 
-                    var x = vec.Args[0];
-                    var y = vec.Args[1];
-                    var xResult = VizzyExpressionSolver.TrySolve(text.Substring(x.Start, x.End - x.Start), change.X, _globals.TryResolve);
-                    var yResult = VizzyExpressionSolver.TrySolve(text.Substring(y.Start, y.End - y.Start), change.Y, _globals.TryResolve);
-                    if (!xResult.Success || !yResult.Success)
-                    {
-                        this.Refuse(change, "x: " + (xResult.FailureReason ?? "fine") + "; y: " + (yResult.FailureReason ?? "fine") + ". Formula: " + text);
-                        return;
-                    }
-
-                    // y first: it comes later in the text, so x's position stays valid.
-                    rewritten = text.Substring(0, y.Start) + yResult.RewrittenText + text.Substring(y.End);
-                    rewritten = rewritten.Substring(0, x.Start) + xResult.RewrittenText + rewritten.Substring(x.End);
+                    spans.AddRange(axes.Select(axis => (vec.Args[axis.Index].Start, vec.Args[axis.Index].End, vec.Args[axis.Index], axis)));
                 }
 
-                constant.SetAttributeValue("text", rewritten);
-                this.Done(change, text + " becomes " + rewritten + where, shared);
+                var rewritten = text;
+                foreach (var span in spans.OrderByDescending(item => item.Start))
+                {
+                    if (!VizzyExpressionSolver.TryEvaluate(span.Node, _globals.TryResolve, out var current))
+                    {
+                        plan.Fail(span.Axis.Name + ": the formula's value can't be worked out: " + text);
+                        return;
+                    }
+
+                    if (!span.Axis.Matches(current))
+                    {
+                        plan.Fail(Moved);
+                        return;
+                    }
+
+                    var part = text.Substring(span.Start, span.End - span.Start);
+                    var result = VizzyExpressionSolver.TrySolve(part, span.Axis.Target(current), _globals.TryResolve);
+                    if (!result.Success)
+                    {
+                        plan.Fail(span.Axis.Name + ": " + result.FailureReason + ". Formula: " + text);
+                        return;
+                    }
+
+                    rewritten = rewritten.Substring(0, span.Start) + result.RewrittenText + rewritten.Substring(span.End);
+                }
+
+                plan.Parts.Add(text + " becomes " + rewritten);
+                plan.Writes.Add(() => constant.SetAttributeValue("text", rewritten));
             }
 
             /// <summary>
             /// The helper's body works the value out from its parameters, for every caller. So only this
-            /// call's arguments may change, each axis separately: an axis fixed in the body stays.
+            /// call's arguments may change, each axis on its own line: an axis fixed in the body stays.
             /// </summary>
-            private void ApplyToCallArguments(MfdChange change, Helper helper, XElement call)
+            private void ApplyToCallArguments(MfdChange change, List<Axis> axes, Helper helper, XElement call)
             {
                 var text = (string)helper.Formula.Elements("Constant").FirstOrDefault()?.Attribute("text");
                 VizzyExpressionSolver.Node root;
@@ -532,13 +694,20 @@ namespace Assets.Scripts.Mfd
                 }
                 catch (FormatException e)
                 {
-                    this.Refuse(change, "Couldn't read " + helper.Name + "'s formula (" + e.Message + "): " + text);
+                    this.Refuse(change, null, "Couldn't read " + helper.Name + "'s formula (" + e.Message + "): " + text);
                     return;
                 }
 
-                if (change.Property == MfdProperty.Rotation)
+                var arguments = call.Elements().ToList();
+                double? Argument(string name)
                 {
-                    this.ApplyAxis(change, "rotation", text, change.X, helper, call);
+                    var index = helper.Parameters.IndexOf(name);
+                    return index >= 0 && index < arguments.Count && TryNumber(arguments[index], out var number) && arguments[index].Name == "Constant" ? number : (double?)null;
+                }
+
+                if (axes[0].IsRotation)
+                {
+                    this.Finish(change, null, this.PlanHelperAxis(axes[0], text, root, 0, helper, arguments, Argument), string.Empty);
                     return;
                 }
 
@@ -564,7 +733,7 @@ namespace Assets.Scripts.Mfd
 
                     if (offset == null)
                     {
-                        this.Refuse(change, helper.Name + "'s formula isn't vec(x, y, z) or offset + vec(x, y, z): " + text);
+                        this.Refuse(change, null, helper.Name + "'s formula isn't vec(x, y, z) or offset + vec(x, y, z): " + text);
                         return;
                     }
 
@@ -573,55 +742,67 @@ namespace Assets.Scripts.Mfd
                     if (!VizzyExpressionSolver.TryEvaluate(offsetXCall, _globals.TryResolve, out offsetX)
                         || !VizzyExpressionSolver.TryEvaluate(offsetYCall, _globals.TryResolve, out offsetY))
                     {
-                        this.Refuse(change, "The offset in " + helper.Name + "'s formula can't be worked out: " + text);
+                        this.Refuse(change, null, "The offset in " + helper.Name + "'s formula can't be worked out: " + text);
                         return;
                     }
                 }
 
                 if (vec.Args.Count < 2)
                 {
-                    this.Refuse(change, "The vec in " + helper.Name + "'s formula has fewer than 2 parts: " + text);
+                    this.Refuse(change, null, "The vec in " + helper.Name + "'s formula has fewer than 2 parts: " + text);
                     return;
                 }
 
-                var x = vec.Args[0];
-                var y = vec.Args[1];
-                this.ApplyAxis(change, "x", text.Substring(x.Start, x.End - x.Start), change.X - offsetX, helper, call);
-                this.ApplyAxis(change, "y", text.Substring(y.Start, y.End - y.Start), change.Y - offsetY, helper, call);
+                foreach (var axis in axes)
+                {
+                    var node = vec.Args[axis.Index];
+                    var plan = this.PlanHelperAxis(axis, text.Substring(node.Start, node.End - node.Start), node, axis.Index == 0 ? offsetX : offsetY, helper, arguments, Argument);
+                    this.Finish(change, axis.Name, plan, string.Empty);
+                }
             }
 
-            private void ApplyAxis(MfdChange change, string axis, string text, double target, Helper helper, XElement call)
+            private Plan PlanHelperAxis(Axis axis, string text, VizzyExpressionSolver.Node node, double offset, Helper helper, List<XElement> arguments, Func<string, double?> argument)
             {
-                var result = VizzyExpressionSolver.TrySolve(text, target, _globals.TryResolve);
+                var plan = new Plan();
+                if (!VizzyExpressionSolver.TryEvaluate(node, _globals.TryResolve, argument, out var value))
+                {
+                    return plan.Fail(helper.Name + "'s value for this call can't be worked out.");
+                }
+
+                var current = value + offset;
+                if (!axis.Matches(current))
+                {
+                    return plan.Fail(Moved);
+                }
+
+                var result = VizzyExpressionSolver.TrySolve(text, axis.Target(current) - offset, _globals.TryResolve);
                 if (result.Success)
                 {
-                    this.Refuse(change, axis + " is fixed inside " + helper.Name + ", which every caller shares.");
-                    return;
+                    return plan.Fail(axis.Name + " is fixed inside " + helper.Name + ", which every caller shares.");
                 }
 
                 if (result.PendingLocalParameterName == null)
                 {
-                    this.Refuse(change, axis + ": " + result.FailureReason + ": " + text);
-                    return;
+                    return plan.Fail(axis.Name + ": " + result.FailureReason + ": " + text);
                 }
 
                 var index = helper.Parameters.IndexOf(result.PendingLocalParameterName);
-                var argument = index < 0 ? null : call.Elements().ElementAtOrDefault(index);
-                if (argument == null || !IsPlainNumber(argument))
+                var target = index < 0 ? null : arguments.ElementAtOrDefault(index);
+                if (target == null || !IsPlainNumber(target))
                 {
-                    this.Refuse(change, axis + ": the call's " + result.PendingLocalParameterName + " isn't a plain number.");
-                    return;
+                    return plan.Fail(axis.Name + ": the call's " + result.PendingLocalParameterName + " isn't a plain number.");
                 }
 
-                var old = NumberText(argument);
-                SetNumber(argument, result.NewValue);
-                this.Done(change, axis + " (" + helper.Name + "'s " + result.PendingLocalParameterName + "): " + old + " becomes " + Format(result.NewValue), false);
+                var solved = result.NewValue;
+                plan.Parts.Add(helper.Name + "'s " + result.PendingLocalParameterName + ": " + NumberText(target) + " becomes " + Format(solved));
+                plan.Writes.Add(() => SetNumber(target, solved));
+                return plan;
             }
 
             /// <summary>Custom instructions that set the property for a widget named by one of their parameters.</summary>
             private IEnumerable<Helper> FindHelpers(string block)
             {
-                foreach (var stack in _program.Descendants("Instructions"))
+                foreach (var stack in _program.Elements("Instructions"))
                 {
                     var definition = stack.Elements().FirstOrDefault();
                     if (definition == null || definition.Name != "CustomInstruction")
@@ -726,7 +907,15 @@ namespace Assets.Scripts.Mfd
 
                 var sets = _program.Descendants("SetVariable")
                     .Where(item => (string)item.Elements("Variable").FirstOrDefault()?.Attribute("variableName") == name)
+                    .Where(this.Reachable)
                     .ToList();
+
+                // Change Variable and User Input write to it too, so its value isn't just what one block sets.
+                if (OtherWrites(_program, name))
+                {
+                    failure = "The variable " + name + " is also changed by another kind of block, so its value can't be worked out.";
+                    return false;
+                }
 
                 // Anything but the name a SetVariable writes to is a read, including another SetVariable's value.
                 var reads = _program.Descendants("Variable").Count(item =>
@@ -769,6 +958,16 @@ namespace Assets.Scripts.Mfd
             }
         }
 
+        /// <summary>Blocks other than Set Variable that write to a global variable.</summary>
+        private static bool OtherWrites(XElement program, string name)
+        {
+            return program.Descendants("Variable").Any(item =>
+                (string)item.Attribute("variableName") == name
+                && (string)item.Attribute("local") != "true"
+                && item.ElementsBeforeSelf().FirstOrDefault() == null
+                && (item.Parent?.Name == "ChangeVariable" || item.Parent?.Name == "UserInput"));
+        }
+
         /// <summary>
         /// Works out global vectors used in formulas, for two shapes: the live size of _Screen, and a Funk
         /// vec(a, b, c). The value must come from one block: anything else fails rather than guesses.
@@ -781,9 +980,12 @@ namespace Assets.Scripts.Mfd
             private readonly Dictionary<string, double[]> _known = new Dictionary<string, double[]>();
             private readonly HashSet<string> _working = new HashSet<string>();
 
-            public GlobalVectors(XElement program, double screenWidth, double screenHeight)
+            private readonly Func<XElement, bool> _reachable;
+
+            public GlobalVectors(XElement program, double screenWidth, double screenHeight, Func<XElement, bool> reachable)
             {
                 _program = program;
+                _reachable = reachable;
                 _screenWidth = screenWidth;
                 _screenHeight = screenHeight;
             }
@@ -837,8 +1039,9 @@ namespace Assets.Scripts.Mfd
                         var variable = item.Elements("Variable").FirstOrDefault();
                         return (string)variable?.Attribute("variableName") == name && (string)variable?.Attribute("local") != "true";
                     })
+                    .Where(_reachable)
                     .ToList();
-                var value = sets.Count == 1 ? sets[0].Elements().Skip(1).FirstOrDefault() : null;
+                var value = sets.Count == 1 && !OtherWrites(_program, name) ? sets[0].Elements().Skip(1).FirstOrDefault() : null;
                 if (value == null)
                 {
                     return null;

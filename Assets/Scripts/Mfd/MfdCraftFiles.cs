@@ -62,9 +62,10 @@ namespace Assets.Scripts.Mfd
                 return "Saved for this flight only: no craft file with this program was found.";
             }
 
+            var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+            var written = new List<(string Id, XElement Original)>();
             try
             {
-                var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
                 foreach (var update in updates)
                 {
                     var file = designs.GetCraftFile(update.Id);
@@ -73,13 +74,33 @@ namespace Assets.Scripts.Mfd
 
                 foreach (var update in updates)
                 {
+                    var original = new XElement(designs.GetCraftDesign(update.Id));
                     designs.SaveCraft(update.Id, update.Craft);
+                    written.Add((update.Id, original));
                 }
             }
             catch (Exception e)
             {
                 EditorLog.Error("Couldn't write the craft files: " + e);
-                return "Saved for this flight, but writing the craft files failed: see Player.log.";
+
+                // All or none: put back what was already written, through the game so its cached copy follows.
+                var restored = new List<string>();
+                foreach (var done in written)
+                {
+                    try
+                    {
+                        designs.SaveCraft(done.Id, done.Original);
+                        restored.Add(done.Id);
+                    }
+                    catch (Exception again)
+                    {
+                        EditorLog.Error("Couldn't put back " + done.Id + ": " + again);
+                    }
+                }
+
+                var left = written.Select(done => done.Id).Except(restored).ToList();
+                return "Saved for this flight, but writing the craft files failed: see Player.log."
+                    + (left.Count > 0 ? " These may hold the change, with a .bak-" + stamp + " copy next to them: " + string.Join(", ", left) + "." : " No file was changed.");
             }
 
             EditorLog.Debug("MFD save wrote: " + string.Join(", ", updates.Select(update => update.Id)));

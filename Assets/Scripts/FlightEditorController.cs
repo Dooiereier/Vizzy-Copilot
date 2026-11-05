@@ -172,10 +172,21 @@ namespace Assets.Scripts
             });
         }
 
+        /// <summary>The picker holds the flight; a panel that doesn't open must let it go again.</summary>
         private void OpenMfd(FlightProgramData data)
         {
             _mfdSession = new MfdEditorSession(data);
-            _mfdSession.Open();
+            try
+            {
+                _mfdSession.Open();
+            }
+            finally
+            {
+                if (!_mfdSession.IsOpen)
+                {
+                    FlightPause.Release();
+                }
+            }
         }
 
         /// <summary>The Restart Vizzy button: the selected part's program, otherwise a choice of them, MFDs included. Always asks first.</summary>

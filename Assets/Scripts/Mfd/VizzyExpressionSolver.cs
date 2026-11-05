@@ -236,6 +236,16 @@ namespace Assets.Scripts.Mfd
         public static Node Parse(string text) => new Parser(Tokenize(text)).Parse();
 
         /// <summary>
+        /// A number for a program, with a decimal point. Seven significant digits, as values come from floats:
+        /// more would write 123.7 as 123.699997.
+        /// </summary>
+        public static string FormatNumber(double value)
+        {
+            var rounded = double.Parse(value.ToString("G7", CultureInfo.InvariantCulture), NumberStyles.Float, CultureInfo.InvariantCulture);
+            return rounded.ToString("0.##########", CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
         /// Resolves a global variable to its (x, y, z) value. Every real
         /// global seen so far in these formulas (ScreenSize, SystemsPos,
         /// etc.) is a vector, always accessed through x()/y()/z()
@@ -249,6 +259,15 @@ namespace Assets.Scripts.Mfd
         /// </summary>
         public static bool TryEvaluate(Node node, TryResolveGlobalVector resolveGlobal, out double result)
         {
+            return TryEvaluate(node, resolveGlobal, null, out result);
+        }
+
+        /// <summary>
+        /// As above, with a value for each bare name a custom instruction's parameter stands for: the
+        /// arguments of one call. A bare name without one stays unknown.
+        /// </summary>
+        public static bool TryEvaluate(Node node, TryResolveGlobalVector resolveGlobal, Func<string, double?> resolveLocal, out double result)
+        {
             var numberNode = node as NumberNode;
             if (numberNode != null)
             {
@@ -257,6 +276,12 @@ namespace Assets.Scripts.Mfd
             }
 
             var varRefNode = node as VarRefNode;
+            if (varRefNode != null && !varRefNode.IsGlobal && resolveLocal?.Invoke(varRefNode.Name) is double local)
+            {
+                result = local;
+                return true;
+            }
+
             if (varRefNode != null)
             {
                 // A bare global used directly as a scalar isn't something
@@ -270,7 +295,7 @@ namespace Assets.Scripts.Mfd
             if (unaryNode != null)
             {
                 double innerVal;
-                if (!TryEvaluate(unaryNode.Inner, resolveGlobal, out innerVal))
+                if (!TryEvaluate(unaryNode.Inner, resolveGlobal, resolveLocal, out innerVal))
                 {
                     result = 0;
                     return false;
@@ -284,7 +309,7 @@ namespace Assets.Scripts.Mfd
             if (binOpNode != null)
             {
                 double l, r;
-                if (!TryEvaluate(binOpNode.Left, resolveGlobal, out l) || !TryEvaluate(binOpNode.Right, resolveGlobal, out r))
+                if (!TryEvaluate(binOpNode.Left, resolveGlobal, resolveLocal, out l) || !TryEvaluate(binOpNode.Right, resolveGlobal, resolveLocal, out r))
                 {
                     result = 0;
                     return false;
@@ -543,7 +568,8 @@ namespace Assets.Scripts.Mfd
         {
             public bool Success;
             public string RewrittenText;
-            public string PendingLocalParameterName; // set (Success=false-equivalent for direct rewrite) if the only candidate unknown was a subroutine-local parameter -- call-site resolution not yet implemented, see class doc.
+            /// <summary>The bare name to change instead, when it's the only unknown: a custom instruction's parameter, set by its call.</summary>
+            public string PendingLocalParameterName;
             public double NewValue;
             public string FailureReason;
         }
@@ -585,9 +611,14 @@ namespace Assets.Scripts.Mfd
                     var spliceEnd = unaryParent?.End ?? numberTarget.End;
                     var spliceValue = unaryParent != null ? -solved.Value : solved.Value;
 
-                    var newText = expressionText.Substring(0, spliceStart)
-                        + spliceValue.ToString("0.######", CultureInfo.InvariantCulture)
-                        + expressionText.Substring(spliceEnd);
+                    // A negative in brackets: "2 * -3" or "a - -3" may not read the same in the game's Funk.
+                    var spliced = FormatNumber(spliceValue);
+                    if (spliceValue < 0)
+                    {
+                        spliced = "(" + spliced + ")";
+                    }
+
+                    var newText = expressionText.Substring(0, spliceStart) + spliced + expressionText.Substring(spliceEnd);
                     return new SolveResult { Success = true, RewrittenText = newText, NewValue = solved.Value };
                 }
 
@@ -604,7 +635,7 @@ namespace Assets.Scripts.Mfd
                         Success = false,
                         PendingLocalParameterName = ((VarRefNode)varTarget).Name,
                         NewValue = solved.Value,
-                        FailureReason = $"solved for subroutine parameter '{((VarRefNode)varTarget).Name}' = {solved.Value:0.######}, but writing that back into the correct CallCustomInstruction call site isn't implemented yet",
+                        FailureReason = $"the value comes from the name '{((VarRefNode)varTarget).Name}', which only a custom instruction's call can set",
                     };
                 }
             }
