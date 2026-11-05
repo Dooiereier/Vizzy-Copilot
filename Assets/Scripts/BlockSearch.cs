@@ -79,6 +79,23 @@ namespace Assets.Scripts
                 .ToList();
         }
 
+        /// <summary>The result an arrow key moves to. A single press wraps around, a held key stops at the end.</summary>
+        public static int MoveSelection(int current, int delta, int count, bool wrap)
+        {
+            if (count <= 0)
+            {
+                return -1;
+            }
+
+            var next = current + delta;
+            if (wrap)
+            {
+                return (next + count) % count;
+            }
+
+            return next < 0 ? 0 : next >= count ? count - 1 : next;
+        }
+
         private static int Rank(string title, string whole)
         {
             if (title == whole)

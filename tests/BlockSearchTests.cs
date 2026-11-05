@@ -35,6 +35,13 @@ public static class BlockSearchTests
         check("no match shows nothing", Titles("xyzzy").Length == 0);
         check("the limit holds", Titles("a", 2).Length == 2);
 
+        check("down moves to the next result", BlockSearch.MoveSelection(0, 1, 3, true) == 1);
+        check("a press wraps from last to first", BlockSearch.MoveSelection(2, 1, 3, true) == 0);
+        check("a press wraps from first to last", BlockSearch.MoveSelection(0, -1, 3, true) == 2);
+        check("a held key stops at the last", BlockSearch.MoveSelection(2, 1, 3, false) == 2);
+        check("a held key stops at the first", BlockSearch.MoveSelection(0, -1, 3, false) == 0);
+        check("no results, no selection", BlockSearch.MoveSelection(0, 1, 0, true) == -1);
+
         var mixed = new[]
         {
             new BlockEntry("Pitch list", "list", "Lists", null, BlockGroup.List),

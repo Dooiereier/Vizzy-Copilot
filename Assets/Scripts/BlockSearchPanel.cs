@@ -16,10 +16,11 @@ namespace Assets.Scripts
     using UI.Xml;
     using UnityEngine;
     using UnityEngine.EventSystems;
+    using UnityEngine.UI;
 
     /// <summary>
     /// Shift+F or the left bar's search button in the Vizzy editor: type part of a block's name, and matching toolbox blocks appear,
-    /// dragged out as usual, or double-clicked to appear in the middle of the view. Dropdown choices count as their own results, with that choice set, as do this program's variables, lists and custom blocks.
+    /// dragged out as usual, or double-clicked to appear in the middle of the view. Arrow keys move a frame through the results, and Enter places the framed one in the middle of the view. Dropdown choices count as their own results, with that choice set, as do this program's variables, lists and custom blocks.
     /// </summary>
     public sealed class BlockSearchPanel : MonoBehaviour
     {
@@ -31,7 +32,14 @@ namespace Assets.Scripts
         private const int MaxResults = 30;
         private const float MinWidth = 300f;
         private const float MaxWidth = 600f;
-        private const string Help = "Block Search (Shift+F): type part of a block's name or a dropdown choice, such as + or wait, then drag the block out or double-click it.";
+
+        // Results start this far in (LoadNodes), so room for the frame on the other side too.
+        private const float SideMargin = 25f;
+        private const float FramePadding = 3f;
+        private const float FrameThickness = 2f;
+        private const float RepeatDelay = 0.35f;
+        private const float RepeatInterval = 0.06f;
+        private const string Help = "Block Search (Shift+F): type part of a block's name or a dropdown choice, such as + or wait, then drag the block out or double-click it. Up and Down select a block, Enter places it in the middle of the view.";
 
         // Private in the game: it's what makes a block behave as a toolbox block.
         private static readonly MethodInfo LoadNodes = typeof(VizzyUIController).GetMethod("LoadNodes", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -44,6 +52,12 @@ namespace Assets.Scripts
         private List<BlockEntry> _entries;
         private string _shownText;
         private int _clearTypedKeyFrame = -1;
+        private readonly List<BlockElementScript> _shownBlocks = new List<BlockElementScript>();
+        private int _selected = -1;
+        private RectTransform _frame;
+        private ScrollRect _scroll;
+        private float _nextRepeat;
+        private int _refocusUntilFrame = -1;
 
         public bool IsOpen => _flyout != null && _flyout.gameObject.activeSelf;
 
@@ -128,6 +142,8 @@ namespace Assets.Scripts
             _flyout = layout.GetElementById(FlyoutId);
             _results = layout.GetElementById(ResultsId).rectTransform;
             _input = layout.GetElementById(InputId).GetComponentInChildren<TMP_InputField>(true);
+            _input.onFocusSelectAll = false;
+            _scroll = _results.GetComponentInParent<ScrollRect>(true);
 
             // The input's default text color is close to this panel's background.
             _input.textComponent.color = Color.white;
@@ -196,12 +212,176 @@ namespace Assets.Scripts
                 {
                     ShowResults(_input.text);
                 }
+
+                // Another text field, such as a block's, keeps its own keys.
+                if (!Game.Instance.UserInterface.IsTextInputFocused || _input.isFocused)
+                {
+                    HandleKeys();
+                }
             }
             catch (Exception e)
             {
                 EditorLog.Error("Block search failed: " + e);
                 Close();
             }
+        }
+
+        /// <summary>After the input field has handled the same keys this frame.</summary>
+        private void LateUpdate()
+        {
+            try
+            {
+                if (!IsOpen)
+                {
+                    return;
+                }
+
+                // In a single line field, Up and Down send the caret to the start or the end.
+                if (_input.isFocused && (ArrowHeld(KeyCode.UpArrow) || ArrowHeld(KeyCode.DownArrow)))
+                {
+                    _input.MoveTextEnd(false);
+                }
+
+                // Enter ends the field's editing, and typing should carry on.
+                if (Time.frameCount <= _refocusUntilFrame && !_input.isFocused)
+                {
+                    _input.Select();
+                    _input.ActivateInputField();
+                }
+
+                PositionFrame();
+            }
+            catch (Exception e)
+            {
+                EditorLog.Error("Block search failed: " + e);
+                Close();
+            }
+        }
+
+        private static bool ArrowHeld(KeyCode key)
+        {
+            return UnityEngine.Input.GetKey(key) || UnityEngine.Input.GetKeyUp(key);
+        }
+
+        private void HandleKeys()
+        {
+            if (_shownBlocks.Count == 0)
+            {
+                return;
+            }
+
+            if (UnityEngine.Input.GetKeyDown(KeyCode.Return) || UnityEngine.Input.GetKeyDown(KeyCode.KeypadEnter))
+            {
+                _refocusUntilFrame = Time.frameCount + 2;
+                if (_selected >= 0)
+                {
+                    PlaceAtCenter(_shownBlocks[_selected]);
+                }
+
+                return;
+            }
+
+            var delta = UnityEngine.Input.GetKey(KeyCode.DownArrow) ? 1 : UnityEngine.Input.GetKey(KeyCode.UpArrow) ? -1 : 0;
+            if (delta == 0)
+            {
+                return;
+            }
+
+            var pressed = UnityEngine.Input.GetKeyDown(KeyCode.DownArrow) || UnityEngine.Input.GetKeyDown(KeyCode.UpArrow);
+            if (pressed)
+            {
+                _nextRepeat = Time.unscaledTime + RepeatDelay;
+            }
+            else if (Time.unscaledTime >= _nextRepeat)
+            {
+                _nextRepeat = Time.unscaledTime + RepeatInterval;
+            }
+            else
+            {
+                return;
+            }
+
+            _selected = BlockSearch.MoveSelection(_selected, delta, _shownBlocks.Count, pressed);
+            PositionFrame();
+            ScrollToSelected();
+        }
+
+        /// <summary>Follows the selected block each frame: a block's size can settle after it's built.</summary>
+        private void PositionFrame()
+        {
+            if (_frame == null)
+            {
+                return;
+            }
+
+            var block = _selected >= 0 && _selected < _shownBlocks.Count ? _shownBlocks[_selected] : null;
+            _frame.gameObject.SetActive(block != null);
+            if (block == null)
+            {
+                return;
+            }
+
+            // LoadNodes pins a result by its top left corner and spaces results by Size.
+            var topLeft = block.RectTransform.localPosition;
+            _frame.localPosition = new Vector3(topLeft.x - FramePadding, topLeft.y - block.Size.y - FramePadding, 0f);
+            _frame.sizeDelta = block.Size + (Vector2.one * 2f * FramePadding);
+        }
+
+        private void ScrollToSelected()
+        {
+            if (_scroll == null || _scroll.content == null || _selected < 0)
+            {
+                return;
+            }
+
+            var view = new Vector3[4];
+            ((RectTransform)(_scroll.viewport != null ? _scroll.viewport : _scroll.transform)).GetWorldCorners(view);
+            var selected = _shownBlocks[_selected];
+            var margin = (FramePadding + FrameThickness) * _results.lossyScale.y;
+            var top = selected.RectTransform.position.y;
+            var bottom = top - (selected.Size.y * _results.lossyScale.y);
+
+            // A block taller than the view shows its top.
+            var shift = 0f;
+            if (top + margin > view[1].y)
+            {
+                shift = view[1].y - top - margin;
+            }
+            else if (bottom - margin < view[0].y)
+            {
+                shift = Mathf.Min(view[0].y - bottom + margin, view[1].y - top - margin);
+            }
+
+            _scroll.velocity = Vector2.zero;
+            _scroll.content.position += new Vector3(0f, shift, 0f);
+        }
+
+        /// <summary>A plain frame on top of the results. It takes no clicks, so blocks can still be dragged through it.</summary>
+        private void BuildFrame()
+        {
+            _frame = (RectTransform)new GameObject("SelectedResultFrame", typeof(RectTransform)).transform;
+            _frame.SetParent(_results, false);
+            _frame.anchorMin = _frame.anchorMax = new Vector2(0f, 1f);
+            _frame.pivot = Vector2.zero;
+            AddFrameSide(new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, FrameThickness));
+            AddFrameSide(new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, FrameThickness));
+            AddFrameSide(new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(FrameThickness, 0f));
+            AddFrameSide(new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(FrameThickness, 0f));
+        }
+
+        private void AddFrameSide(Vector2 anchorMin, Vector2 anchorMax, Vector2 size)
+        {
+            var side = new GameObject("Side", typeof(RectTransform), typeof(Image));
+            var rect = (RectTransform)side.transform;
+            rect.SetParent(_frame, false);
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.pivot = anchorMin;
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = size;
+            var image = side.GetComponent<Image>();
+            image.color = new Color32(0xE0, 0xE0, 0xE0, 0xFF);
+            image.raycastTarget = false;
         }
 
         private void Open()
@@ -326,7 +506,37 @@ namespace Assets.Scripts
                 block.gameObject.AddComponent<ResultClick>().Connect(this, block);
             }
 
-            _flyout.SetAndApplyAttribute("width", Mathf.Clamp(size.x, MinWidth, MaxWidth).ToString());
+            _flyout.SetAndApplyAttribute("width", Mathf.Clamp(size.x + (2f * SideMargin), MinWidth, MaxWidth).ToString());
+
+            // Top-level results are the panel's own children; the old ones are only gone at the end of the frame.
+            _shownBlocks.Clear();
+            foreach (Transform child in _results)
+            {
+                var block = child.gameObject.activeSelf ? child.GetComponent<BlockElementScript>() : null;
+                if (block != null)
+                {
+                    _shownBlocks.Add(block);
+                }
+            }
+
+            _selected = _shownBlocks.Count > 0 ? 0 : -1;
+            BuildFrame();
+            PositionFrame();
+            if (_scroll != null)
+            {
+                _scroll.velocity = Vector2.zero;
+                _scroll.verticalNormalizedPosition = 1f;
+            }
+        }
+
+        /// <summary>A click on a result selects it, so the frame stays with what was last used.</summary>
+        private void SelectResult(BlockElementScript result)
+        {
+            var index = _shownBlocks.IndexOf(result.Root);
+            if (index >= 0)
+            {
+                _selected = index;
+            }
         }
 
         /// <summary>Double click: a copy of the result in the middle of the view, without dragging.</summary>
@@ -350,6 +560,9 @@ namespace Assets.Scripts
 
         private void ClearResults()
         {
+            _shownBlocks.Clear();
+            _selected = -1;
+            _frame = null;
             foreach (Transform child in _results)
             {
                 child.gameObject.SetActive(false);
@@ -370,7 +583,13 @@ namespace Assets.Scripts
 
             public void OnPointerClick(PointerEventData eventData)
             {
-                if (eventData.button == PointerEventData.InputButton.Left && eventData.clickCount == 2)
+                if (eventData.button != PointerEventData.InputButton.Left)
+                {
+                    return;
+                }
+
+                _panel.SelectResult(_block);
+                if (eventData.clickCount == 2)
                 {
                     try
                     {
