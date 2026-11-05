@@ -11,7 +11,7 @@ namespace Assets.Scripts.Mfd
     public sealed class MfdWidgetOutline
     {
         private const float Thickness = 2f;
-        private const string ShaderName = "Shaders/VizzyStudioOverlay";
+        private const string ShaderName = "Assets/Resources/Shaders/VizzyStudioOverlay.shader";
         private static readonly Color OutlineColor = new Color(1f, 0.25f, 0.25f, 0.9f);
 
         private static Material _material;

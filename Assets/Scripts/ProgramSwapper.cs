@@ -42,6 +42,7 @@ namespace Assets.Scripts
             if (remapped != null && !XNode.DeepEquals(remapped.Process, data.ProcessXml))
             {
                 EditorLog.Warning("Resume check: the running state isn't what was restored. A game update may have changed its format.");
+                LogFirstDifference(remapped.Process, data.ProcessXml);
             }
 
             return true;
@@ -65,6 +66,26 @@ namespace Assets.Scripts
             data.FlightProgramXml = newProgram;
             data.ProcessXml = new XElement(remapped.Process);
             return message;
+        }
+
+        private static void LogFirstDifference(XElement restored, XElement running)
+        {
+            var before = restored.DescendantsAndSelf().ToList();
+            var after = running.DescendantsAndSelf().ToList();
+            for (var i = 0; i < before.Count && i < after.Count; i++)
+            {
+                var a = before[i];
+                var b = after[i];
+                var sameAttributes = a.Attributes().Select(item => item.ToString()).SequenceEqual(b.Attributes().Select(item => item.ToString()));
+                if (a.Name != b.Name || !sameAttributes)
+                {
+                    EditorLog.Debug("Restored: <" + a.Name + " " + string.Join(" ", a.Attributes()) + ">");
+                    EditorLog.Debug("Running: <" + b.Name + " " + string.Join(" ", b.Attributes()) + ">");
+                    return;
+                }
+            }
+
+            EditorLog.Debug("Restored has " + before.Count + " elements, running has " + after.Count + ".");
         }
 
         /// <summary>A beep's looping sound is only stopped by the craft service that StartProgram replaces.</summary>

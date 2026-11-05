@@ -23,6 +23,7 @@ namespace Assets.Scripts.Mfd
             var ids = new[] { CraftDesigns.EditorCraftId, craftName }.Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
 
             var updates = new List<(string Id, XElement Craft)>();
+            var designWithoutProgram = false;
             foreach (var id in ids)
             {
                 if (!designs.HasCraft(id) || CraftDesigns.IsStock(id))
@@ -43,6 +44,7 @@ namespace Assets.Scripts.Mfd
                 var program = FindProgram(craft, programName, partId);
                 if (program == null)
                 {
+                    designWithoutProgram |= id == craftName;
                     continue;
                 }
 
@@ -83,7 +85,10 @@ namespace Assets.Scripts.Mfd
             EditorLog.Debug("MFD save wrote: " + string.Join(", ", updates.Select(update => update.Id)));
             return updates.Any(update => update.Id == craftName)
                 ? "Saved to the running program and the craft " + craftName + ", with a backup."
-                : "Saved to the running program and the designer's working copy, with a backup. This craft has no saved design: save it in the designer to keep it.";
+                : "Saved to the running program and the designer's working copy, with a backup. "
+                    + (designWithoutProgram
+                        ? "The saved design " + craftName + " doesn't have this program, so it wasn't changed: save the craft in the designer to keep this."
+                        : "This craft has no saved design: save it in the designer to keep this.");
         }
 
         /// <summary>By name; the part's id only settles it when several parts have that program.</summary>
