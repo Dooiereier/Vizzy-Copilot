@@ -25,8 +25,8 @@ namespace Assets.Scripts
 
             entry.Part = part;
             entry.Latest = new XElement(applied);
-            entry.Known.Add(new XElement(before));
-            entry.Known.Add(new XElement(applied));
+            entry.Known.Add(ThreadRemapper.WithoutWhitespace(before));
+            entry.Known.Add(ThreadRemapper.WithoutWhitespace(applied));
         }
 
         /// <summary>
@@ -89,7 +89,9 @@ namespace Assets.Scripts
 
             public bool Knows(XElement program)
             {
-                return Known.Any(known => XNode.DeepEquals(known, program));
+                // A program loaded from a file keeps its indents: they mustn't make it a different program.
+                var plain = ThreadRemapper.WithoutWhitespace(program);
+                return Known.Any(known => XNode.DeepEquals(known, plain));
             }
         }
     }

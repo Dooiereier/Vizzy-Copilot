@@ -17,6 +17,7 @@ public static class ThreadRemapperTests
         ReorderedStacksFollowTheBlock();
         NewOnStartBeforeEverythingDoesNotMoveThreads();
         InsertedBlockShiftsThread();
+        IndentsFromAFileDontLookLikeEdits();
         EditedCurrentBlockKeepsThread();
         DeletedCurrentBlockGoesToNextBlock();
         DeletedLastBlockInLoopReturnsToLoop();
@@ -80,6 +81,21 @@ public static class ThreadRemapperTests
         var result = ThreadRemapper.Remap(before, after, Process(Thread(1, Frame())));
         Check("no new thread starts", result.Process.Elements("Thread").Count() == 1);
         CheckNext("thread stays on its block", result, 0, 3);
+    }
+
+    private static void IndentsFromAFileDontLookLikeEdits()
+    {
+        var program = Program(Stack(1, Event(0, "One"), Loop(1, "x", Wait(2, "a"), Wait(3, "b")), Wait(4, "c")), Stack(2, Event(5, "Two"), Wait(6, "d"), Wait(7, "e")));
+        var fromFile = XElement.Parse(program.ToString(), LoadOptions.PreserveWhitespace);
+        var result = ThreadRemapper.Remap(fromFile, program, Process(Thread(3, Frame(), Frame(returnId: 1)), Thread(7, Frame())));
+        CheckNext("indents: the thread in a loop stays", result, 0, 3);
+        CheckNext("indents: the other stack's thread stays", result, 1, 7);
+        Check("indents: no thread ends", result.Notes.All(note => !note.Contains("deleted")));
+
+        LatestEdits.Clear();
+        LatestEdits.Remember("part", program, Program(Stack(1, Event(0, "One"), Wait(1, "edit"))));
+        Check("indents: a loaded program with indents is still known", LatestEdits.ProgramToRestore("part", fromFile, Process()) != null);
+        LatestEdits.Clear();
     }
 
     private static void InsertedBlockShiftsThread()

@@ -387,6 +387,22 @@ namespace Assets.Scripts
             return chain.SelectMany(block => new[] { block }.Concat(block.Children.SelectMany(AllBlocks)));
         }
 
+        /// <summary>
+        /// A copy without whitespace-only text. A program loaded from a craft file keeps the file's line breaks
+        /// and indents, while one from the editor has none, so the same block would otherwise look edited.
+        /// </summary>
+        public static XElement WithoutWhitespace(XElement element)
+        {
+            var copy = new XElement(element);
+            RemoveWhitespace(copy);
+            return copy;
+        }
+
+        private static void RemoveWhitespace(XElement element)
+        {
+            element.DescendantNodes().OfType<XText>().Where(text => string.IsNullOrWhiteSpace(text.Value)).ToList().ForEach(text => text.Remove());
+        }
+
         private static string ChainKey(List<Block> chain)
         {
             return string.Join("\n", chain.Select(block => block.Full));
@@ -420,6 +436,7 @@ namespace Assets.Scripts
 
                 var own = new XElement(element);
                 own.Elements("Instructions").Remove();
+                RemoveWhitespace(own);
                 foreach (var part in own.DescendantsAndSelf())
                 {
                     part.Attribute("id")?.Remove();
