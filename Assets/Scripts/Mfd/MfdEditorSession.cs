@@ -38,6 +38,7 @@ namespace Assets.Scripts.Mfd
         private MfdScript _mfd;
         private IInspectorPanel _panel;
         private GroupModel _selectedGroup;
+        private LabelModel _selectedName;
         private GroupModel _changesGroup;
         private GroupModel _listGroup;
         private string _shownList;
@@ -277,14 +278,15 @@ namespace Assets.Scripts.Mfd
                 _outline.Hide();
             }
 
-            this.ReplaceSelectedGroup();
-        }
+            if (_selectedName != null)
+            {
+                _selectedName.Label = row?.Name ?? string.Empty;
+            }
 
-        private void ReplaceSelectedGroup()
-        {
-            var group = this.BuildSelectedGroup();
-            _panel.ReplaceGroup(_selectedGroup, group);
-            _selectedGroup = group;
+            foreach (var value in _selectedValues)
+            {
+                value.Update();
+            }
         }
 
         private void ReplaceChangesGroup()
@@ -294,40 +296,42 @@ namespace Assets.Scripts.Mfd
             _changesGroup = group;
         }
 
+        /// <summary>
+        /// Built once and shown or hidden: replacing a group with icon rows leaves their buttons' dead
+        /// elements in the panel, whose update then throws every frame and stops the fields updating.
+        /// </summary>
         private GroupModel BuildSelectedGroup()
         {
             _selectedValues.Clear();
             var group = new GroupModel("Selected widget");
-            var row = _selected;
-            if (row == null)
-            {
-                group.Add(new LabelModel("Choose a widget in the list below.", ElementAlignment.Left));
-                return group;
-            }
+            bool Chosen() => _selected != null;
+            void Add(ItemModel item) => group.Add(item).DetermineVisibility = Chosen;
 
-            group.Add(new LabelModel(row.Name, ElementAlignment.Left));
-            this.AddValue(group, "X", () => row.Widget.LocalPosition.x, value => row.SetPosition(new Vector2(value, row.Widget.LocalPosition.y)));
-            this.AddValue(group, "Y", () => row.Widget.LocalPosition.y, value => row.SetPosition(new Vector2(row.Widget.LocalPosition.x, value)));
-            group.Add(this.IconRow(
-                Icon("Ui/Sprites/Design/IconSpinnerArrowLeft", "Move left", () => row.Move(new Vector2(-_step, 0f))),
-                Icon("Ui/Sprites/Design/IconSpinnerArrowRight", "Move right", () => row.Move(new Vector2(_step, 0f))),
-                Icon("Ui/Sprites/Common/IconMoveUp", "Move up", () => row.Move(new Vector2(0f, _step))),
-                Icon("Ui/Sprites/Common/IconMoveDown", "Move down", () => row.Move(new Vector2(0f, -_step)))));
+            group.Add(new LabelModel("Choose a widget in the list below.", ElementAlignment.Left)).DetermineVisibility = () => _selected == null;
+            _selectedName = new LabelModel(string.Empty, ElementAlignment.Left);
+            Add(_selectedName);
+            this.AddValue(Add, "X", widget => widget.LocalPosition.x, (row, value) => row.SetPosition(new Vector2(value, row.Widget.LocalPosition.y)));
+            this.AddValue(Add, "Y", widget => widget.LocalPosition.y, (row, value) => row.SetPosition(new Vector2(row.Widget.LocalPosition.x, value)));
+            Add(this.IconRow(
+                Icon("Ui/Sprites/Design/IconSpinnerArrowLeft", "Move left", row => row.Move(new Vector2(-_step, 0f))),
+                Icon("Ui/Sprites/Design/IconSpinnerArrowRight", "Move right", row => row.Move(new Vector2(_step, 0f))),
+                Icon("Ui/Sprites/Common/IconMoveUp", "Move up", row => row.Move(new Vector2(0f, _step))),
+                Icon("Ui/Sprites/Common/IconMoveDown", "Move down", row => row.Move(new Vector2(0f, -_step)))));
 
-            this.AddValue(group, "Width", () => row.Widget.Size.x, value => row.SetSize(new Vector2(value, row.Widget.Size.y)));
-            this.AddValue(group, "Height", () => row.Widget.Size.y, value => row.SetSize(new Vector2(row.Widget.Size.x, value)));
-            group.Add(this.IconRow(
-                Icon("Ui/Sprites/Design/IconSpinnerArrowLeft", "Narrower", () => row.Grow(new Vector2(-_step, 0f))),
-                Icon("Ui/Sprites/Design/IconSpinnerArrowRight", "Wider", () => row.Grow(new Vector2(_step, 0f))),
-                Icon("Ui/Sprites/Common/IconMoveUp", "Taller", () => row.Grow(new Vector2(0f, _step))),
-                Icon("Ui/Sprites/Common/IconMoveDown", "Shorter", () => row.Grow(new Vector2(0f, -_step)))));
+            this.AddValue(Add, "Width", widget => widget.Size.x, (row, value) => row.SetSize(new Vector2(value, row.Widget.Size.y)));
+            this.AddValue(Add, "Height", widget => widget.Size.y, (row, value) => row.SetSize(new Vector2(row.Widget.Size.x, value)));
+            Add(this.IconRow(
+                Icon("Ui/Sprites/Design/IconSpinnerArrowLeft", "Narrower", row => row.Grow(new Vector2(-_step, 0f))),
+                Icon("Ui/Sprites/Design/IconSpinnerArrowRight", "Wider", row => row.Grow(new Vector2(_step, 0f))),
+                Icon("Ui/Sprites/Common/IconMoveUp", "Taller", row => row.Grow(new Vector2(0f, _step))),
+                Icon("Ui/Sprites/Common/IconMoveDown", "Shorter", row => row.Grow(new Vector2(0f, -_step)))));
 
-            this.AddValue(group, "Rotation", () => row.Widget.LocalRotation, value => row.Widget.LocalRotation = value);
-            group.Add(this.IconRow(
-                Icon("Ui/Sprites/Design/IconSpinnerArrowLeft", "Rotation down", () => row.Widget.LocalRotation -= _step * RotationStepFactor),
-                Icon("Ui/Sprites/Design/IconSpinnerArrowRight", "Rotation up", () => row.Widget.LocalRotation += _step * RotationStepFactor)));
+            this.AddValue(Add, "Rotation", widget => widget.LocalRotation, (row, value) => row.Widget.LocalRotation = value);
+            Add(this.IconRow(
+                Icon("Ui/Sprites/Design/IconSpinnerArrowLeft", "Rotation down", row => row.Widget.LocalRotation -= _step * RotationStepFactor),
+                Icon("Ui/Sprites/Design/IconSpinnerArrowRight", "Rotation up", row => row.Widget.LocalRotation += _step * RotationStepFactor)));
 
-            group.Add(new DropdownModel(
+            Add(new DropdownModel(
                 "Step",
                 () => Number(_step),
                 value => _step = float.Parse(value, System.Globalization.CultureInfo.InvariantCulture),
@@ -335,15 +339,24 @@ namespace Assets.Scripts.Mfd
             return group;
         }
 
-        private void AddValue(GroupModel group, string label, Func<float> get, Action<float> set)
+        /// <summary>The selected widget's value; nothing while none is selected.</summary>
+        private void AddValue(Action<ItemModel> add, string label, Func<IMfdWidget, float> get, Action<Row, float> set)
         {
-            _selectedValues.Add(group.Add(new FloatInputModel(
+            var model = new FloatInputModel(
                 label,
-                get,
-                value => this.Run(() => set(value)),
+                () => _selected != null && _selected.IsAlive ? get(_selected.Widget) : 0f,
+                value => this.Run(() =>
+                {
+                    if (_selected != null)
+                    {
+                        set(_selected, value);
+                    }
+                }),
                 null,
                 null,
-                Number)));
+                Number);
+            add(model);
+            _selectedValues.Add(model);
         }
 
         private IconButtonRowModel IconRow(params IconButtonModel[] icons)
@@ -357,9 +370,15 @@ namespace Assets.Scripts.Mfd
             return row;
         }
 
-        private IconButtonModel Icon(string sprite, string tooltip, Action action)
+        private IconButtonModel Icon(string sprite, string tooltip, Action<Row> action)
         {
-            return new IconButtonModel(sprite, _ => this.Run(action), tooltip);
+            return new IconButtonModel(sprite, _ => this.Run(() =>
+            {
+                if (_selected != null)
+                {
+                    action(_selected);
+                }
+            }), tooltip);
         }
 
         /// <summary>A value changed: the fields and the list of changes follow.</summary>
