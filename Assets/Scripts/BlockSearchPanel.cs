@@ -9,6 +9,8 @@ namespace Assets.Scripts
     using Assets.Scripts.Vizzy.UI;
     using Assets.Scripts.Vizzy.UI.Elements;
     using ModApi.Craft.Program;
+    using ModApi.Craft.Program.Expressions;
+    using ModApi.Craft.Program.Instructions;
     using ModApi.Ui;
     using TMPro;
     using UI.Xml;
@@ -17,7 +19,7 @@ namespace Assets.Scripts
 
     /// <summary>
     /// Shift+F or the left bar's search button in the Vizzy editor: type part of a block's name, and matching toolbox blocks appear,
-    /// dragged out as usual, or double-clicked to appear in the middle of the view. Dropdown choices count as their own results, with that choice set.
+    /// dragged out as usual, or double-clicked to appear in the middle of the view. Dropdown choices count as their own results, with that choice set, as do this program's variables, lists and custom blocks.
     /// </summary>
     public sealed class BlockSearchPanel : MonoBehaviour
     {
@@ -236,7 +238,45 @@ namespace Assets.Scripts
                 }
             }
 
+            AddProgramEntries(entries, _controller.VizzyUI.FlightProgram);
             return entries;
+        }
+
+        /// <summary>What's particular to this program, built the way the toolbox's own categories build it.</summary>
+        private static void AddProgramEntries(List<BlockEntry> entries, FlightProgram program)
+        {
+            foreach (var variable in program.GlobalVariables.Variables.OrderBy(variable => variable.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                var isList = variable.IsList;
+                var name = variable.Name;
+                entries.Add(new BlockEntry(name, isList ? "list" : "variable", isList ? "Lists" : "Variables", new Func<ProgramNode>(() => new VariableExpression(isList) { VariableName = name })));
+            }
+
+            foreach (var custom in program.CustomExpressions)
+            {
+                var name = custom.Name;
+                var format = custom.CallFormat;
+                entries.Add(new BlockEntry(name, "custom expression", "Custom Expressions", new Func<ProgramNode>(() => WithEmptySlots(new CallCustomExpression { Call = name, Style = "call-custom-expression" }, format))));
+            }
+
+            foreach (var custom in program.CustomInstructions)
+            {
+                var name = custom.Name;
+                var format = custom.CallFormat;
+                entries.Add(new BlockEntry(name, "custom instruction", "Custom Instructions", new Func<ProgramNode>(() => WithEmptySlots(new CallCustomInstruction { Call = name, Style = "call-custom-instruction" }, format))));
+            }
+        }
+
+        private static ProgramNode WithEmptySlots(ProgramNode node, string format)
+        {
+            var count = NodeFormat.GetNumExpressionsInFormat(format);
+            node.InitializeExpressions(new ProgramExpression[count]);
+            for (var i = 0; i < count; i++)
+            {
+                node.SetExpression(i, new ConstantExpression(0d));
+            }
+
+            return node;
         }
 
         private static void AddEntries(List<BlockEntry> entries, ProgramNode node, NodeStyle style, string category)
@@ -250,15 +290,16 @@ namespace Assets.Scripts
             var title = string.Join(" ", tokens.Where(token => token.TokenType == NodeFormat.TokenType.Text).Select(token => token.Text.Trim()).Where(text => text.Length > 0));
             var list = tokens.FirstOrDefault(token => token.TokenType == NodeFormat.TokenType.List);
             var items = list == null ? null : node.GetListItems(list.Text);
+            var listName = list?.Text;
             if (items == null || items.Count == 0)
             {
-                entries.Add(new BlockEntry(title, style.Id, category, new Choice(node, null, null)));
+                entries.Add(new BlockEntry(title, style.Id, category, new Func<ProgramNode>(() => node)));
                 return;
             }
 
             foreach (var item in items.Where(item => !string.IsNullOrEmpty(item.Id) && !string.IsNullOrEmpty(item.Text)))
             {
-                entries.Add(new BlockEntry((title + " " + item.Text).Trim(), style.Id, category, new Choice(node, list.Text, item.Id)));
+                entries.Add(new BlockEntry(title + " " + item.Text, style.Id, category, new Func<ProgramNode>(() => WithChoice(node, listName, item.Id))));
             }
         }
 
@@ -271,7 +312,7 @@ namespace Assets.Scripts
             {
                 try
                 {
-                    nodes.Add(((Choice)entry.Source).Build());
+                    nodes.Add(((Func<ProgramNode>)entry.Source)());
                 }
                 catch (Exception e)
                 {
@@ -297,6 +338,14 @@ namespace Assets.Scripts
             var placed = editor.NodeBuilder.CloneBlock(root, true).First();
             placed.transform.position = viewport.TransformPoint(viewport.rect.center);
             editor.CreateUndoStep(null);
+        }
+
+        /// <summary>A copy, as the toolbox's own block has to keep its default.</summary>
+        private static ProgramNode WithChoice(ProgramNode node, string list, string value)
+        {
+            var copy = ProgramSerializer.DeserializeProgramNode(SerializerBridge.SerializeNode(node));
+            copy.SetListValue(list, value);
+            return copy;
         }
 
         private void ClearResults()
@@ -332,34 +381,6 @@ namespace Assets.Scripts
                         EditorLog.Error("Block search couldn't place a block: " + e);
                     }
                 }
-            }
-        }
-
-        /// <summary>A toolbox block, with one dropdown set to a choice if it has one.</summary>
-        private sealed class Choice
-        {
-            private readonly ProgramNode _node;
-            private readonly string _list;
-            private readonly string _value;
-
-            public Choice(ProgramNode node, string list, string value)
-            {
-                _node = node;
-                _list = list;
-                _value = value;
-            }
-
-            /// <summary>A copy when a choice is set: the toolbox's own block has to keep its default.</summary>
-            public ProgramNode Build()
-            {
-                if (_list == null)
-                {
-                    return _node;
-                }
-
-                var copy = ProgramSerializer.DeserializeProgramNode(SerializerBridge.SerializeNode(_node));
-                copy.SetListValue(_list, _value);
-                return copy;
             }
         }
     }

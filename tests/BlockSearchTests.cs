@@ -16,6 +16,8 @@ public static class BlockSearchTests
             new BlockEntry("altitude AGL", "prop-altitude", "Craft Information", null),
             new BlockEntry("altitude ASL", "prop-altitude", "Craft Information", null),
             new BlockEntry("await signal", "other", "Events", null),
+            new BlockEntry("<color=#0f0>f</color><color=#f0f>UN</color><color=#f00>k</color>", "evaluate-expression", "Operators", null),
+            new BlockEntry("LaunchPitch", "variable", "Variables", null),
         };
 
         string[] Titles(string query, int limit = 30) => BlockSearch.Find(query, entries, limit).Select(entry => entry.Title).ToArray();
@@ -27,6 +29,8 @@ public static class BlockSearchTests
         check("a dropdown choice is found", Titles("agl").SequenceEqual(new[] { "altitude AGL" }));
         check("all words have to match", Titles("altitude asl").SequenceEqual(new[] { "altitude ASL" }));
         check("case doesn't matter", Titles("WAIT UNTIL").SequenceEqual(new[] { "wait until" }));
+        check("rich text is removed from names", Titles("funk").SequenceEqual(new[] { "fUNk" }));
+        check("a variable is found by name", Titles("launchp").SequenceEqual(new[] { "LaunchPitch" }));
         check("nothing typed shows nothing", Titles("  ").Length == 0);
         check("no match shows nothing", Titles("xyzzy").Length == 0);
         check("the limit holds", Titles("a", 2).Length == 2);

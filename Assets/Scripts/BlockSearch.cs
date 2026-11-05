@@ -3,14 +3,15 @@ namespace Assets.Scripts
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Text.RegularExpressions;
 
     /// <summary>One thing the block search can offer: a toolbox block, with a dropdown choice if it has one.</summary>
     public sealed class BlockEntry
     {
         public BlockEntry(string title, string styleId, string category, object source)
         {
-            Title = title;
-            Terms = (title + " " + styleId + " " + category + " " + BlockSearch.AliasesFor(styleId)).ToLowerInvariant();
+            Title = BlockSearch.PlainText(title);
+            Terms = (Title + " " + styleId + " " + category + " " + BlockSearch.AliasesFor(styleId)).ToLowerInvariant();
             Source = source;
         }
 
@@ -33,7 +34,14 @@ namespace Assets.Scripts
             ["op-div"] = "divide",
             ["op-exp"] = "power exponent",
             ["op-mod"] = "modulus remainder",
+            ["evaluate-expression"] = "funk",
         };
+
+        /// <summary>Block text without rich text tags: the Funk block's name is colored letter by letter.</summary>
+        public static string PlainText(string text)
+        {
+            return Regex.Replace(text ?? string.Empty, "<[^>]*>", string.Empty).Trim();
+        }
 
         public static string AliasesFor(string styleId)
         {

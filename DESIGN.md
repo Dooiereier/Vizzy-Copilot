@@ -148,7 +148,7 @@ MFD Runtime Editor is planned later; it may not bring its own copy of Harmony.
 blocks, built by the game's private `VizzyUIController.LoadNodes`, so dragging, cloning and tooltips are the game's own
 and no drag starts from code. Entries come from `VizzyToolbox.Categories` and `NodeFormat.Tokenize`. Each choice in a
 block's first dropdown (`GetListItems`) is its own result, built on a copy made with `ProgramSerializer`, so the toolbox's
-block keeps its default. `BlockSearch` does the matching, tested offline. Custom blocks and variables aren't included yet.
+block keeps its default. `BlockSearch` does the matching, tested offline. The program's variables, lists and custom blocks are added when it opens, built the way `UpdateCategory` builds them.
 
 ## Update check
 
