@@ -20,7 +20,7 @@ namespace Assets.Scripts
 
     /// <summary>
     /// Shift+F or the left bar's search button in the Vizzy editor: type part of a block's name, and matching toolbox blocks appear,
-    /// dragged out as usual, or double-clicked to appear in the middle of the view. Arrow keys move a highlight through the results, and Enter places the highlighted one in the middle of the view. Dropdown choices count as their own results, with that choice set, as do this program's variables, lists and custom blocks.
+    /// dragged out as usual, or double-clicked to be placed in what's visible of the canvas (see BlockPlacement). Arrow keys move a highlight through the results, and Enter places the highlighted one. Dropdown choices count as their own results, with that choice set, as do this program's variables, lists and custom blocks.
     /// </summary>
     public sealed class BlockSearchPanel : MonoBehaviour
     {
@@ -39,6 +39,7 @@ namespace Assets.Scripts
 
         // Room above the first result, whose highlight would otherwise touch the list's top.
         private const float TopMargin = 8f;
+        private const float PlacementGap = 20f;
         private const float RepeatDelay = 0.35f;
         private const float RepeatInterval = 0.06f;
         private const string Help = "Block Search (Shift+F)";
@@ -60,6 +61,7 @@ namespace Assets.Scripts
         private ScrollRect _scroll;
         private float _nextRepeat;
         private int _refocusUntilFrame = -1;
+        private BlockElementScript _lastPlaced;
 
         public bool IsOpen => _flyout != null && _flyout.gameObject.activeSelf;
 
@@ -279,7 +281,7 @@ namespace Assets.Scripts
                 _refocusUntilFrame = Time.frameCount + 2;
                 if (_selected >= 0)
                 {
-                    PlaceAtCenter(_shownBlocks[_selected]);
+                    Place(_shownBlocks[_selected]);
                 }
 
                 return;
@@ -530,15 +532,85 @@ namespace Assets.Scripts
             }
         }
 
-        /// <summary>Double click: a copy of the result in the middle of the view, without dragging.</summary>
-        private void PlaceAtCenter(BlockElementScript result)
+        /// <summary>Enter or a double click: a copy of the result in what's visible of the canvas, without dragging.</summary>
+        private void Place(BlockElementScript result)
         {
-            var root = result.Root;
             var editor = _controller.VizzyUI;
-            var viewport = (RectTransform)_controller.ProgramContainer.transform;
-            var placed = editor.NodeBuilder.CloneBlock(root, true).First();
-            placed.transform.position = viewport.TransformPoint(viewport.rect.center);
+            var (blocks, columns, last) = MeasureCanvas();
+            var placed = editor.NodeBuilder.CloneBlock(result.Root, true).First();
+            var scale = editor.ProgramTransform.lossyScale.x;
+            var size = placed.Size * scale;
+            var box = BlockPlacement.Find(VisibleCanvas(), blocks, columns, size.x, size.y, PlacementGap * scale, last);
+            var pivot = placed.RectTransform.pivot;
+            placed.transform.position = new Vector3(box.XMin + (pivot.x * size.x), box.YMax - ((1f - pivot.y) * size.y), placed.transform.position.z);
+            _lastPlaced = placed;
             editor.CreateUndoStep(null);
+        }
+
+        /// <summary>The canvas's own area, less what the flyout covers.</summary>
+        private PlacementBox VisibleCanvas()
+        {
+            var canvas = new Vector3[4];
+            ((RectTransform)_controller.ProgramContainer.transform).GetWorldCorners(canvas);
+            var flyout = new Vector3[4];
+            _flyout.rectTransform.GetWorldCorners(flyout);
+            return new PlacementBox(Mathf.Max(canvas[0].x, flyout[2].x), canvas[0].y, canvas[2].x, canvas[2].y);
+        }
+
+        /// <summary>
+        /// Every stack and loose block as one box in world space. Stacks of two or more are columns,
+        /// and so is the block last placed from here, so that placing several builds a column.
+        /// </summary>
+        private (List<PlacementBox> Blocks, List<PlacementBox> Columns, PlacementBox? Last) MeasureCanvas()
+        {
+            var groups = new Dictionary<BlockElementScript, (PlacementBox Box, int Instructions)>();
+            foreach (var block in _controller.VizzyUI.ProgramTransform.GetComponentsInChildren<BlockElementScript>(false))
+            {
+                var head = HeadOf(block);
+                var box = WorldBox(block);
+                var instructions = block is InstructionElementScript ? 1 : 0;
+                if (groups.TryGetValue(head, out var group))
+                {
+                    box = new PlacementBox(Mathf.Min(box.XMin, group.Box.XMin), Mathf.Min(box.YMin, group.Box.YMin), Mathf.Max(box.XMax, group.Box.XMax), Mathf.Max(box.YMax, group.Box.YMax));
+                    instructions += group.Instructions;
+                }
+
+                groups[head] = (box, instructions);
+            }
+
+            var lastHead = _lastPlaced != null ? HeadOf(_lastPlaced) : null;
+            PlacementBox? last = lastHead != null && groups.TryGetValue(lastHead, out var lastGroup) ? lastGroup.Box : (PlacementBox?)null;
+            var columns = groups.Where(pair => pair.Value.Instructions >= 2 || pair.Key == lastHead).Select(pair => pair.Value.Box).ToList();
+            return (groups.Values.Select(group => group.Box).ToList(), columns, last);
+        }
+
+        /// <summary>The block a stack is known by: the first of its outermost chain, or a loose block's root.</summary>
+        private static BlockElementScript HeadOf(BlockElementScript block)
+        {
+            var root = block.Root;
+            var instruction = root as InstructionElementScript ?? block as InstructionElementScript;
+            if (instruction == null)
+            {
+                return root;
+            }
+
+            var first = instruction.FirstInstruction;
+            while (first.ParentInstruction != null)
+            {
+                first = first.ParentInstruction.FirstInstruction;
+            }
+
+            return first;
+        }
+
+        private static PlacementBox WorldBox(BlockElementScript block)
+        {
+            var rect = block.RectTransform;
+            var scale = rect.lossyScale.x;
+            var size = block.Size * scale;
+            var left = rect.position.x - (rect.pivot.x * size.x);
+            var top = rect.position.y + ((1f - rect.pivot.y) * size.y);
+            return new PlacementBox(left, top - size.y, left + size.x, top);
         }
 
         /// <summary>A copy, as the toolbox's own block has to keep its default.</summary>
@@ -584,7 +656,7 @@ namespace Assets.Scripts
                 {
                     try
                     {
-                        _panel.PlaceAtCenter(_block);
+                        _panel.Place(_block);
                     }
                     catch (Exception e)
                     {
