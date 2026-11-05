@@ -18,11 +18,11 @@ namespace Assets.Scripts.Mfd
     /// </summary>
     public sealed class MfdEditorSession
     {
-        private const int PanelWidth = 440;
+        private const int PanelWidth = 340;
         private const float MaxScreenHeight = 0.9f;
         private const int WidgetsClassifiedPerFrame = 3;
         private const int LabelLineHeight = 22;
-        private const int LabelCharactersPerLine = 52;
+        private const int LabelCharactersPerLine = 40;
         private const float MinSize = 1f;
         private static readonly string[] Steps = { "1", "10", "100" };
 
@@ -84,7 +84,7 @@ namespace Assets.Scripts.Mfd
                 _rows.Add(new Row(pair.Value));
             }
 
-            var model = new InspectorModel("VizzyStudioArrangeMfd", "Arrange MFD: " + _data.Part.DisplayName);
+            var model = new InspectorModel("VizzyStudioArrangeMfd", "Arrange MFD");
             _selectedGroup = this.BuildSelectedGroup();
             model.AddGroup(_selectedGroup);
             _changesGroup = this.BuildChangesGroup();
