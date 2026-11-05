@@ -42,6 +42,8 @@ namespace Assets.Scripts.Mfd
         private IInspectorPanel _panel;
         private GroupModel _selectedGroup;
         private GroupModel _changesGroup;
+        private GroupModel _listGroup;
+        private string _shownList;
         private Row _selected;
         private XElement _classifyProgram;
         private int _classifyNext;
@@ -92,12 +94,9 @@ namespace Assets.Scripts.Mfd
             model.AddGroup(_selectedGroup);
             _changesGroup = this.BuildChangesGroup();
             model.AddGroup(_changesGroup);
-            var list = new GroupModel("Widgets");
-            model.AddGroup(list);
-            foreach (var row in _rows)
-            {
-                row.Button = list.Add(new TextButtonModel(row.Name, _ => this.Select(row)));
-            }
+            _listGroup = new GroupModel("Widgets");
+            _listGroup.Add(new LabelModel("Checking the widgets...", ElementAlignment.Left));
+            model.AddGroup(_listGroup);
 
             var info = new InspectorPanelCreationInfo
             {
@@ -142,7 +141,7 @@ namespace Assets.Scripts.Mfd
             }
 
             // Building rows can reset their colors, and they appear after the panel opens.
-            if (_selected != null)
+            if (_selected?.Button != null)
             {
                 _rowPaint.Paint(_selected.Button, true);
             }
@@ -177,16 +176,63 @@ namespace Assets.Scripts.Mfd
         /// <summary>Works out over several frames what each widget can save, as a large program takes a moment per widget.</summary>
         private void ClassifySome()
         {
+            if (_classifyNext >= _rows.Count && _shownList != null)
+            {
+                return;
+            }
+
             for (var i = 0; i < WidgetsClassifiedPerFrame && _classifyNext < _rows.Count; i++)
             {
                 var row = _rows[_classifyNext++];
-                if (row.IsAlive && row.Button != null)
+                if (row.IsAlive)
                 {
                     var lines = this.Classify(row);
-                    row.Button.Label = row.Name + "  -  " + StatusText(lines);
-                    row.Button.Tooltip = string.Join("\n", lines.Select(line => line.ToString()));
+                    row.CanArrange = lines.Any(line => line.Property != MfdProperty.Rotation && (line.Applied || line.NeedsSharedOverride));
+                    row.Label = row.Name + "  -  " + StatusText(lines);
+                    row.Tooltip = string.Join("\n", lines.Select(line => line.ToString()));
+                }
+                else
+                {
+                    row.CanArrange = false;
                 }
             }
+
+            if (_classifyNext >= _rows.Count)
+            {
+                this.ShowList();
+            }
+        }
+
+        /// <summary>Only the widgets that saving can move or resize. Rebuilt only when the list differs, as that resets its rows.</summary>
+        private void ShowList()
+        {
+            var shown = _rows.Where(row => row.CanArrange).ToList();
+            var signature = string.Join("\n", shown.Select(row => row.Label));
+            if (signature == _shownList)
+            {
+                return;
+            }
+
+            _shownList = signature;
+            var group = new GroupModel("Widgets");
+            foreach (var row in _rows)
+            {
+                row.Button = null;
+            }
+
+            foreach (var row in shown)
+            {
+                row.Button = group.Add(new TextButtonModel(row.Label, _ => this.Select(row)));
+                row.Button.Tooltip = row.Tooltip;
+            }
+
+            if (shown.Count == 0)
+            {
+                this.AddWrappedTo(group, "No widget here can be moved or resized and saved. A program may build more of its screen later: open this again then.");
+            }
+
+            _panel.ReplaceGroup(_listGroup, group);
+            _listGroup = group;
         }
 
         private List<MfdLine> Classify(Row row)
@@ -223,7 +269,7 @@ namespace Assets.Scripts.Mfd
 
         private void Select(Row row)
         {
-            if (_selected != null && _selected.Button != null)
+            if (_selected?.Button != null)
             {
                 _rowPaint.Paint(_selected.Button, false);
             }
@@ -354,7 +400,7 @@ namespace Assets.Scripts.Mfd
             var group = new GroupModel("Changes");
             if (_message != null)
             {
-                this.AddWrapped(group, _message);
+                this.AddWrappedTo(group, _message);
             }
 
             var changes = this.PendingChanges();
@@ -372,7 +418,7 @@ namespace Assets.Scripts.Mfd
             var lines = MfdFormulaWriter.Apply(new XElement(_data.FlightProgramXml), changes, width, height, _allowShared);
             foreach (var line in lines)
             {
-                this.AddWrapped(group, (line.Applied ? string.Empty : "Won't save: ") + line);
+                this.AddWrappedTo(group, (line.Applied ? string.Empty : "Won't save: ") + line);
             }
 
             if (_allowShared || lines.Any(line => line.NeedsSharedOverride))
@@ -393,7 +439,7 @@ namespace Assets.Scripts.Mfd
             return group;
         }
 
-        private void AddWrapped(GroupModel group, string text)
+        private void AddWrappedTo(GroupModel group, string text)
         {
             var label = group.Add(new LabelModel(text, ElementAlignment.Left));
             label.PreferredHeight = LabelLineHeight * Mathf.Max(1, Mathf.CeilToInt((float)text.Length / LabelCharactersPerLine));
@@ -525,7 +571,14 @@ namespace Assets.Scripts.Mfd
 
             public string Name { get; }
 
+            /// <summary>Its row in the list, or null when it isn't listed.</summary>
             public TextButtonModel Button { get; set; }
+
+            public bool CanArrange { get; set; }
+
+            public string Label { get; set; }
+
+            public string Tooltip { get; set; }
 
             /// <summary>A destroyed widget's own properties throw, so its Unity object is asked first.</summary>
             public bool IsAlive => (!(this.Widget is UnityEngine.Object unity) || unity != null) && this.Widget.Transform != null;
