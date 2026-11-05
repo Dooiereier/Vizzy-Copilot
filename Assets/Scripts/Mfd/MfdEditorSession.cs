@@ -24,7 +24,10 @@ namespace Assets.Scripts.Mfd
         private const int LabelLineHeight = 22;
         private const int LabelCharactersPerLine = 40;
         private const float MinSize = 1f;
-        private static readonly string[] Steps = { "1", "10", "100" };
+        private static readonly string[] Steps = { "0.2", "2", "20" };
+
+        // Rotation's degrees need bigger clicks than position and size.
+        private const float RotationStepFactor = 5f;
 
         private readonly FlightProgramData _data;
         private readonly MfdWidgetOutline _outline = new MfdWidgetOutline();
@@ -42,7 +45,7 @@ namespace Assets.Scripts.Mfd
         private Row _selected;
         private XElement _classifyProgram;
         private int _classifyNext;
-        private float _step = 10f;
+        private float _step = 2f;
         private bool _allowShared;
         private string _message;
 
@@ -319,8 +322,8 @@ namespace Assets.Scripts.Mfd
 
             this.AddValue(group, "Rotation", () => row.Widget.LocalRotation, value => row.Widget.LocalRotation = value);
             group.Add(this.IconRow(
-                Icon("Ui/Sprites/Design/IconSpinnerArrowLeft", "Rotation down", () => row.Widget.LocalRotation -= _step),
-                Icon("Ui/Sprites/Design/IconSpinnerArrowRight", "Rotation up", () => row.Widget.LocalRotation += _step)));
+                Icon("Ui/Sprites/Design/IconSpinnerArrowLeft", "Rotation down", () => row.Widget.LocalRotation -= _step * RotationStepFactor),
+                Icon("Ui/Sprites/Design/IconSpinnerArrowRight", "Rotation up", () => row.Widget.LocalRotation += _step * RotationStepFactor)));
 
             group.Add(new DropdownModel(
                 "Step",
