@@ -41,11 +41,9 @@ namespace Assets.Scripts.Mfd
         private GroupModel _selectedGroup;
         private GroupModel _changesGroup;
         private GroupModel _listGroup;
-        private LabelModel _checkingLabel;
         private string _shownList;
         private Row _selected;
         private XElement _classifyProgram;
-        private int _classifyNext;
         private float _step = 2f;
         private bool _allowShared;
         private string _message;
@@ -93,8 +91,12 @@ namespace Assets.Scripts.Mfd
             model.AddGroup(_selectedGroup);
             _changesGroup = this.BuildChangesGroup();
             model.AddGroup(_changesGroup);
-            _listGroup = new GroupModel("Widgets");
-            _checkingLabel = _listGroup.Add(new LabelModel("Checking the widgets...", ElementAlignment.Left));
+
+            // Before the panel exists: replacing a group before its Start leaves a dead element behind,
+            // which throws in the panel's update every frame and stops the rows after it from updating.
+            _classifyProgram = new XElement(_data.FlightProgramXml);
+            this.ClassifyAll();
+            _listGroup = this.BuildListGroup();
             model.AddGroup(_listGroup);
 
             var info = new InspectorPanelCreationInfo
@@ -106,7 +108,6 @@ namespace Assets.Scripts.Mfd
             };
             _panel = Game.Instance.UserInterface.CreateInspectorPanel(model, info);
             _panel.Closed += this.OnPanelClosed;
-            _classifyProgram = new XElement(_data.FlightProgramXml);
         }
 
         public void Close()
@@ -162,8 +163,6 @@ namespace Assets.Scripts.Mfd
                     text.enableWordWrapping = true;
                 }
             }
-
-            this.ClassifySome();
         }
 
         private static string Number(float value)
@@ -171,24 +170,13 @@ namespace Assets.Scripts.Mfd
             return value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
         }
 
-        /// <summary>Works out over several frames what each widget can save, as a large program takes a moment per widget.</summary>
-        private void ClassifySome()
+        /// <summary>Works out what each widget can save. The flight is held, so a moment on a large program does no harm.</summary>
+        private void ClassifyAll()
         {
-            // The panel builds its elements in its Start. A group replaced before that leaves a dead element
-            // behind, which throws in the panel's update every frame and stops the rows after it from updating.
-            if (_checkingLabel != null && _checkingLabel.ItemElement == null)
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            foreach (var row in _rows)
             {
-                return;
-            }
-
-            if (_classifyNext >= _rows.Count && _shownList != null)
-            {
-                return;
-            }
-
-            for (var i = 0; i < WidgetsClassifiedPerFrame && _classifyNext < _rows.Count; i++)
-            {
-                var row = _rows[_classifyNext++];
+                row.CanArrange = false;
                 if (row.IsAlive)
                 {
                     var lines = this.Classify(row);
@@ -196,37 +184,21 @@ namespace Assets.Scripts.Mfd
                     row.Label = row.Name + StatusSuffix(lines);
                     row.Tooltip = string.Join("\n", lines.Select(line => line.ToString()));
                 }
-                else
-                {
-                    row.CanArrange = false;
-                }
             }
 
-            if (_classifyNext >= _rows.Count)
-            {
-                this.ShowList();
-            }
-        }
-
-        /// <summary>Only the widgets that saving can move or resize. Rebuilt only when the list differs, as that resets its rows.</summary>
-        private void ShowList()
-        {
-            var shown = _rows.Where(row => row.CanArrange).ToList();
             this.ScreenSize(out var width, out var height);
-            EditorLog.Debug("MFD list: " + shown.Count + " of " + _rows.Count + " widgets listed, screen " + width + " x " + height + ".");
+            EditorLog.Debug("MFD list: " + _rows.Count(row => row.CanArrange) + " of " + _rows.Count + " widgets listed, screen " + width + " x " + height + ", " + clock.ElapsedMilliseconds + " ms.");
             foreach (var row in _rows.Where(item => !item.CanArrange))
             {
                 EditorLog.Debug("MFD widget " + row.Name + " not listed: " + (row.Tooltip ?? "it's gone"));
             }
+        }
 
-            var signature = string.Join("\n", shown.Select(row => row.Label));
-            if (signature == _shownList)
-            {
-                return;
-            }
-
-            _shownList = signature;
-            _checkingLabel = null;
+        /// <summary>Only the widgets that saving can move or resize.</summary>
+        private GroupModel BuildListGroup()
+        {
+            var shown = _rows.Where(row => row.CanArrange).ToList();
+            _shownList = string.Join("\n", shown.Select(row => row.Label));
             var group = new GroupModel("Widgets");
             foreach (var row in _rows)
             {
@@ -244,8 +216,18 @@ namespace Assets.Scripts.Mfd
                 this.AddWrappedTo(group, "No widget here can be moved or resized and saved. A program may build more of its screen later: open this again then.");
             }
 
-            _panel.ReplaceGroup(_listGroup, group);
-            _listGroup = group;
+            return group;
+        }
+
+        /// <summary>After a save, only if the list differs, as rebuilding it resets its rows.</summary>
+        private void RefreshList()
+        {
+            if (string.Join("\n", _rows.Where(row => row.CanArrange).Select(row => row.Label)) != _shownList)
+            {
+                var group = this.BuildListGroup();
+                _panel.ReplaceGroup(_listGroup, group);
+                _listGroup = group;
+            }
         }
 
         private List<MfdLine> Classify(Row row)
@@ -524,7 +506,8 @@ namespace Assets.Scripts.Mfd
                 }
 
                 _classifyProgram = new XElement(program);
-                _classifyNext = 0;
+                this.ClassifyAll();
+                this.RefreshList();
                 this.ReplaceChangesGroup();
             }
             catch (Exception e)

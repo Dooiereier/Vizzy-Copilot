@@ -2,12 +2,17 @@ namespace Assets.Scripts
 {
     using System.Collections.Generic;
     using System.Linq;
+    using System.Reflection;
     using System.Xml.Linq;
     using Assets.Scripts.Craft.Parts.Modifiers;
+    using Assets.Scripts.Craft.Parts.Modifiers.Mfd;
+    using ModApi.Craft.Program.Craft;
 
     /// <summary>Puts a program in place on a part, carrying its running threads over.</summary>
     public static class ProgramSwapper
     {
+        private static readonly FieldInfo CraftServiceField = typeof(FlightProgramScript).GetField("_craftService", BindingFlags.Instance | BindingFlags.NonPublic);
+
         /// <summary>For a running part. Returns false if the new program didn't load and the old one is back.</summary>
         public static bool Swap(FlightProgramData data, XElement newProgram, out string message)
         {
@@ -36,12 +41,15 @@ namespace Assets.Scripts
                 return false;
             }
 
+            PrimeMfd(script);
+
             // Serializing straight after restoring shows whether every thread came back as remapped.
             script.UpdateXml();
             LogThreads("After", data.ProcessXml, newProgram);
             if (remapped != null && !XNode.DeepEquals(remapped.Process, data.ProcessXml))
             {
-                EditorLog.Warning("Resume check: the running state isn't what was restored. A game update may have changed its format.");
+                // Not always a fault: a variable holding "#499c57" comes back as the color's numbers.
+                EditorLog.Debug("Resume check: the running state isn't exactly what was restored.");
                 LogFirstDifference(remapped.Process, data.ProcessXml);
             }
 
@@ -55,6 +63,7 @@ namespace Assets.Scripts
             SilenceBeep(script);
             data.ProcessXml = null;
             script.StartProgram();
+            PrimeMfd(script);
             return script.FlightProgram != null;
         }
 
@@ -66,6 +75,28 @@ namespace Assets.Scripts
             data.FlightProgramXml = newProgram;
             data.ProcessXml = new XElement(remapped.Process);
             return message;
+        }
+
+        /// <summary>
+        /// The new craft service only finds its MFD in GetMfdWidget, while GetMfdChildWidgets, behind "destroy
+        /// all widgets", uses that field directly. A program that starts normally creates a widget first, but a
+        /// resumed thread can reach "destroy all" first, which throws. Private: the script doesn't expose its service.
+        /// </summary>
+        private static void PrimeMfd(FlightProgramScript script)
+        {
+            if (script.PartScript.GetModifier<MfdScript>() == null)
+            {
+                return;
+            }
+
+            var service = CraftServiceField?.GetValue(script) as ICraftService;
+            if (service == null)
+            {
+                EditorLog.Warning("Couldn't reach the MFD program's craft service: its 'destroy all widgets' block may fail.");
+                return;
+            }
+
+            service.GetMfdWidget("_Screen");
         }
 
         private static void LogFirstDifference(XElement restored, XElement running)
