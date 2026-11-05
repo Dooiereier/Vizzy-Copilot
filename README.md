@@ -31,7 +31,9 @@ Press **Shift+A**, use **Edit Vizzy** in the flight menu, or use the Vizzy butto
 - Each Apply restarts the memory of `PID`, `smooth`, `sum` and `rate` in Funk.
 - Renaming a variable while it's in use loses its running value.
 
-- **Arrange MFD** (off by default, turn it on in the mod's settings): a third button in the flight Vizzy flyout opens a panel for a custom MFD program. Choose a widget, then move, resize or rotate it by typing values or with steps of 1, 10 or 100. The flight is paused meanwhile. The panel shows the old and new value or formula for each change, or why it can't be saved. Save writes them into the running program and the craft's files, after backing those up as `.bak` files next to them. Closing the panel puts back what wasn't saved. It changes plain numbers, a Funk formula with one number to change, or the arguments of a custom instruction; it leaves anything else alone and says so.
+### Arrange MFD
+
+Off by default: turn it on in the mod's settings. A third button in the flight Vizzy flyout opens a panel for a custom MFD program. Choose a widget, then move, resize or rotate it by typing values or with steps of 1, 10 or 100. The flight is paused meanwhile. The panel shows the old and new value or formula for each change, or why it can't be saved. Save writes them into the running program and the craft's files, after backing those up as `.bak` files next to them. Closing the panel puts back what wasn't saved. It changes plain numbers, a Funk formula with one number to change, or the arguments of a custom instruction; it leaves anything else alone and says so.
 
 ## In the Vizzy editor
 
