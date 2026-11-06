@@ -50,7 +50,11 @@ namespace Assets.Scripts
             FlightPause.Enforce();
             RunGuarded("Couldn't handle the picker's keys: ", ProgramPicker.HandleKeys);
             this.Session?.Update();
-            RunGuarded("Couldn't update the MFD panel: ", () => _mfdSession?.Update());
+            // Nothing at all while the panel is closed, not even a delegate.
+            if (_mfdSession?.IsOpen == true)
+            {
+                RunGuarded("Couldn't update the MFD panel: ", _mfdSession.Update);
+            }
 
             if (_openRequestFrame >= 0 && Time.frameCount > _openRequestFrame)
             {
