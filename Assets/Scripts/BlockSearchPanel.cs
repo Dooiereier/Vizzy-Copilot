@@ -35,6 +35,9 @@ namespace Assets.Scripts
 
         // Results start this far in (LoadNodes), so as much room on the other side.
         private const float SideMargin = 25f;
+
+        // The box keeps the same margin whatever the panel's width: a percentage would grow with the results.
+        private const float InputMargin = 15f;
         private const float HighlightPadding = 3f;
 
         // Room above the first result, whose highlight would otherwise touch the list's top.
@@ -52,6 +55,7 @@ namespace Assets.Scripts
         private XmlElement _flyout;
         private RectTransform _results;
         private TMP_InputField _input;
+        private XmlElement _inputElement;
         private List<BlockEntry> _entries;
         private string _shownText;
         private string _keepText = string.Empty;
@@ -104,7 +108,7 @@ namespace Assets.Scripts
                         new XAttribute("text", string.Empty),
                         new XAttribute("rectAlignment", "UpperCenter"),
                         new XAttribute("lineType", "SingleLine"),
-                        new XAttribute("width", "90%"),
+                        new XAttribute("width", (MinWidth - (2f * InputMargin)).ToString()),
                         new XAttribute("height", "30"),
                         new XAttribute("offsetXY", "0 -34"),
                         new XElement(ns + "TMP_Placeholder", new XAttribute("text", "Type a block name"), new XAttribute("alignment", "Left")),
@@ -142,7 +146,8 @@ namespace Assets.Scripts
             var layout = (XmlLayout)((IXmlLayoutController)controller).XmlLayout;
             _flyout = layout.GetElementById(FlyoutId);
             _results = layout.GetElementById(ResultsId).rectTransform;
-            _input = layout.GetElementById(InputId).GetComponentInChildren<TMP_InputField>(true);
+            _inputElement = layout.GetElementById(InputId);
+            _input = _inputElement.GetComponentInChildren<TMP_InputField>(true);
             _input.onFocusSelectAll = false;
             _scroll = _results.GetComponentInParent<ScrollRect>(true);
 
@@ -518,7 +523,9 @@ namespace Assets.Scripts
                 block.gameObject.AddComponent<ResultClick>().Connect(this, block);
             }
 
-            _flyout.SetAndApplyAttribute("width", Mathf.Clamp(size.x + (2f * SideMargin), MinWidth, MaxWidth).ToString());
+            var width = Mathf.Clamp(size.x + (2f * SideMargin), MinWidth, MaxWidth);
+            _flyout.SetAndApplyAttribute("width", width.ToString());
+            _inputElement.SetAndApplyAttribute("width", (width - (2f * InputMargin)).ToString());
 
             // Top-level results are the panel's own children; the old ones are only gone at the end of the frame.
             _shownBlocks.Clear();
