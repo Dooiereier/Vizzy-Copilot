@@ -56,6 +56,7 @@ namespace Assets.Scripts
         private RectTransform _results;
         private TMP_InputField _input;
         private XmlElement _inputElement;
+        private Transform _menuButton;
         private List<BlockEntry> _entries;
         private string _shownText;
         private string _keepText = string.Empty;
@@ -162,6 +163,7 @@ namespace Assets.Scripts
 
             layout.GetElementById(CloseId).AddOnClickEvent(Close);
             _button = layout.GetElementById(ButtonId);
+            _menuButton = layout.GetElementById("menu-button")?.transform;
             _button.AddOnClickEvent(() =>
             {
                 if (IsOpen)
@@ -184,10 +186,12 @@ namespace Assets.Scripts
                     return;
                 }
 
-                // The game adds its category buttons after this one is built.
-                if (_button.transform.GetSiblingIndex() != _button.transform.parent.childCount - 1)
+                // Second from the top, just below the menu button. The game adds its category buttons after
+                // this one is built, so the place is checked each frame.
+                var place = _menuButton != null ? _menuButton.GetSiblingIndex() + 1 : 1;
+                if (_button.transform.GetSiblingIndex() != place)
                 {
-                    _button.transform.SetAsLastSibling();
+                    _button.transform.SetSiblingIndex(place);
                 }
 
                 var shift = UnityEngine.Input.GetKey(KeyCode.LeftShift) || UnityEngine.Input.GetKey(KeyCode.RightShift);
