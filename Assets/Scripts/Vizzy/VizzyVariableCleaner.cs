@@ -39,24 +39,24 @@ namespace Assets.Scripts.Vizzy
             if (funkUnreadable)
             {
                 // Funk text built by other blocks could name any variable.
-                editor.ShowMessage("No variables removed: a Funk block's text is built by other blocks.");
+                editor.ShowMessage(Text.Get("VizzyStudio.Clean.FunkBuilt"));
                 return;
             }
 
             if (unused.Count == 0)
             {
-                editor.ShowMessage("No unused variables.");
+                editor.ShowMessage(Text.Get("VizzyStudio.Clean.NoneUnused"));
                 return;
             }
 
             var names = string.Join("\n", unused.Take(MaxNamesListed));
             if (unused.Count > MaxNamesListed)
             {
-                names += "\nand " + (unused.Count - MaxNamesListed) + " more";
+                names += "\n" + Text.Get("VizzyStudio.Clean.AndMore", unused.Count - MaxNamesListed);
             }
 
             var dialog = Game.Instance.UserInterface.CreateMessageDialog(ModApi.Ui.MessageDialogType.OkayCancel, null, true);
-            dialog.MessageText = "Remove " + (unused.Count == 1 ? "this unused variable?" : "these " + unused.Count + " unused variables?") + "\n\n" + names;
+            dialog.MessageText = Text.Count("VizzyStudio.Clean.Question", unused.Count) + "\n\n" + names;
             dialog.OkayClicked += _ =>
             {
                 dialog.Close();
@@ -66,7 +66,7 @@ namespace Assets.Scripts.Vizzy
                     editor.DeleteVariable(name);
                 }
 
-                editor.ShowMessage(unused.Count + " unused variable(s) removed.");
+                editor.ShowMessage(Text.Count("VizzyStudio.Clean.Removed", unused.Count));
                 EditorLog.Info("Removed " + unused.Count + " unused variable(s): " + string.Join(", ", unused));
             };
         }

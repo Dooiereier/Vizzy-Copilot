@@ -65,13 +65,13 @@ namespace Assets.Scripts
     /// </summary>
     public enum EditorModifier
     {
-        [EnumOption("Option / Alt", "Option on a Mac.")]
+        [EnumOption("{VizzyStudio.Settings.Modifier.Alt}", "{VizzyStudio.Settings.Modifier.Alt.Description}")]
         Alt,
 
-        [EnumOption("Ctrl", "Also lowers the throttle.")]
+        [EnumOption("{VizzyStudio.Settings.Modifier.Control}", "{VizzyStudio.Settings.Modifier.Control.Description}")]
         Control,
 
-        [EnumOption("Shift", "Also raises the throttle.")]
+        [EnumOption("{VizzyStudio.Settings.Modifier.Shift}", "{VizzyStudio.Settings.Modifier.Shift.Description}")]
         Shift,
     }
 
@@ -145,36 +145,36 @@ namespace Assets.Scripts
         // XML names are given explicitly: the game derives them from the display name otherwise.
         protected override void InitializeSettings()
         {
-            this.CheckForUpdates = this.CreateBool("Check For Updates", "CheckForUpdates")
-                .SetDescription("At game start, reads the latest version from the mod's SimpleRockets.com page and, if it's newer, offers to open the page. Nothing is downloaded automatically.")
+            this.CheckForUpdates = this.CreateBool("{VizzyStudio.Settings.CheckForUpdates}", "CheckForUpdates")
+                .SetDescription("{VizzyStudio.Settings.CheckForUpdates.Description}")
                 .SetDefault(true);
 
-            this.DebugLogging = this.CreateBool("Debug Logging", "DebugLogging")
-                .SetDescription("Writes thread positions and other details to Player.log.")
+            this.DebugLogging = this.CreateBool("{VizzyStudio.Settings.DebugLogging}", "DebugLogging")
+                .SetDescription("{VizzyStudio.Settings.DebugLogging.Description}")
                 .SetDefault(false);
 
-            this.Key = this.CreateEnum<EditorKey>("Editor Key", "Key")
-                .SetDescription("With the modifier below, opens the Vizzy editor in flight. Pressed again, it applies the edit.")
+            this.Key = this.CreateEnum<EditorKey>("{VizzyStudio.Settings.Key}", "Key")
+                .SetDescription("{VizzyStudio.Settings.Key.Description}")
                 .SetDefault(EditorKey.A);
 
-            this.Modifier = this.CreateEnum<EditorModifier>("Editor Key Modifier", "Modifier")
-                .SetDescription("Held with the editor key.")
+            this.Modifier = this.CreateEnum<EditorModifier>("{VizzyStudio.Settings.Modifier}", "Modifier")
+                .SetDescription("{VizzyStudio.Settings.Modifier.Description}")
                 .SetDefault(EditorModifier.Alt);
 
-            this.ShowFlightButtons = this.CreateBool("Show Flight Buttons", "ShowFlightButtons")
-                .SetDescription("Shows a Vizzy button on the flight nav panel, with Restart Vizzy and Edit Vizzy. Applies from the next flight.")
+            this.ShowFlightButtons = this.CreateBool("{VizzyStudio.Settings.ShowFlightButtons}", "ShowFlightButtons")
+                .SetDescription("{VizzyStudio.Settings.ShowFlightButtons.Description}")
                 .SetDefault(true);
 
-            this.ArrangeMfd = this.CreateBool("Arrange MFD", "ArrangeMfd")
-                .SetDescription("Adds Arrange MFD to the flight buttons: move, resize and rotate the widgets of a custom MFD program, then save the values into the program. Saving also changes the craft's files, after backing them up. Applies from the next flight.")
+            this.ArrangeMfd = this.CreateBool("{VizzyStudio.Settings.ArrangeMfd}", "ArrangeMfd")
+                .SetDescription("{VizzyStudio.Settings.ArrangeMfd.Description}")
                 .SetDefault(false);
 
-            this.FunkSyntaxHighlight = this.CreateBool("Funk Syntax Highlight", "FunkSyntaxHighlight")
-                .SetDescription("Colors Funk fields and marks errors in red, in the designer and in flight.")
+            this.FunkSyntaxHighlight = this.CreateBool("{VizzyStudio.Settings.FunkSyntaxHighlight}", "FunkSyntaxHighlight")
+                .SetDescription("{VizzyStudio.Settings.FunkSyntaxHighlight.Description}")
                 .SetDefault(true);
 
-            this.FunkAutoFill = this.CreateBool("Funk Auto-Fill", "FunkAutoFill")
-                .SetDescription("Suggests Funk names while typing in a Funk field, in the designer and in flight. Up and Down choose, Enter takes it, Esc closes the list.")
+            this.FunkAutoFill = this.CreateBool("{VizzyStudio.Settings.FunkAutoFill}", "FunkAutoFill")
+                .SetDescription("{VizzyStudio.Settings.FunkAutoFill.Description}")
                 .SetDefault(true);
         }
     }

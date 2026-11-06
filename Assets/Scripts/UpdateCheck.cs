@@ -81,9 +81,9 @@ namespace Assets.Scripts
             try
             {
                 var dialog = Game.Instance.UserInterface.CreateMessageDialog(MessageDialogType.OkayCancel);
-                dialog.MessageText = "A new version of Vizzy Studio is available.\n\nInstalled: " + installed + "\nLatest: " + latest;
-                dialog.OkayButtonText = "OPEN DOWNLOAD PAGE";
-                dialog.CancelButtonText = "LATER";
+                dialog.MessageText = Text.Get("VizzyStudio.Update.Available", installed, latest);
+                dialog.OkayButtonText = Text.Get("VizzyStudio.Update.Open");
+                dialog.CancelButtonText = Text.Get("VizzyStudio.Update.Later");
                 dialog.OkayClicked += d =>
                 {
                     d.Close();

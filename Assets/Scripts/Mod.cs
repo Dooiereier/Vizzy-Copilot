@@ -40,7 +40,7 @@ namespace Assets.Scripts
             var assemblies = AppDomain.CurrentDomain.GetAssemblies().Select(assembly => assembly.GetName().Name).ToList();
             if (!assemblies.Contains("0Harmony"))
             {
-                _startupProblem = "Vizzy Studio needs the Juno Harmony mod, so it is switched off. Install and enable Juno Harmony, then restart the game.";
+                _startupProblem = Text.Get("VizzyStudio.Startup.NeedsHarmony");
                 Debug.LogError("[VizzyStudio] Juno Harmony isn't loaded, so the mod is off.");
                 return;
             }
@@ -49,7 +49,7 @@ namespace Assets.Scripts
             var replaced = new[] { "VizzyDebugger", "Vizzy Exporter", "Vizzy McBlinky" }.Where(assemblies.Contains).ToList();
             if (replaced.Count > 0)
             {
-                _startupProblem = "Vizzy Studio includes the features of " + string.Join(", ", replaced) + ". Remove those mods, or both will act on the same editor.";
+                _startupProblem = Text.Get("VizzyStudio.Startup.ReplacedMods", string.Join(", ", replaced));
                 Debug.LogWarning("[VizzyStudio] Replaced mods are also loaded: " + string.Join(", ", replaced));
             }
 
@@ -60,7 +60,7 @@ namespace Assets.Scripts
             }
             catch (Exception e)
             {
-                _startupProblem = "Vizzy Studio couldn't start with the Harmony version that's loaded, so it is switched off. See Player.log.";
+                _startupProblem = Text.Get("VizzyStudio.Startup.HarmonyFailed");
                 Debug.LogError("[VizzyStudio] Couldn't start: " + e);
             }
         }

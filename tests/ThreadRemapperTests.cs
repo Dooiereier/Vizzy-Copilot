@@ -13,6 +13,9 @@ public static class ThreadRemapperTests
 
     public static int Main()
     {
+        // Players' text comes from the game's Locale; here, from the English file.
+        Assets.Scripts.Text.Resolve = EnglishText.Load();
+        EnglishText.Run(Check);
         ValueEditKeepsEverything();
         ReorderedStacksFollowTheBlock();
         NewOnStartBeforeEverythingDoesNotMoveThreads();

@@ -24,14 +24,14 @@ namespace Assets.Scripts.Exporter
         {
             if (_selected == null || _selected.VizzyUI as VizzyUIScript != editor)
             {
-                editor.ShowMessage("Click on a block to export to another Vizzy.");
+                editor.ShowMessage(Text.Get("VizzyStudio.Export.ClickBlockFirst"));
                 return;
             }
 
             var block = _selected;
             if (!VizzyExportSnippet.TryCapture(block, out var snippet, out var error))
             {
-                Game.Instance.UserInterface.CreateMessageDialog(error ?? "Nothing to export.");
+                Game.Instance.UserInterface.CreateMessageDialog(error ?? Text.Get("VizzyStudio.Export.Nothing"));
                 return;
             }
 

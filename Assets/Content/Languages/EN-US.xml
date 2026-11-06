@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Strings>
+   <!-- Vizzy Studio: English, the baseline every key starts in. -->
+   <!-- Flight -->
+   <s id="VizzyStudio.Flight.NoMfdProgram">No custom MFD program on this craft.</s>
+   <s id="VizzyStudio.Flight.NoProgramToRestart">No Vizzy program to restart on this craft.</s>
+   <s id="VizzyStudio.Flight.PartGone">The part with this Vizzy program is gone.</s>
+   <s id="VizzyStudio.Flight.ProgramDidntLoad">The Vizzy program didn't load: see Player.log.</s>
+   <s id="VizzyStudio.Flight.LeaveWarp">Leave time warp before changing a Vizzy program.</s>
+   <s id="VizzyStudio.Flight.NoEditableProgram">No editable Vizzy program on this craft.</s>
+   <s id="VizzyStudio.Flight.RestartQuestion">Restart {0}'s Vizzy program from the top? Its threads and variables reset. Other programs keep running.</s>
+   <s id="VizzyStudio.Flight.KeptLatestEdit">Kept your latest Vizzy edit. {0} goes back to the quicksave's program.</s>
+   <s id="VizzyStudio.Flight.NothingToRevert">No kept Vizzy edit to undo: load a quicksave first.</s>
+   <s id="VizzyStudio.Flight.Reverted">Back to the quicksave's Vizzy program.</s>
+   <s id="VizzyStudio.Editor.ApplyFailed">Couldn't apply the Vizzy edit: see Player.log.</s>
+   <s id="VizzyStudio.Editor.PartGoneNotApplied">The part with this Vizzy program is gone: the edit wasn't applied.</s>
+   <s id="VizzyStudio.Editor.EditDidntLoad">The edited Vizzy program didn't load: the old one is still running.</s>
+   <s id="VizzyStudio.Editor.ThreadsEnded.One">1 Vizzy thread ended: its block was deleted.</s>
+   <s id="VizzyStudio.Editor.ThreadsEnded.Many">{0} Vizzy threads ended: their blocks were deleted.</s>
+   <s id="VizzyStudio.Picker.Title">Select vizzy</s>
+   <s id="VizzyStudio.Buttons.Vizzy">Vizzy</s>
+   <s id="VizzyStudio.Buttons.ArrangeMfd">Arrange MFD</s>
+   <s id="VizzyStudio.Buttons.RestartVizzy">Restart Vizzy</s>
+   <s id="VizzyStudio.Buttons.EditVizzy">Edit Vizzy</s>
+   <!-- Editor -->
+   <s id="VizzyStudio.Editor.CleanVariablesTooltip">Removes global variables this program doesn't use, after asking. Another part's program or an InputController could still read them by name.</s>
+   <s id="VizzyStudio.Editor.CleanVariables">CLEAN VARIABLES</s>
+   <s id="VizzyStudio.Editor.ExportBlockTooltip">Click a block on the canvas, then this, to copy it to another saved program. An instruction brings the blocks below it.</s>
+   <s id="VizzyStudio.Editor.ExportBlock">EXPORT BLOCK</s>
+   <!-- CleanVariables -->
+   <s id="VizzyStudio.Clean.FunkBuilt">No variables removed: a Funk block's text is built by other blocks.</s>
+   <s id="VizzyStudio.Clean.NoneUnused">No unused variables.</s>
+   <s id="VizzyStudio.Clean.AndMore">and {0} more</s>
+   <s id="VizzyStudio.Clean.Question.One">Remove this unused variable?</s>
+   <s id="VizzyStudio.Clean.Question.Many">Remove these {0} unused variables?</s>
+   <s id="VizzyStudio.Clean.Removed.One">1 unused variable removed.</s>
+   <s id="VizzyStudio.Clean.Removed.Many">{0} unused variables removed.</s>
+   <!-- Export -->
+   <s id="VizzyStudio.Export.ClickBlockFirst">Click on a block to export to another Vizzy.</s>
+   <s id="VizzyStudio.Export.Nothing">Nothing to export.</s>
+   <s id="VizzyStudio.Export.Title">Export To</s>
+   <s id="VizzyStudio.Export.Button">Export</s>
+   <s id="VizzyStudio.Export.SameProgram">That's the program you have open. Choose another one.</s>
+   <s id="VizzyStudio.Export.Failed">Export failed.</s>
+   <s id="VizzyStudio.Export.Variables.One">1 global variable</s>
+   <s id="VizzyStudio.Export.Variables.Many">{0} global variables</s>
+   <s id="VizzyStudio.Export.CustomExpressions.One">1 custom expression</s>
+   <s id="VizzyStudio.Export.CustomExpressions.Many">{0} custom expressions</s>
+   <s id="VizzyStudio.Export.CustomInstructions.One">1 custom instruction</s>
+   <s id="VizzyStudio.Export.CustomInstructions.Many">{0} custom instructions</s>
+   <s id="VizzyStudio.Export.ListSeparator"> and </s>
+   <s id="VizzyStudio.Export.Created">Created {0} it needed.</s>
+   <s id="VizzyStudio.Export.Done">Exported to {0}. It'll show up as a new block group next time that program is loaded.</s>
+   <s id="VizzyStudio.Export.FileGone">That file no longer exists.</s>
+   <s id="VizzyStudio.Export.NotAProgram">That file doesn't look like a valid Vizzy program.</s>
+   <s id="VizzyStudio.Export.NameTaken">That program already has a custom block called {0}.</s>
+   <s id="VizzyStudio.Export.WriteFailed">Couldn't export into that file: {0}</s>
+   <s id="VizzyStudio.Export.ReadFailed">Couldn't read this block: {0}</s>
+   <!-- Startup -->
+   <s id="VizzyStudio.Startup.NeedsHarmony">Vizzy Studio needs the Juno Harmony mod, so it is switched off. Install and enable Juno Harmony, then restart the game.</s>
+   <s id="VizzyStudio.Startup.ReplacedMods">Vizzy Studio includes the features of {0}. Remove those mods, or both will act on the same editor.</s>
+   <s id="VizzyStudio.Startup.HarmonyFailed">Vizzy Studio couldn't start with the Harmony version that's loaded, so it is switched off. See Player.log.</s>
+   <!-- Update -->
+   <s id="VizzyStudio.Update.Available">A new version of Vizzy Studio is available.\n\nInstalled: {0}\nLatest: {1}</s>
+   <s id="VizzyStudio.Update.Open">OPEN DOWNLOAD PAGE</s>
+   <s id="VizzyStudio.Update.Later">LATER</s>
+   <!-- BlockSearch -->
+   <s id="VizzyStudio.BlockSearch.Tooltip">Block Search (Shift+F)</s>
+   <s id="VizzyStudio.BlockSearch.Title">BLOCK SEARCH</s>
+   <s id="VizzyStudio.BlockSearch.Placeholder">Type a block name</s>
+   <s id="VizzyStudio.BlockSearch.CustomExpressions">Custom Expressions</s>
+   <s id="VizzyStudio.BlockSearch.CustomInstructions">Custom Instructions</s>
+   <s id="VizzyStudio.BlockSearch.Lists">Lists</s>
+   <s id="VizzyStudio.BlockSearch.Variables">Variables</s>
+   <!-- JumpTo -->
+   <s id="VizzyStudio.JumpTo.Tooltip">Jump To: moves the view to tagged blocks. Tag them with a comment starting with //, such as //Launch, or //Launch/Pitch Program to nest it.</s>
+   <s id="VizzyStudio.JumpTo.Title">JUMP TO</s>
+   <!-- Matrix -->
+   <s id="VizzyStudio.Matrix.Multiply.Format">Matrix Multiply A=(0), B=(1)</s>
+   <s id="VizzyStudio.Matrix.Multiply.Tooltip">3x3 matrix multiplication. Both inputs are 9-element row-major lists [m00..m22].\nVizzy Studio mod required</s>
+   <s id="VizzyStudio.Matrix.GetElement.Format">Get Matrix Element M=(0), Row=(1:Number), Col=(2:Number)</s>
+   <s id="VizzyStudio.Matrix.GetElement.Tooltip">Returns element M[row][col]. Row and col are 0-based.\nVizzy Studio mod required</s>
+   <s id="VizzyStudio.Matrix.SetElement.Format">Set Matrix Element M=(0), Row=(1:Number), Col=(2:Number), Value=(3:Number)</s>
+   <s id="VizzyStudio.Matrix.SetElement.Tooltip">Returns a copy of M with element [row][col] replaced by Value.\nVizzy Studio mod required</s>
+   <s id="VizzyStudio.Matrix.Normalize.Format">Normalize Matrix M=(0), Mode=(1:Number)</s>
+   <s id="VizzyStudio.Matrix.Normalize.Tooltip">Mode 0: normalize columns, 1: normalize rows, 2: Frobenius scale to length 1.\nVizzy Studio mod required</s>
+   <!-- Mfd -->
+   <s id="VizzyStudio.Mfd.RestartQuestion">Restart {0}'s MFD program from the top? Its widgets are removed and its threads and variables reset. Other programs keep running.</s>
+   <!-- MfdSave -->
+   <s id="VizzyStudio.MfdSave.FileDiffers">Saved for this flight only: the craft file {0} has a different program, for example after a change in the designer or Edit Vizzy. No file was changed.</s>
+   <s id="VizzyStudio.MfdSave.NoFile">Saved for this flight only: no craft file with this program was found.</s>
+   <s id="VizzyStudio.MfdSave.WriteFailed">Saved for this flight, but writing the craft files failed: see Player.log.</s>
+   <s id="VizzyStudio.MfdSave.MayHoldChange">These may hold the change, with a .bak-{0} copy next to them: {1}.</s>
+   <s id="VizzyStudio.MfdSave.NoFileChanged">No file was changed.</s>
+   <s id="VizzyStudio.MfdSave.SavedToCraft">Saved to the running program and the craft {0}, with a backup.</s>
+   <s id="VizzyStudio.MfdSave.SavedToWorkingCopy">Saved to the running program and the designer's working copy, with a backup.</s>
+   <s id="VizzyStudio.MfdSave.DesignLacksProgram">The saved design {0} doesn't have this program, so it wasn't changed: save the craft in the designer to keep this.</s>
+   <s id="VizzyStudio.MfdSave.NoDesign">This craft has no saved design: save it in the designer to keep this.</s>
+   <!-- MfdPanel -->
+   <s id="VizzyStudio.Mfd.NoMfd">This part has no MFD.</s>
+   <s id="VizzyStudio.Mfd.Widgets">Widgets</s>
+   <s id="VizzyStudio.Mfd.NoWidgets">No widget here can be moved or resized and saved. A program may build more of its screen later: open this again then.</s>
+   <s id="VizzyStudio.Mfd.OnlyPosition">only position</s>
+   <s id="VizzyStudio.Mfd.OnlySize">only size</s>
+   <s id="VizzyStudio.Mfd.Shared">shared</s>
+   <s id="VizzyStudio.Mfd.SelectedWidget">Selected widget</s>
+   <s id="VizzyStudio.Mfd.ChooseWidget">Choose a widget in the list below.</s>
+   <s id="VizzyStudio.Mfd.X">X</s>
+   <s id="VizzyStudio.Mfd.Y">Y</s>
+   <s id="VizzyStudio.Mfd.Width">Width</s>
+   <s id="VizzyStudio.Mfd.Height">Height</s>
+   <s id="VizzyStudio.Mfd.Rotation">Rotation</s>
+   <s id="VizzyStudio.Mfd.MoveLeft">Move left</s>
+   <s id="VizzyStudio.Mfd.MoveRight">Move right</s>
+   <s id="VizzyStudio.Mfd.MoveUp">Move up</s>
+   <s id="VizzyStudio.Mfd.MoveDown">Move down</s>
+   <s id="VizzyStudio.Mfd.Narrower">Narrower</s>
+   <s id="VizzyStudio.Mfd.Wider">Wider</s>
+   <s id="VizzyStudio.Mfd.Taller">Taller</s>
+   <s id="VizzyStudio.Mfd.Shorter">Shorter</s>
+   <s id="VizzyStudio.Mfd.RotationDown">Rotation down</s>
+   <s id="VizzyStudio.Mfd.RotationUp">Rotation up</s>
+   <s id="VizzyStudio.Mfd.Step">Step</s>
+   <s id="VizzyStudio.Mfd.Changes">Changes</s>
+   <s id="VizzyStudio.Mfd.NothingChanged">Nothing changed yet.</s>
+   <s id="VizzyStudio.Mfd.RestartMfd">Restart MFD</s>
+   <s id="VizzyStudio.Mfd.WontSave">Won't save: {0}</s>
+   <s id="VizzyStudio.Mfd.AllowShared">Also change shared variables</s>
+   <s id="VizzyStudio.Mfd.AllowSharedTooltip">A shared variable moves everything that reads it. Widgets the panel can work out move on screen now.</s>
+   <s id="VizzyStudio.Mfd.FollowersNotShown">Some widgets that follow this can't be moved here, such as ones a custom instruction places: Save, then Restart MFD to see them.</s>
+   <s id="VizzyStudio.Mfd.Save">Save</s>
+   <s id="VizzyStudio.Mfd.Revert">Revert</s>
+   <s id="VizzyStudio.Mfd.NothingSaved">Nothing could be saved.</s>
+   <s id="VizzyStudio.Mfd.SharedAfterRestart">Other widgets reading the shared variable that the panel couldn't move here move after a restart.</s>
+   <s id="VizzyStudio.Mfd.SaveFailed">Saving failed: see Player.log.</s>
+   <s id="VizzyStudio.Mfd.UnsavedLost">Changes that aren't saved are lost.</s>
+   <s id="VizzyStudio.Mfd.RestartFailed">The MFD program didn't restart: see Player.log.</s>
+   <s id="VizzyStudio.Mfd.MovedFollowers.One">Moved 1 other widget that follows on screen to show it.</s>
+   <s id="VizzyStudio.Mfd.MovedFollowers.Many">Moved {0} other widgets that follow on screen to show it.</s>
+   <s id="VizzyStudio.Mfd.Limits">({0})</s>
+   <s id="VizzyStudio.Mfd.LimitSeparator">, </s>
+   <!-- MfdWriter -->
+   <s id="VizzyStudio.Mfd.Line">{0} {1}: {2}</s>
+   <s id="VizzyStudio.Mfd.Moved">Something else moves this widget: the block doesn't give where it was when the panel opened, for example after a Set Parent or another block that sets it.</s>
+   <s id="VizzyStudio.Mfd.BlockAndCall">Both a block and a custom instruction call set this, so there's no single one to change.</s>
+   <s id="VizzyStudio.Mfd.DifferentValues">{0} blocks set this to different values, so there's no single one to change.</s>
+   <s id="VizzyStudio.Mfd.InAllBlocks">(in all {0} blocks that set it)</s>
+   <s id="VizzyStudio.Mfd.NoBlock">No block sets this by the widget's name.</s>
+   <s id="VizzyStudio.Mfd.SeveralCalls">{0} custom instruction calls set this, so there's no single one to change.</s>
+   <s id="VizzyStudio.Mfd.InCall">(in the call to {0})</s>
+   <s id="VizzyStudio.Mfd.NoValue">The block has no value.</s>
+   <s id="VizzyStudio.Mfd.VectorTooShort">The vector has fewer than 2 parts.</s>
+   <s id="VizzyStudio.Mfd.UnsupportedBlocks">The value is built from {0} blocks, which can't be rewritten. Numbers, + - * / blocks and Funk formulas can.</s>
+   <s id="VizzyStudio.Mfd.SharedNote">shared variable: everything else reading it changes too</s>
+   <s id="VizzyStudio.Mfd.CantWorkOutBlocks">only numbers, + - * / blocks and the screen's size can be worked out.</s>
+   <s id="VizzyStudio.Mfd.Becomes">{0} becomes {1}</s>
+   <s id="VizzyStudio.Mfd.NeedsOneNumber">It needs exactly one number to change, and this has {0}.</s>
+   <s id="VizzyStudio.Mfd.CantSolveBlocks">Only + - * / blocks, numbers and known sizes can be solved.</s>
+   <s id="VizzyStudio.Mfd.FunkBuilt">The Funk block's text is built by other blocks.</s>
+   <s id="VizzyStudio.Mfd.CantReadFormula">Couldn't read the formula ({0}): {1}</s>
+   <s id="VizzyStudio.Mfd.NotVec">The formula isn't a plain vec(x, y, z): {0}</s>
+   <s id="VizzyStudio.Mfd.CantWorkOutFormula">the formula's value can't be worked out: {0}</s>
+   <s id="VizzyStudio.Mfd.SolveFailed">{0}. Formula: {1}</s>
+   <s id="VizzyStudio.Mfd.CantReadHelper">Couldn't read {0}'s formula ({1}): {2}</s>
+   <s id="VizzyStudio.Mfd.HelperNotVec">{0}'s formula isn't vec(x, y, z) or offset + vec(x, y, z): {1}</s>
+   <s id="VizzyStudio.Mfd.HelperOffset">The offset in {0}'s formula can't be worked out: {1}</s>
+   <s id="VizzyStudio.Mfd.HelperVecShort">The vec in {0}'s formula has fewer than 2 parts: {1}</s>
+   <s id="VizzyStudio.Mfd.HelperValue">{0}'s value for this call can't be worked out.</s>
+   <s id="VizzyStudio.Mfd.FixedInHelper">{0} is fixed inside {1}, which every caller shares.</s>
+   <s id="VizzyStudio.Mfd.HelperSolveFailed">{0}: {1}</s>
+   <s id="VizzyStudio.Mfd.ArgumentNotNumber">the call's {0} isn't a plain number.</s>
+   <s id="VizzyStudio.Mfd.ArgumentBecomes">{0}'s {1}: {2} becomes {3}</s>
+   <s id="VizzyStudio.Mfd.LocalVariable">The value comes from the local variable {0}.</s>
+   <s id="VizzyStudio.Mfd.VariableChain">Too many variables lead to this value.</s>
+   <s id="VizzyStudio.Mfd.VariableOtherWrites">The variable {0} is also changed by another kind of block, so its value can't be worked out.</s>
+   <s id="VizzyStudio.Mfd.VariableSetTwice">The variable {0} is set by {1} blocks, so there's no single value to change.</s>
+   <s id="VizzyStudio.Mfd.VariableShared">The variable {0} is also read elsewhere, so changing it moves those too.</s>
+   <s id="VizzyStudio.Mfd.Property.Position">position</s>
+   <s id="VizzyStudio.Mfd.Property.Size">size</s>
+   <s id="VizzyStudio.Mfd.Property.Rotation">rotation</s>
+   <!-- Solver -->
+   <s id="VizzyStudio.Solver.ParseError">parse error: {0}</s>
+   <s id="VizzyStudio.Solver.NotLinear">the number can only be reached through + - * / from known values, and here it can't</s>
+   <s id="VizzyStudio.Solver.FromParameter">the value comes from the name '{0}', which only a custom instruction's call can set</s>
+   <s id="VizzyStudio.Solver.NoUnknown">no single number or custom instruction parameter decides it: it appears more than once, or only inside a function that isn't + - * /</s>
+   <!-- Settings -->
+   <s id="VizzyStudio.Settings.CheckForUpdates">Check For Updates</s>
+   <s id="VizzyStudio.Settings.DebugLogging">Debug Logging</s>
+   <s id="VizzyStudio.Settings.Key">Editor Key</s>
+   <s id="VizzyStudio.Settings.Modifier">Editor Key Modifier</s>
+   <s id="VizzyStudio.Settings.ShowFlightButtons">Show Flight Buttons</s>
+   <s id="VizzyStudio.Settings.ArrangeMfd">Arrange MFD</s>
+   <s id="VizzyStudio.Settings.FunkSyntaxHighlight">Funk Syntax Highlight</s>
+   <s id="VizzyStudio.Settings.FunkAutoFill">Funk Auto-Fill</s>
+   <s id="VizzyStudio.Settings.CheckForUpdates.Description">At game start, reads the latest version from the mod's SimpleRockets.com page and, if it's newer, offers to open the page. Nothing is downloaded automatically.</s>
+   <s id="VizzyStudio.Settings.DebugLogging.Description">Writes thread positions and other details to Player.log.</s>
+   <s id="VizzyStudio.Settings.Key.Description">With the modifier below, opens the Vizzy editor in flight. Pressed again, it applies the edit.</s>
+   <s id="VizzyStudio.Settings.Modifier.Description">Held with the editor key.</s>
+   <s id="VizzyStudio.Settings.ShowFlightButtons.Description">Shows a Vizzy button on the flight nav panel, with Restart Vizzy and Edit Vizzy. Applies from the next flight.</s>
+   <s id="VizzyStudio.Settings.ArrangeMfd.Description">Adds Arrange MFD to the flight buttons: move, resize and rotate the widgets of a custom MFD program, then save the values into the program. Saving also changes the craft's files, after backing them up. Applies from the next flight.</s>
+   <s id="VizzyStudio.Settings.FunkSyntaxHighlight.Description">Colors Funk fields and marks errors in red, in the designer and in flight.</s>
+   <s id="VizzyStudio.Settings.FunkAutoFill.Description">Suggests Funk names while typing in a Funk field, in the designer and in flight. Up and Down choose, Enter takes it, Esc closes the list.</s>
+   <s id="VizzyStudio.Settings.Modifier.Alt">Option / Alt</s>
+   <s id="VizzyStudio.Settings.Modifier.Alt.Description">Option on a Mac.</s>
+   <s id="VizzyStudio.Settings.Modifier.Control">Ctrl</s>
+   <s id="VizzyStudio.Settings.Modifier.Control.Description">Also lowers the throttle.</s>
+   <s id="VizzyStudio.Settings.Modifier.Shift">Shift</s>
+   <s id="VizzyStudio.Settings.Modifier.Shift.Description">Also raises the throttle.</s>
+</Strings>

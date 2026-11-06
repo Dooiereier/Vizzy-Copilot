@@ -36,7 +36,7 @@ namespace Assets.Scripts
             RowPaint.Clear();
             Picks.Clear();
 
-            var model = new InspectorModel("VizzyStudioPicker", "Select vizzy");
+            var model = new InspectorModel("VizzyStudioPicker", Text.Get("VizzyStudio.Picker.Title"));
             foreach (var data in programs)
             {
                 Action pick = () =>

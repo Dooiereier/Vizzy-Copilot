@@ -43,7 +43,7 @@ namespace Assets.Scripts
                     new XElement(ns + "Button",
                         new XAttribute("id", MenuButtonId),
                         new XAttribute("class", "btn menu-button"),
-                        new XElement(ns + "TextMeshPro", new XAttribute("text", "Edit Vizzy"))));
+                        new XElement(ns + "TextMeshPro", new XAttribute("text", Text.Get("VizzyStudio.Buttons.EditVizzy")))));
 
                 request.AddOnLayoutRebuiltAction(controller =>
                 {
@@ -109,14 +109,14 @@ namespace Assets.Scripts
                     new XElement(ns + "Button",
                         new XAttribute("id", CleanButtonId),
                         new XAttribute("class", "btn"),
-                        new XAttribute("tooltip", "Removes global variables this program doesn't use, after asking. Another part's program or an InputController could still read them by name."),
-                        new XElement(ns + "TextMeshPro", new XAttribute("text", "CLEAN VARIABLES"))));
+                        new XAttribute("tooltip", Text.Get("VizzyStudio.Editor.CleanVariablesTooltip")),
+                        new XElement(ns + "TextMeshPro", new XAttribute("text", Text.Get("VizzyStudio.Editor.CleanVariables")))));
                 gridRow.Parent.Elements().First(e => (string)e.Attribute("id") == CleanButtonId).AddAfterSelf(
                     new XElement(ns + "Button",
                         new XAttribute("id", ExportButtonId),
                         new XAttribute("class", "btn"),
-                        new XAttribute("tooltip", "Click a block on the canvas, then this, to copy it to another saved program. An instruction brings the blocks below it."),
-                        new XElement(ns + "TextMeshPro", new XAttribute("text", "EXPORT BLOCK"))));
+                        new XAttribute("tooltip", Text.Get("VizzyStudio.Editor.ExportBlockTooltip")),
+                        new XElement(ns + "TextMeshPro", new XAttribute("text", Text.Get("VizzyStudio.Editor.ExportBlock")))));
 
                 request.AddOnLayoutRebuiltAction(controller =>
                 {

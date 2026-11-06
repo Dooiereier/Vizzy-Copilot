@@ -594,7 +594,7 @@ namespace Assets.Scripts.Mfd
             }
             catch (FormatException ex)
             {
-                return new SolveResult { Success = false, FailureReason = $"parse error: {ex.Message}" };
+                return new SolveResult { Success = false, FailureReason = Text.Get("VizzyStudio.Solver.ParseError", ex.Message) };
             }
 
             if (TryFindUniqueTarget(root, n => n is NumberNode, out var numberTarget))
@@ -622,7 +622,7 @@ namespace Assets.Scripts.Mfd
                     return new SolveResult { Success = true, RewrittenText = newText, NewValue = solved.Value };
                 }
 
-                return new SolveResult { Success = false, FailureReason = "the literal number isn't reachable through purely linear (+,-,*,/) operations from known values -- formula too complex to preserve" };
+                return new SolveResult { Success = false, FailureReason = Text.Get("VizzyStudio.Solver.NotLinear") };
             }
 
             if (TryFindUniqueTarget(root, n => n is VarRefNode v && !v.IsGlobal, out var varTarget))
@@ -635,12 +635,12 @@ namespace Assets.Scripts.Mfd
                         Success = false,
                         PendingLocalParameterName = ((VarRefNode)varTarget).Name,
                         NewValue = solved.Value,
-                        FailureReason = $"the value comes from the name '{((VarRefNode)varTarget).Name}', which only a custom instruction's call can set",
+                        FailureReason = Text.Get("VizzyStudio.Solver.FromParameter", ((VarRefNode)varTarget).Name),
                     };
                 }
             }
 
-            return new SolveResult { Success = false, FailureReason = "no single literal number or subroutine parameter could be solved for (the unknown appears more than once, or only under a nonlinear function)" };
+            return new SolveResult { Success = false, FailureReason = Text.Get("VizzyStudio.Solver.NoUnknown") };
         }
     }
 }

@@ -21,8 +21,8 @@ namespace Assets.Scripts.Exporter
         public override void OnListViewInitialized(ListViewScript listView)
         {
             base.OnListViewInitialized(listView);
-            listView.Title = "Export To";
-            listView.PrimaryButtonText = "Export";
+            listView.Title = Text.Get("VizzyStudio.Export.Title");
+            listView.PrimaryButtonText = Text.Get("VizzyStudio.Export.Button");
             listView.CanDelete = false;
         }
 
@@ -33,7 +33,7 @@ namespace Assets.Scripts.Exporter
                 // Saving the open program would write over the export.
                 if (string.Equals(Path.GetFileNameWithoutExtension(file.Name), _editor.FlightProgram?.Name, System.StringComparison.OrdinalIgnoreCase))
                 {
-                    Game.Instance.UserInterface.CreateMessageDialog("That's the program you have open. Choose another one.");
+                    Game.Instance.UserInterface.CreateMessageDialog(Text.Get("VizzyStudio.Export.SameProgram"));
                     return;
                 }
 
@@ -47,24 +47,23 @@ namespace Assets.Scripts.Exporter
             var dialogs = Game.Instance.UserInterface;
             if (!VizzyProgramFileExporter.TryExport(_snippet, path, out var counts, out var error))
             {
-                dialogs.CreateMessageDialog(error ?? "Export failed.");
+                dialogs.CreateMessageDialog(error ?? Text.Get("VizzyStudio.Export.Failed"));
                 return;
             }
 
             var created = new List<string>();
-            AddCount(created, counts.VariablesCreated, "global variable", "global variables");
-            AddCount(created, counts.CustomExpressionsCreated, "custom expression", "custom expressions");
-            AddCount(created, counts.CustomInstructionsCreated, "custom instruction", "custom instructions");
-            var note = created.Count > 0 ? " Created " + string.Join(" and ", created) + " it needed." : string.Empty;
-            dialogs.CreateMessageDialog("Exported to " + Path.GetFileNameWithoutExtension(path) + "." + note
-                + " It'll show up as a new block group next time that program is loaded.");
+            AddCount(created, counts.VariablesCreated, "VizzyStudio.Export.Variables");
+            AddCount(created, counts.CustomExpressionsCreated, "VizzyStudio.Export.CustomExpressions");
+            AddCount(created, counts.CustomInstructionsCreated, "VizzyStudio.Export.CustomInstructions");
+            var note = created.Count > 0 ? " " + Text.Get("VizzyStudio.Export.Created", string.Join(Text.Get("VizzyStudio.Export.ListSeparator"), created)) : string.Empty;
+            dialogs.CreateMessageDialog(Text.Get("VizzyStudio.Export.Done", Path.GetFileNameWithoutExtension(path)) + note);
         }
 
-        private static void AddCount(List<string> notes, int count, string singular, string plural)
+        private static void AddCount(List<string> notes, int count, string key)
         {
             if (count > 0)
             {
-                notes.Add(count + " " + (count == 1 ? singular : plural));
+                notes.Add(Text.Count(key, count));
             }
         }
     }

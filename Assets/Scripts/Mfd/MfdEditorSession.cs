@@ -62,7 +62,7 @@ namespace Assets.Scripts.Mfd
             _mfd = _data.Part.PartScript.GetModifier<MfdScript>();
             if (_mfd == null)
             {
-                Game.Instance.FlightScene.FlightSceneUI.ShowMessage("This part has no MFD.");
+                Game.Instance.FlightScene.FlightSceneUI.ShowMessage(Text.Get("VizzyStudio.Mfd.NoMfd"));
                 return;
             }
 
@@ -86,7 +86,7 @@ namespace Assets.Scripts.Mfd
                 _rows.Add(new Row(widget));
             }
 
-            var model = new InspectorModel("VizzyStudioArrangeMfd", "Arrange MFD");
+            var model = new InspectorModel("VizzyStudioArrangeMfd", Text.Get("VizzyStudio.Buttons.ArrangeMfd"));
             _selectedGroup = this.BuildSelectedGroup();
             model.AddGroup(_selectedGroup);
             _changesGroup = this.BuildChangesGroup();
@@ -198,7 +198,7 @@ namespace Assets.Scripts.Mfd
         {
             var shown = _rows.Where(row => row.CanArrange).ToList();
             _shownList = string.Join("\n", shown.Select(row => row.Label));
-            var group = new GroupModel("Widgets");
+            var group = new GroupModel(Text.Get("VizzyStudio.Mfd.Widgets"));
             foreach (var row in _rows)
             {
                 row.Button = null;
@@ -212,7 +212,7 @@ namespace Assets.Scripts.Mfd
 
             if (shown.Count == 0)
             {
-                this.AddWrappedTo(group, "No widget here can be moved or resized and saved. A program may build more of its screen later: open this again then.");
+                this.AddWrappedTo(group, Text.Get("VizzyStudio.Mfd.NoWidgets"));
             }
 
             return group;
@@ -242,19 +242,19 @@ namespace Assets.Scripts.Mfd
             var parts = new List<string>();
             if (!Saves(MfdProperty.Size))
             {
-                parts.Add("only position");
+                parts.Add(Text.Get("VizzyStudio.Mfd.OnlyPosition"));
             }
             else if (!Saves(MfdProperty.Position))
             {
-                parts.Add("only size");
+                parts.Add(Text.Get("VizzyStudio.Mfd.OnlySize"));
             }
 
             if (lines.Any(line => line.Property != MfdProperty.Rotation && line.NeedsSharedOverride))
             {
-                parts.Add("shared");
+                parts.Add(Text.Get("VizzyStudio.Mfd.Shared"));
             }
 
-            return parts.Count == 0 ? string.Empty : " (" + string.Join(", ", parts) + ")";
+            return parts.Count == 0 ? string.Empty : " " + Text.Get("VizzyStudio.Mfd.Limits", string.Join(Text.Get("VizzyStudio.Mfd.LimitSeparator"), parts));
         }
 
         private void ScreenSize(out double width, out double height)
@@ -306,36 +306,36 @@ namespace Assets.Scripts.Mfd
         private GroupModel BuildSelectedGroup()
         {
             _selectedValues.Clear();
-            var group = new GroupModel("Selected widget");
+            var group = new GroupModel(Text.Get("VizzyStudio.Mfd.SelectedWidget"));
             bool Chosen() => _selected != null;
             void Add(ItemModel item) => group.Add(item).DetermineVisibility = Chosen;
 
-            group.Add(new LabelModel("Choose a widget in the list below.", ElementAlignment.Left)).DetermineVisibility = () => _selected == null;
+            group.Add(new LabelModel(Text.Get("VizzyStudio.Mfd.ChooseWidget"), ElementAlignment.Left)).DetermineVisibility = () => _selected == null;
             _selectedName = new LabelModel(string.Empty, ElementAlignment.Left);
             Add(_selectedName);
-            this.AddValue(Add, "X", widget => widget.LocalPosition.x, (row, value) => row.SetPosition(new Vector2(value, row.Widget.LocalPosition.y)));
-            this.AddValue(Add, "Y", widget => widget.LocalPosition.y, (row, value) => row.SetPosition(new Vector2(row.Widget.LocalPosition.x, value)));
+            this.AddValue(Add, Text.Get("VizzyStudio.Mfd.X"), widget => widget.LocalPosition.x, (row, value) => row.SetPosition(new Vector2(value, row.Widget.LocalPosition.y)));
+            this.AddValue(Add, Text.Get("VizzyStudio.Mfd.Y"), widget => widget.LocalPosition.y, (row, value) => row.SetPosition(new Vector2(row.Widget.LocalPosition.x, value)));
             Add(this.IconRow(
-                Icon("Ui/Sprites/Design/IconSpinnerArrowLeft", "Move left", row => row.Move(new Vector2(-_step, 0f))),
-                Icon("Ui/Sprites/Design/IconSpinnerArrowRight", "Move right", row => row.Move(new Vector2(_step, 0f))),
-                Icon("Ui/Sprites/Common/IconMoveUp", "Move up", row => row.Move(new Vector2(0f, _step))),
-                Icon("Ui/Sprites/Common/IconMoveDown", "Move down", row => row.Move(new Vector2(0f, -_step)))));
+                Icon("Ui/Sprites/Design/IconSpinnerArrowLeft", Text.Get("VizzyStudio.Mfd.MoveLeft"), row => row.Move(new Vector2(-_step, 0f))),
+                Icon("Ui/Sprites/Design/IconSpinnerArrowRight", Text.Get("VizzyStudio.Mfd.MoveRight"), row => row.Move(new Vector2(_step, 0f))),
+                Icon("Ui/Sprites/Common/IconMoveUp", Text.Get("VizzyStudio.Mfd.MoveUp"), row => row.Move(new Vector2(0f, _step))),
+                Icon("Ui/Sprites/Common/IconMoveDown", Text.Get("VizzyStudio.Mfd.MoveDown"), row => row.Move(new Vector2(0f, -_step)))));
 
-            this.AddValue(Add, "Width", widget => widget.Size.x, (row, value) => row.SetSize(new Vector2(value, row.Widget.Size.y)));
-            this.AddValue(Add, "Height", widget => widget.Size.y, (row, value) => row.SetSize(new Vector2(row.Widget.Size.x, value)));
+            this.AddValue(Add, Text.Get("VizzyStudio.Mfd.Width"), widget => widget.Size.x, (row, value) => row.SetSize(new Vector2(value, row.Widget.Size.y)));
+            this.AddValue(Add, Text.Get("VizzyStudio.Mfd.Height"), widget => widget.Size.y, (row, value) => row.SetSize(new Vector2(row.Widget.Size.x, value)));
             Add(this.IconRow(
-                Icon("Ui/Sprites/Design/IconSpinnerArrowLeft", "Narrower", row => row.Grow(new Vector2(-_step, 0f))),
-                Icon("Ui/Sprites/Design/IconSpinnerArrowRight", "Wider", row => row.Grow(new Vector2(_step, 0f))),
-                Icon("Ui/Sprites/Common/IconMoveUp", "Taller", row => row.Grow(new Vector2(0f, _step))),
-                Icon("Ui/Sprites/Common/IconMoveDown", "Shorter", row => row.Grow(new Vector2(0f, -_step)))));
+                Icon("Ui/Sprites/Design/IconSpinnerArrowLeft", Text.Get("VizzyStudio.Mfd.Narrower"), row => row.Grow(new Vector2(-_step, 0f))),
+                Icon("Ui/Sprites/Design/IconSpinnerArrowRight", Text.Get("VizzyStudio.Mfd.Wider"), row => row.Grow(new Vector2(_step, 0f))),
+                Icon("Ui/Sprites/Common/IconMoveUp", Text.Get("VizzyStudio.Mfd.Taller"), row => row.Grow(new Vector2(0f, _step))),
+                Icon("Ui/Sprites/Common/IconMoveDown", Text.Get("VizzyStudio.Mfd.Shorter"), row => row.Grow(new Vector2(0f, -_step)))));
 
-            this.AddValue(Add, "Rotation", widget => widget.LocalRotation, (row, value) => row.Widget.LocalRotation = value);
+            this.AddValue(Add, Text.Get("VizzyStudio.Mfd.Rotation"), widget => widget.LocalRotation, (row, value) => row.Widget.LocalRotation = value);
             Add(this.IconRow(
-                Icon("Ui/Sprites/Design/IconSpinnerArrowLeft", "Rotation down", row => row.Widget.LocalRotation -= _step * RotationStepFactor),
-                Icon("Ui/Sprites/Design/IconSpinnerArrowRight", "Rotation up", row => row.Widget.LocalRotation += _step * RotationStepFactor)));
+                Icon("Ui/Sprites/Design/IconSpinnerArrowLeft", Text.Get("VizzyStudio.Mfd.RotationDown"), row => row.Widget.LocalRotation -= _step * RotationStepFactor),
+                Icon("Ui/Sprites/Design/IconSpinnerArrowRight", Text.Get("VizzyStudio.Mfd.RotationUp"), row => row.Widget.LocalRotation += _step * RotationStepFactor)));
 
             Add(new DropdownModel(
-                "Step",
+                Text.Get("VizzyStudio.Mfd.Step"),
                 () => Number(_step),
                 value => _step = float.Parse(value, System.Globalization.CultureInfo.InvariantCulture),
                 Steps));
@@ -513,7 +513,7 @@ namespace Assets.Scripts.Mfd
         private GroupModel BuildChangesGroup()
         {
             _wrappedLabels.Clear();
-            var group = new GroupModel("Changes");
+            var group = new GroupModel(Text.Get("VizzyStudio.Mfd.Changes"));
             if (_message != null)
             {
                 this.AddWrappedTo(group, _message);
@@ -524,10 +524,10 @@ namespace Assets.Scripts.Mfd
             {
                 if (_message == null)
                 {
-                    group.Add(new LabelModel("Nothing changed yet.", ElementAlignment.Left));
+                    group.Add(new LabelModel(Text.Get("VizzyStudio.Mfd.NothingChanged"), ElementAlignment.Left));
                 }
 
-                group.Add(new TextButtonModel("Restart MFD", _ => this.AskToRestart()));
+                group.Add(new TextButtonModel(Text.Get("VizzyStudio.Mfd.RestartMfd"), _ => this.AskToRestart()));
                 return group;
             }
 
@@ -535,14 +535,14 @@ namespace Assets.Scripts.Mfd
             var lines = MfdFormulaWriter.Apply(_data.FlightProgramXml, changes, width, height, _allowShared, true);
             foreach (var line in lines)
             {
-                this.AddWrappedTo(group, (line.Applied ? string.Empty : "Won't save: ") + line);
+                this.AddWrappedTo(group, line.Applied ? line.ToString() : Text.Get("VizzyStudio.Mfd.WontSave", line));
             }
 
             // On by default, so it's only shown when a shared variable is involved.
             if (lines.Any(line => line.Shared || line.NeedsSharedOverride))
             {
                 group.Add(new ToggleModel(
-                    "Also change shared variables",
+                    Text.Get("VizzyStudio.Mfd.AllowShared"),
                     () => _allowShared,
                     value =>
                     {
@@ -550,22 +550,22 @@ namespace Assets.Scripts.Mfd
                         this.UpdateCascade();
                         this.ReplaceChangesGroup();
                     },
-                    "A shared variable moves everything that reads it. Widgets the panel can work out move on screen now."));
+                    Text.Get("VizzyStudio.Mfd.AllowSharedTooltip")));
             }
 
             if (_cascaded > 0)
             {
-                this.AddWrappedTo(group, "Moved " + _cascaded + " other " + (_cascaded == 1 ? "widget that follows" : "widgets that follow") + " on screen to show it.");
+                this.AddWrappedTo(group, Text.Count("VizzyStudio.Mfd.MovedFollowers", _cascaded));
             }
 
             if (this.HasFollowersNotShown(changes, lines))
             {
-                this.AddWrappedTo(group, "Some widgets that follow this can't be moved here, such as ones a custom instruction places: Save, then Restart MFD to see them.");
+                this.AddWrappedTo(group, Text.Get("VizzyStudio.Mfd.FollowersNotShown"));
             }
 
-            group.Add(new TextButtonModel("Save", _ => this.Save()));
-            group.Add(new TextButtonModel("Revert", _ => this.Run(this.RevertAll)));
-            group.Add(new TextButtonModel("Restart MFD", _ => this.AskToRestart()));
+            group.Add(new TextButtonModel(Text.Get("VizzyStudio.Mfd.Save"), _ => this.Save()));
+            group.Add(new TextButtonModel(Text.Get("VizzyStudio.Mfd.Revert"), _ => this.Run(this.RevertAll)));
+            group.Add(new TextButtonModel(Text.Get("VizzyStudio.Mfd.RestartMfd"), _ => this.AskToRestart()));
             return group;
         }
 
@@ -609,7 +609,7 @@ namespace Assets.Scripts.Mfd
 
                 if (!lines.Any(line => line.Applied))
                 {
-                    _message = "Nothing could be saved.";
+                    _message = Text.Get("VizzyStudio.Mfd.NothingSaved");
                     this.ReplaceChangesGroup();
                     return;
                 }
@@ -626,7 +626,7 @@ namespace Assets.Scripts.Mfd
 
                 if (lines.Any(line => line.Applied && line.Shared))
                 {
-                    _message += " Other widgets reading the shared variable that the panel couldn't move here move after a restart.";
+                    _message += " " + Text.Get("VizzyStudio.Mfd.SharedAfterRestart");
                 }
 
                 // What couldn't be saved stays listed, so it can still be reverted. Widgets moved to show a
@@ -646,7 +646,7 @@ namespace Assets.Scripts.Mfd
             catch (Exception e)
             {
                 EditorLog.Error("Couldn't save the MFD changes: " + e);
-                _message = "Saving failed: see Player.log.";
+                _message = Text.Get("VizzyStudio.Mfd.SaveFailed");
                 this.ReplaceChangesGroup();
             }
         }
@@ -656,7 +656,7 @@ namespace Assets.Scripts.Mfd
         {
             var dialog = Game.Instance.UserInterface.CreateMessageDialog(ModApi.Ui.MessageDialogType.OkayCancel, null, true);
             dialog.UseDangerButtonStyle = true;
-            dialog.MessageText = MfdRestart.Question(_data) + " Changes that aren't saved are lost.";
+            dialog.MessageText = MfdRestart.Question(_data) + " " + Text.Get("VizzyStudio.Mfd.UnsavedLost");
             dialog.OkayClicked += _ =>
             {
                 dialog.Close();
@@ -665,7 +665,7 @@ namespace Assets.Scripts.Mfd
                     this.Close();
                     if (!MfdRestart.Run(_data))
                     {
-                        Game.Instance.FlightScene.FlightSceneUI.ShowMessage("The MFD program didn't restart: see Player.log.");
+                        Game.Instance.FlightScene.FlightSceneUI.ShowMessage(Text.Get("VizzyStudio.Mfd.RestartFailed"));
                     }
                 }
                 catch (Exception e)

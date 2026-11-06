@@ -45,7 +45,7 @@ namespace Assets.Scripts
         private const float PlacementGap = 20f;
         private const float RepeatDelay = 0.35f;
         private const float RepeatInterval = 0.06f;
-        private const string Help = "Block Search (Shift+F)";
+        private static string Help => Text.Get("VizzyStudio.BlockSearch.Tooltip");
 
         // Private in the game: it's what makes a block behave as a toolbox block.
         private static readonly MethodInfo LoadNodes = typeof(VizzyUIController).GetMethod("LoadNodes", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -99,7 +99,7 @@ namespace Assets.Scripts
                     new XAttribute("active", "false"),
                     new XElement(ns + "Panel",
                         new XAttribute("class", "flyout-header"),
-                        new XElement(ns + "TextMeshPro", new XAttribute("text", "BLOCK SEARCH"), new XAttribute("tooltip", Help)),
+                        new XElement(ns + "TextMeshPro", new XAttribute("text", Text.Get("VizzyStudio.BlockSearch.Title")), new XAttribute("tooltip", Help)),
                         new XElement(ns + "Image",
                             new XAttribute("id", CloseId),
                             new XAttribute("class", "flyout-close-button audio-btn-back"),
@@ -112,7 +112,7 @@ namespace Assets.Scripts
                         new XAttribute("width", (MinWidth - (2f * InputMargin)).ToString()),
                         new XAttribute("height", "30"),
                         new XAttribute("offsetXY", "0 -34"),
-                        new XElement(ns + "TMP_Placeholder", new XAttribute("text", "Type a block name"), new XAttribute("alignment", "Left")),
+                        new XElement(ns + "TMP_Placeholder", new XAttribute("text", Text.Get("VizzyStudio.BlockSearch.Placeholder")), new XAttribute("alignment", "Left")),
                         new XElement(ns + "TMP_Text", new XAttribute("text", string.Empty), new XAttribute("alignment", "Left"))),
                     new XElement(ns + "VerticalScrollView",
                         new XAttribute("class", "no-image"),
@@ -450,21 +450,21 @@ namespace Assets.Scripts
             {
                 var isList = variable.IsList;
                 var name = variable.Name;
-                entries.Add(new BlockEntry(name, isList ? "list" : "variable", isList ? "Lists" : "Variables", new Func<ProgramNode>(() => new VariableExpression(isList) { VariableName = name }), isList ? BlockGroup.List : BlockGroup.Variable));
+                entries.Add(new BlockEntry(name, isList ? "list" : "variable", isList ? Text.Get("VizzyStudio.BlockSearch.Lists") : Text.Get("VizzyStudio.BlockSearch.Variables"), new Func<ProgramNode>(() => new VariableExpression(isList) { VariableName = name }), isList ? BlockGroup.List : BlockGroup.Variable));
             }
 
             foreach (var custom in program.CustomExpressions)
             {
                 var name = custom.Name;
                 var format = custom.CallFormat;
-                entries.Add(new BlockEntry(name, "custom expression", "Custom Expressions", new Func<ProgramNode>(() => WithEmptySlots(new CallCustomExpression { Call = name, Style = "call-custom-expression" }, format)), BlockGroup.CustomExpression));
+                entries.Add(new BlockEntry(name, "custom expression", Text.Get("VizzyStudio.BlockSearch.CustomExpressions"), new Func<ProgramNode>(() => WithEmptySlots(new CallCustomExpression { Call = name, Style = "call-custom-expression" }, format)), BlockGroup.CustomExpression));
             }
 
             foreach (var custom in program.CustomInstructions)
             {
                 var name = custom.Name;
                 var format = custom.CallFormat;
-                entries.Add(new BlockEntry(name, "custom instruction", "Custom Instructions", new Func<ProgramNode>(() => WithEmptySlots(new CallCustomInstruction { Call = name, Style = "call-custom-instruction" }, format)), BlockGroup.CustomInstruction));
+                entries.Add(new BlockEntry(name, "custom instruction", Text.Get("VizzyStudio.BlockSearch.CustomInstructions"), new Func<ProgramNode>(() => WithEmptySlots(new CallCustomInstruction { Call = name, Style = "call-custom-instruction" }, format)), BlockGroup.CustomInstruction));
             }
         }
 

@@ -51,7 +51,7 @@ namespace Assets.Scripts.Mfd
                 var lines = MfdFormulaWriter.Apply(program, changes, screenWidth, screenHeight, allowShared);
                 if (!Same(lines, expected))
                 {
-                    return "Saved for this flight only: the craft file " + id + " has a different program, for example after a change in the designer or Edit Vizzy. No file was changed.";
+                    return Text.Get("VizzyStudio.MfdSave.FileDiffers", id);
                 }
 
                 updates.Add((id, craft));
@@ -59,7 +59,7 @@ namespace Assets.Scripts.Mfd
 
             if (updates.Count == 0)
             {
-                return "Saved for this flight only: no craft file with this program was found.";
+                return Text.Get("VizzyStudio.MfdSave.NoFile");
             }
 
             var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
@@ -99,17 +99,17 @@ namespace Assets.Scripts.Mfd
                 }
 
                 var left = written.Select(done => done.Id).Except(restored).ToList();
-                return "Saved for this flight, but writing the craft files failed: see Player.log."
-                    + (left.Count > 0 ? " These may hold the change, with a .bak-" + stamp + " copy next to them: " + string.Join(", ", left) + "." : " No file was changed.");
+                return Text.Get("VizzyStudio.MfdSave.WriteFailed") + " "
+                    + (left.Count > 0 ? Text.Get("VizzyStudio.MfdSave.MayHoldChange", stamp, string.Join(", ", left)) : Text.Get("VizzyStudio.MfdSave.NoFileChanged"));
             }
 
             EditorLog.Debug("MFD save wrote: " + string.Join(", ", updates.Select(update => update.Id)));
             return updates.Any(update => update.Id == craftName)
-                ? "Saved to the running program and the craft " + craftName + ", with a backup."
-                : "Saved to the running program and the designer's working copy, with a backup. "
+                ? Text.Get("VizzyStudio.MfdSave.SavedToCraft", craftName)
+                : Text.Get("VizzyStudio.MfdSave.SavedToWorkingCopy") + " "
                     + (designWithoutProgram
-                        ? "The saved design " + craftName + " doesn't have this program, so it wasn't changed: save the craft in the designer to keep this."
-                        : "This craft has no saved design: save it in the designer to keep this.");
+                        ? Text.Get("VizzyStudio.MfdSave.DesignLacksProgram", craftName)
+                        : Text.Get("VizzyStudio.MfdSave.NoDesign"));
         }
 
         /// <summary>By name; the part's id only settles it when several parts have that program.</summary>

@@ -92,14 +92,10 @@ namespace Assets.Scripts
                     stylesElement = new XElement(ns + "Styles");
                     xml.Add(stylesElement);
                 }
-                stylesElement.Add(Style(ns, "Matrix3x3Mul", "Matrix Multiply A=(0), B=(1)",
-                    "3x3 matrix multiplication. Both inputs are 9-element row-major lists [m00..m22].\nVizzy Studio mod required"));
-                stylesElement.Add(Style(ns, "Matrix3x3GetElement", "Get Matrix Element M=(0), Row=(1:Number), Col=(2:Number)",
-                    "Returns element M[row][col]. Row and col are 0-based.\nVizzy Studio mod required"));
-                stylesElement.Add(Style(ns, "Matrix3x3SetElement", "Set Matrix Element M=(0), Row=(1:Number), Col=(2:Number), Value=(3:Number)",
-                    "Returns a copy of M with element [row][col] replaced by Value.\nVizzy Studio mod required"));
-                stylesElement.Add(Style(ns, "Matrix3x3Normalize", "Normalize Matrix M=(0), Mode=(1:Number)",
-                    "Mode 0: normalize columns, 1: normalize rows, 2: Frobenius scale to length 1.\nVizzy Studio mod required"));
+                stylesElement.Add(Style(ns, "Matrix3x3Mul", "VizzyStudio.Matrix.Multiply.Format", "VizzyStudio.Matrix.Multiply.Tooltip"));
+                stylesElement.Add(Style(ns, "Matrix3x3GetElement", "VizzyStudio.Matrix.GetElement.Format", "VizzyStudio.Matrix.GetElement.Tooltip"));
+                stylesElement.Add(Style(ns, "Matrix3x3SetElement", "VizzyStudio.Matrix.SetElement.Format", "VizzyStudio.Matrix.SetElement.Tooltip"));
+                stylesElement.Add(Style(ns, "Matrix3x3Normalize", "VizzyStudio.Matrix.Normalize.Format", "VizzyStudio.Matrix.Normalize.Tooltip"));
 
                 // At the bottom of Operators, below the false block.
                 XElement category = xml.Element(ns + "Categories").Elements(ns + "Category")
@@ -118,6 +114,7 @@ namespace Assets.Scripts
             }
         }
 
+        /// <summary>The game reads format and tooltip through its Locale, so they're keys, translated like stock blocks.</summary>
         private static XElement Style(XNamespace ns, string id, string format, string tooltip)
         {
             return new XElement(ns + "Style",

@@ -86,7 +86,7 @@ namespace Assets.Scripts.Exporter
 
             if (snippet == null || snippet.Nodes.Count == 0)
             {
-                error = "Nothing to export.";
+                error = Text.Get("VizzyStudio.Export.Nothing");
                 return false;
             }
 
@@ -94,7 +94,7 @@ namespace Assets.Scripts.Exporter
             {
                 if (!File.Exists(targetFilePath))
                 {
-                    error = "That file no longer exists.";
+                    error = Text.Get("VizzyStudio.Export.FileGone");
                     return false;
                 }
 
@@ -102,14 +102,14 @@ namespace Assets.Scripts.Exporter
                 XElement root = doc.Root;
                 if (root == null)
                 {
-                    error = "That file doesn't look like a valid Vizzy program.";
+                    error = Text.Get("VizzyStudio.Export.NotAProgram");
                     return false;
                 }
 
                 string customName = (string)snippet.Nodes[0].Attribute("name");
                 if (IsCustomDefinitionIn(root, snippet.Nodes[0].Name.LocalName, customName))
                 {
-                    error = "That program already has a custom block called " + customName + ".";
+                    error = Text.Get("VizzyStudio.Export.NameTaken", customName);
                     return false;
                 }
 
@@ -173,7 +173,7 @@ namespace Assets.Scripts.Exporter
             }
             catch (Exception ex)
             {
-                error = $"Couldn't export into that file: {ex.Message}";
+                error = Text.Get("VizzyStudio.Export.WriteFailed", ex.Message);
                 Debug.LogError($"[VizzyStudio] {error}\n{ex}");
                 return false;
             }

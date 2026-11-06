@@ -106,7 +106,7 @@ namespace Assets.Scripts
             }
             else
             {
-                _editor.ShowMessage(_applyFailure ?? "Couldn't apply the Vizzy edit: see Player.log.");
+                _editor.ShowMessage(_applyFailure ?? Text.Get("VizzyStudio.Editor.ApplyFailed"));
             }
         }
 
@@ -172,7 +172,7 @@ namespace Assets.Scripts
             {
                 if (_data.Script == null)
                 {
-                    _applyFailure = "The part with this Vizzy program is gone: the edit wasn't applied.";
+                    _applyFailure = Text.Get("VizzyStudio.Editor.PartGoneNotApplied");
                     return;
                 }
 

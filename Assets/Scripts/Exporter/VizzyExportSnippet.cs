@@ -54,7 +54,7 @@ namespace Assets.Scripts.Exporter
 
             if (block == null || block.Node == null)
             {
-                error = "Nothing to export - right-click a block first.";
+                error = Text.Get("VizzyStudio.Export.ClickBlockFirst");
                 return false;
             }
 
@@ -79,7 +79,7 @@ namespace Assets.Scripts.Exporter
             }
             catch (Exception ex)
             {
-                error = $"Failed to read this block: {ex.Message}";
+                error = Text.Get("VizzyStudio.Export.ReadFailed", ex.Message);
                 Debug.LogError($"[VizzyStudio] {error}\n{ex}");
                 return false;
             }

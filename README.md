@@ -54,6 +54,10 @@ In the game's mod settings: the update check, debug logging, the editor key and 
 
 The update check reads the latest version from the mod's page once per game start and offers to open the page. Nothing is downloaded automatically.
 
+## Languages
+
+English, Portuguese and Simplified Chinese, following the game's language setting. The translations are in `Assets/Content/Languages`; corrections from native speakers are welcome.
+
 ## Building
 
 You need Unity 2022.3.62f3 and the Juno ModTools. Open the project and save the mod from the ModTools window. Harmony must never end up inside the mod file: it comes from Juno Harmony.

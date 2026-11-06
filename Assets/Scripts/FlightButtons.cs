@@ -52,7 +52,7 @@ namespace Assets.Scripts
                 bar.Add(new XElement(ns + "ContentButton",
                     new XAttribute("id", ToggleId),
                     new XAttribute("class", "panel-button audio-btn-click"),
-                    new XAttribute("tooltip", "Vizzy"),
+                    new XAttribute("tooltip", Text.Get("VizzyStudio.Buttons.Vizzy")),
                     new XElement(ns + "Image",
                         new XAttribute("id", ToggleIconId),
                         new XAttribute("class", "panel-button-icon"),
@@ -74,9 +74,9 @@ namespace Assets.Scripts
                     new XAttribute("contentSizeFitter", "vertical"),
                     new XElement(ns + "HorizontalLayout",
                         new XAttribute("class", "nav-sphere-row"),
-                        arrangeMfd ? FlyoutButton(ns, ArrangeMfdId, "Arrange MFD", "VizzyStudio/Sprites/IconMfd") : null,
-                        FlyoutButton(ns, RestartId, "Restart Vizzy", "Ui/Sprites/Flight/IconRetry"),
-                        FlyoutButton(ns, EditId, "Edit Vizzy", "Ui/Sprites/Design/IconButtonEdit"))));
+                        arrangeMfd ? FlyoutButton(ns, ArrangeMfdId, Text.Get("VizzyStudio.Buttons.ArrangeMfd"), "VizzyStudio/Sprites/IconMfd") : null,
+                        FlyoutButton(ns, RestartId, Text.Get("VizzyStudio.Buttons.RestartVizzy"), "Ui/Sprites/Flight/IconRetry"),
+                        FlyoutButton(ns, EditId, Text.Get("VizzyStudio.Buttons.EditVizzy"), "Ui/Sprites/Design/IconButtonEdit"))));
             }
             catch (Exception e)
             {

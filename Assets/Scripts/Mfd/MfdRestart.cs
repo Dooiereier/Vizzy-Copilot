@@ -43,7 +43,7 @@ namespace Assets.Scripts.Mfd
 
         public static string Question(FlightProgramData data)
         {
-            return "Restart " + data.Part.DisplayName + "'s MFD program from the top? Its widgets are removed and its threads and variables reset. Other programs keep running.";
+            return Text.Get("VizzyStudio.Mfd.RestartQuestion", data.Part.DisplayName);
         }
 
         /// <summary>Returns false if the part has no MFD or the program doesn't load.</summary>

@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Strings>
+   <!-- Vizzy Studio: Simplified Chinese, with the game's own terms. Corrections welcome. -->
+   <!-- Flight -->
+   <s id="VizzyStudio.Flight.NoMfdProgram">此载具上没有自定义 MFD 程序.</s>
+   <s id="VizzyStudio.Flight.NoProgramToRestart">此载具上没有可重启的 Vizzy 程序.</s>
+   <s id="VizzyStudio.Flight.PartGone">带有此 Vizzy 程序的部件已不存在.</s>
+   <s id="VizzyStudio.Flight.ProgramDidntLoad">Vizzy 程序未能加载:请查看 Player.log.</s>
+   <s id="VizzyStudio.Flight.LeaveWarp">请先退出时间加速,再修改 Vizzy 程序.</s>
+   <s id="VizzyStudio.Flight.NoEditableProgram">此载具上没有可编辑的 Vizzy 程序.</s>
+   <s id="VizzyStudio.Flight.RestartQuestion">从头重启 {0} 的 Vizzy 程序?其线程和变量将被重置.其他程序继续运行.</s>
+   <s id="VizzyStudio.Flight.KeptLatestEdit">已保留你最近的 Vizzy 编辑.{0} 可回到快速存档时的程序.</s>
+   <s id="VizzyStudio.Flight.NothingToRevert">没有可撤销的 Vizzy 编辑:请先读取快速存档.</s>
+   <s id="VizzyStudio.Flight.Reverted">已回到快速存档时的 Vizzy 程序.</s>
+   <s id="VizzyStudio.Editor.ApplyFailed">无法应用 Vizzy 编辑:请查看 Player.log.</s>
+   <s id="VizzyStudio.Editor.PartGoneNotApplied">带有此 Vizzy 程序的部件已不存在:编辑未应用.</s>
+   <s id="VizzyStudio.Editor.EditDidntLoad">编辑后的 Vizzy 程序未能加载:旧程序仍在运行.</s>
+   <s id="VizzyStudio.Editor.ThreadsEnded.One">1 个 Vizzy 线程已结束:它所在的块已被删除.</s>
+   <s id="VizzyStudio.Editor.ThreadsEnded.Many">{0} 个 Vizzy 线程已结束:它们所在的块已被删除.</s>
+   <s id="VizzyStudio.Picker.Title">选择 Vizzy</s>
+   <s id="VizzyStudio.Buttons.Vizzy">Vizzy</s>
+   <s id="VizzyStudio.Buttons.ArrangeMfd">排列 MFD</s>
+   <s id="VizzyStudio.Buttons.RestartVizzy">重启 Vizzy</s>
+   <s id="VizzyStudio.Buttons.EditVizzy">编辑 Vizzy</s>
+   <!-- Editor -->
+   <s id="VizzyStudio.Editor.CleanVariablesTooltip">询问后删除此程序未使用的全局变量.其他部件的程序或 InputController 仍可能按名称读取它们.</s>
+   <s id="VizzyStudio.Editor.CleanVariables">清理变量</s>
+   <s id="VizzyStudio.Editor.ExportBlockTooltip">先在画布上点击一个块,再点击此处,即可将其复制到另一个已保存的程序.指令会带上其下方的块.</s>
+   <s id="VizzyStudio.Editor.ExportBlock">导出块</s>
+   <!-- CleanVariables -->
+   <s id="VizzyStudio.Clean.FunkBuilt">未删除任何变量:某个 Funk 块的文本由其他块构成.</s>
+   <s id="VizzyStudio.Clean.NoneUnused">没有未使用的变量.</s>
+   <s id="VizzyStudio.Clean.AndMore">以及另外 {0} 个</s>
+   <s id="VizzyStudio.Clean.Question.One">删除这个未使用的变量?</s>
+   <s id="VizzyStudio.Clean.Question.Many">删除这 {0} 个未使用的变量?</s>
+   <s id="VizzyStudio.Clean.Removed.One">已删除 1 个未使用的变量.</s>
+   <s id="VizzyStudio.Clean.Removed.Many">已删除 {0} 个未使用的变量.</s>
+   <!-- Export -->
+   <s id="VizzyStudio.Export.ClickBlockFirst">点击一个块,将其导出到另一个 Vizzy.</s>
+   <s id="VizzyStudio.Export.Nothing">没有可导出的内容.</s>
+   <s id="VizzyStudio.Export.Title">导出到</s>
+   <s id="VizzyStudio.Export.Button">导出</s>
+   <s id="VizzyStudio.Export.SameProgram">这是你当前打开的程序.请选择另一个.</s>
+   <s id="VizzyStudio.Export.Failed">导出失败.</s>
+   <s id="VizzyStudio.Export.Variables.One">1 个全局变量</s>
+   <s id="VizzyStudio.Export.Variables.Many">{0} 个全局变量</s>
+   <s id="VizzyStudio.Export.CustomExpressions.One">1 个自定义表达式</s>
+   <s id="VizzyStudio.Export.CustomExpressions.Many">{0} 个自定义表达式</s>
+   <s id="VizzyStudio.Export.CustomInstructions.One">1 个自定义指令</s>
+   <s id="VizzyStudio.Export.CustomInstructions.Many">{0} 个自定义指令</s>
+   <s id="VizzyStudio.Export.ListSeparator">和</s>
+   <s id="VizzyStudio.Export.Created">已创建所需的 {0}.</s>
+   <s id="VizzyStudio.Export.Done">已导出到 {0}.下次加载该程序时,它会显示为一个新的块组.</s>
+   <s id="VizzyStudio.Export.FileGone">该文件已不存在.</s>
+   <s id="VizzyStudio.Export.NotAProgram">该文件看起来不是有效的 Vizzy 程序.</s>
+   <s id="VizzyStudio.Export.NameTaken">该程序已有一个名为 {0} 的自定义块.</s>
+   <s id="VizzyStudio.Export.WriteFailed">无法导出到该文件:{0}</s>
+   <s id="VizzyStudio.Export.ReadFailed">无法读取此块:{0}</s>
+   <!-- Startup -->
+   <s id="VizzyStudio.Startup.NeedsHarmony">Vizzy Studio 需要 Juno Harmony 模组,因此已被关闭.请安装并启用 Juno Harmony, 然后重启游戏.</s>
+   <s id="VizzyStudio.Startup.ReplacedMods">Vizzy Studio 已包含 {0} 的功能.请移除这些模组,否则两者会作用于同一个编辑器.</s>
+   <s id="VizzyStudio.Startup.HarmonyFailed">Vizzy Studio 无法在当前加载的 Harmony 版本下启动,因此已被关闭.请查看 Player.log.</s>
+   <!-- Update -->
+   <s id="VizzyStudio.Update.Available">Vizzy Studio 有新版本可用.\n\n已安装:{0}\n最新:{1}</s>
+   <s id="VizzyStudio.Update.Open">打开下载页面</s>
+   <s id="VizzyStudio.Update.Later">稍后</s>
+   <!-- BlockSearch -->
+   <s id="VizzyStudio.BlockSearch.Tooltip">搜索块 (Shift+F)</s>
+   <s id="VizzyStudio.BlockSearch.Title">搜索块</s>
+   <s id="VizzyStudio.BlockSearch.Placeholder">输入块的名称</s>
+   <s id="VizzyStudio.BlockSearch.CustomExpressions">自定义表达式</s>
+   <s id="VizzyStudio.BlockSearch.CustomInstructions">自定义指令</s>
+   <s id="VizzyStudio.BlockSearch.Lists">列表</s>
+   <s id="VizzyStudio.BlockSearch.Variables">变量</s>
+   <!-- JumpTo -->
+   <s id="VizzyStudio.JumpTo.Tooltip">跳转到:将视图移到带标记的块.用以 // 开头的注释标记它们,例如 //发射,或用 //发射/俯仰程序 进行嵌套.</s>
+   <s id="VizzyStudio.JumpTo.Title">跳转到</s>
+   <!-- Matrix -->
+   <s id="VizzyStudio.Matrix.Multiply.Format">矩阵相乘 A=(0),B=(1)</s>
+   <s id="VizzyStudio.Matrix.Multiply.Tooltip">3x3 矩阵乘法.两个输入都是按行排列的 9 元素列表 [m00..m22].\n需要 Vizzy Studio 模组</s>
+   <s id="VizzyStudio.Matrix.GetElement.Format">获取矩阵元素 M=(0),行=(1:Number),列=(2:Number)</s>
+   <s id="VizzyStudio.Matrix.GetElement.Tooltip">返回元素 M[行][列]. 行和列从 0 开始.\n需要 Vizzy Studio 模组</s>
+   <s id="VizzyStudio.Matrix.SetElement.Format">设置矩阵元素 M=(0),行=(1:Number),列=(2:Number),值=(3:Number)</s>
+   <s id="VizzyStudio.Matrix.SetElement.Tooltip">返回 M 的副本,其中元素 [行][列] 被替换为值.\n需要 Vizzy Studio 模组</s>
+   <s id="VizzyStudio.Matrix.Normalize.Format">归一化矩阵 M=(0),模式=(1:Number)</s>
+   <s id="VizzyStudio.Matrix.Normalize.Tooltip">模式 0: 归一化列, 1: 归一化行, 2: 按 Frobenius 范数缩放到长度 1.\n需要 Vizzy Studio 模组</s>
+   <!-- Mfd -->
+   <s id="VizzyStudio.Mfd.RestartQuestion">从头重启 {0} 的 MFD 程序?其控件将被移除,线程和变量将被重置.其他程序继续运行.</s>
+   <!-- MfdSave -->
+   <s id="VizzyStudio.MfdSave.FileDiffers">仅为本次飞行保存:载具文件 {0} 中的程序不同,例如在设计器或编辑 Vizzy 中修改过.没有更改任何文件.</s>
+   <s id="VizzyStudio.MfdSave.NoFile">仅为本次飞行保存:未找到包含此程序的载具文件.</s>
+   <s id="VizzyStudio.MfdSave.WriteFailed">已为本次飞行保存,但写入载具文件失败:请查看 Player.log.</s>
+   <s id="VizzyStudio.MfdSave.MayHoldChange">以下文件可能已包含该更改,旁边有 .bak-{0} 副本:{1}.</s>
+   <s id="VizzyStudio.MfdSave.NoFileChanged">没有更改任何文件.</s>
+   <s id="VizzyStudio.MfdSave.SavedToCraft">已保存到运行中的程序和载具 {0},并已备份.</s>
+   <s id="VizzyStudio.MfdSave.SavedToWorkingCopy">已保存到运行中的程序和设计器的工作副本,并已备份.</s>
+   <s id="VizzyStudio.MfdSave.DesignLacksProgram">已保存的设计 {0} 中没有此程序,因此未被更改:请在设计器中保存载具以保留此更改.</s>
+   <s id="VizzyStudio.MfdSave.NoDesign">此载具没有已保存的设计:请在设计器中保存它以保留此更改.</s>
+   <!-- MfdPanel -->
+   <s id="VizzyStudio.Mfd.NoMfd">此部件没有 MFD.</s>
+   <s id="VizzyStudio.Mfd.Widgets">控件</s>
+   <s id="VizzyStudio.Mfd.NoWidgets">这里没有可以移动或调整大小并保存的控件.程序之后可能会构建更多屏幕内容:届时请再次打开.</s>
+   <s id="VizzyStudio.Mfd.OnlyPosition">仅位置</s>
+   <s id="VizzyStudio.Mfd.OnlySize">仅尺寸</s>
+   <s id="VizzyStudio.Mfd.Shared">共享</s>
+   <s id="VizzyStudio.Mfd.SelectedWidget">选中的控件</s>
+   <s id="VizzyStudio.Mfd.ChooseWidget">在下面的列表中选择一个控件.</s>
+   <s id="VizzyStudio.Mfd.X">X</s>
+   <s id="VizzyStudio.Mfd.Y">Y</s>
+   <s id="VizzyStudio.Mfd.Width">宽度</s>
+   <s id="VizzyStudio.Mfd.Height">高度</s>
+   <s id="VizzyStudio.Mfd.Rotation">旋转</s>
+   <s id="VizzyStudio.Mfd.MoveLeft">左移</s>
+   <s id="VizzyStudio.Mfd.MoveRight">右移</s>
+   <s id="VizzyStudio.Mfd.MoveUp">上移</s>
+   <s id="VizzyStudio.Mfd.MoveDown">下移</s>
+   <s id="VizzyStudio.Mfd.Narrower">变窄</s>
+   <s id="VizzyStudio.Mfd.Wider">变宽</s>
+   <s id="VizzyStudio.Mfd.Taller">变高</s>
+   <s id="VizzyStudio.Mfd.Shorter">变矮</s>
+   <s id="VizzyStudio.Mfd.RotationDown">减小旋转</s>
+   <s id="VizzyStudio.Mfd.RotationUp">增大旋转</s>
+   <s id="VizzyStudio.Mfd.Step">步长</s>
+   <s id="VizzyStudio.Mfd.Changes">更改</s>
+   <s id="VizzyStudio.Mfd.NothingChanged">尚未更改任何内容.</s>
+   <s id="VizzyStudio.Mfd.RestartMfd">重启 MFD</s>
+   <s id="VizzyStudio.Mfd.WontSave">不会保存:{0}</s>
+   <s id="VizzyStudio.Mfd.AllowShared">同时更改共享变量</s>
+   <s id="VizzyStudio.Mfd.AllowSharedTooltip">共享变量会移动所有读取它的内容.面板能计算出的控件现在就会在屏幕上移动.</s>
+   <s id="VizzyStudio.Mfd.FollowersNotShown">部分跟随此控件的控件无法在此移动,例如由自定义指令放置的控件:请保存,然后重启 MFD 查看.</s>
+   <s id="VizzyStudio.Mfd.Save">保存</s>
+   <s id="VizzyStudio.Mfd.Revert">还原</s>
+   <s id="VizzyStudio.Mfd.NothingSaved">没有可以保存的内容.</s>
+   <s id="VizzyStudio.Mfd.SharedAfterRestart">其他读取该共享变量、但面板无法在此移动的控件,会在重启后移动.</s>
+   <s id="VizzyStudio.Mfd.SaveFailed">保存失败:请查看 Player.log.</s>
+   <s id="VizzyStudio.Mfd.UnsavedLost">未保存的更改将丢失.</s>
+   <s id="VizzyStudio.Mfd.RestartFailed">MFD 程序未能重启:请查看 Player.log.</s>
+   <s id="VizzyStudio.Mfd.MovedFollowers.One">已在屏幕上移动 1 个跟随的控件以显示效果.</s>
+   <s id="VizzyStudio.Mfd.MovedFollowers.Many">已在屏幕上移动 {0} 个跟随的控件以显示效果.</s>
+   <s id="VizzyStudio.Mfd.Limits">({0})</s>
+   <s id="VizzyStudio.Mfd.LimitSeparator">, </s>
+   <!-- MfdWriter -->
+   <s id="VizzyStudio.Mfd.Line">{0} {1}:{2}</s>
+   <s id="VizzyStudio.Mfd.Moved">有其他内容在移动此控件:该块给出的值与面板打开时控件所在的位置不同,例如之后有设置父级或另一个设置它的块.</s>
+   <s id="VizzyStudio.Mfd.BlockAndCall">一个块和一个自定义指令调用都设置了此项,因此没有唯一可更改的地方.</s>
+   <s id="VizzyStudio.Mfd.DifferentValues">有 {0} 个块将此项设为不同的值,因此没有唯一可更改的地方.</s>
+   <s id="VizzyStudio.Mfd.InAllBlocks">(在设置它的全部 {0} 个块中)</s>
+   <s id="VizzyStudio.Mfd.NoBlock">没有块按控件名称设置此项.</s>
+   <s id="VizzyStudio.Mfd.SeveralCalls">有 {0} 个自定义指令调用设置了此项,因此没有唯一可更改的地方.</s>
+   <s id="VizzyStudio.Mfd.InCall">(在对 {0} 的调用中)</s>
+   <s id="VizzyStudio.Mfd.NoValue">该块没有值.</s>
+   <s id="VizzyStudio.Mfd.VectorTooShort">该向量少于 2 个分量.</s>
+   <s id="VizzyStudio.Mfd.UnsupportedBlocks">该值由 {0} 块构成,无法改写.数字,+ - * / 块和 Funk 公式可以.</s>
+   <s id="VizzyStudio.Mfd.SharedNote">共享变量:所有读取它的内容也会改变</s>
+   <s id="VizzyStudio.Mfd.CantWorkOutBlocks">只能计算数字,+ - * / 块和屏幕尺寸.</s>
+   <s id="VizzyStudio.Mfd.Becomes">{0} 变为 {1}</s>
+   <s id="VizzyStudio.Mfd.NeedsOneNumber">需要恰好一个可更改的数字,而这里有 {0} 个.</s>
+   <s id="VizzyStudio.Mfd.CantSolveBlocks">只能求解 + - * / 块,数字和已知尺寸.</s>
+   <s id="VizzyStudio.Mfd.FunkBuilt">该 Funk 块的文本由其他块构成.</s>
+   <s id="VizzyStudio.Mfd.CantReadFormula">无法读取公式 ({0}):{1}</s>
+   <s id="VizzyStudio.Mfd.NotVec">该公式不是简单的 vec(x, y, z):{0}</s>
+   <s id="VizzyStudio.Mfd.CantWorkOutFormula">无法计算公式的值:{0}</s>
+   <s id="VizzyStudio.Mfd.SolveFailed">{0}.公式:{1}</s>
+   <s id="VizzyStudio.Mfd.CantReadHelper">无法读取 {0} 的公式 ({1}):{2}</s>
+   <s id="VizzyStudio.Mfd.HelperNotVec">{0} 的公式不是 vec(x, y, z) 或 偏移 + vec(x, y, z):{1}</s>
+   <s id="VizzyStudio.Mfd.HelperOffset">无法计算 {0} 公式中的偏移:{1}</s>
+   <s id="VizzyStudio.Mfd.HelperVecShort">{0} 公式中的 vec 少于 2 个分量:{1}</s>
+   <s id="VizzyStudio.Mfd.HelperValue">无法计算 {0} 在此调用中的值.</s>
+   <s id="VizzyStudio.Mfd.FixedInHelper">{0} 在 {1} 中是固定的,所有调用者共用.</s>
+   <s id="VizzyStudio.Mfd.HelperSolveFailed">{0}:{1}</s>
+   <s id="VizzyStudio.Mfd.ArgumentNotNumber">调用中的 {0} 不是简单的数字.</s>
+   <s id="VizzyStudio.Mfd.ArgumentBecomes">{0} 的 {1}:{2} 变为 {3}</s>
+   <s id="VizzyStudio.Mfd.LocalVariable">该值来自局部变量 {0}.</s>
+   <s id="VizzyStudio.Mfd.VariableChain">通向此值的变量太多.</s>
+   <s id="VizzyStudio.Mfd.VariableOtherWrites">变量 {0} 还会被另一种块更改,因此无法计算它的值.</s>
+   <s id="VizzyStudio.Mfd.VariableSetTwice">变量 {0} 由 {1} 个块设置,因此没有唯一可更改的值.</s>
+   <s id="VizzyStudio.Mfd.VariableShared">变量 {0} 在其他地方也被读取,更改它也会移动那些内容.</s>
+   <s id="VizzyStudio.Mfd.Property.Position">位置</s>
+   <s id="VizzyStudio.Mfd.Property.Size">尺寸</s>
+   <s id="VizzyStudio.Mfd.Property.Rotation">旋转</s>
+   <!-- Solver -->
+   <s id="VizzyStudio.Solver.ParseError">解析错误:{0}</s>
+   <s id="VizzyStudio.Solver.NotLinear">该数字只能通过已知值的 + - * / 得到,而这里不行</s>
+   <s id="VizzyStudio.Solver.FromParameter">该值来自名称 '{0}', 只有自定义指令的调用才能设置它</s>
+   <s id="VizzyStudio.Solver.NoUnknown">没有单个数字或自定义指令参数能决定它:它出现了不止一次,或只出现在 + - * / 以外的函数中</s>
+   <!-- Settings -->
+   <s id="VizzyStudio.Settings.CheckForUpdates">检查更新</s>
+   <s id="VizzyStudio.Settings.DebugLogging">调试日志</s>
+   <s id="VizzyStudio.Settings.Key">编辑器按键</s>
+   <s id="VizzyStudio.Settings.Modifier">编辑器按键修饰键</s>
+   <s id="VizzyStudio.Settings.ShowFlightButtons">显示飞行按钮</s>
+   <s id="VizzyStudio.Settings.ArrangeMfd">排列 MFD</s>
+   <s id="VizzyStudio.Settings.FunkSyntaxHighlight">Funk 语法高亮</s>
+   <s id="VizzyStudio.Settings.FunkAutoFill">Funk 自动补全</s>
+   <s id="VizzyStudio.Settings.CheckForUpdates.Description">游戏启动时,从 SimpleRockets.com 上的模组页面读取最新版本,如果更新,则询问是否打开该页面.不会自动下载任何内容.</s>
+   <s id="VizzyStudio.Settings.DebugLogging.Description">将线程位置和其他细节写入 Player.log.</s>
+   <s id="VizzyStudio.Settings.Key.Description">与下方的修饰键一起按下,在飞行中打开 Vizzy 编辑器.再次按下则应用编辑.</s>
+   <s id="VizzyStudio.Settings.Modifier.Description">与编辑器按键一起按住.</s>
+   <s id="VizzyStudio.Settings.ShowFlightButtons.Description">在飞行导航面板上显示一个 Vizzy 按钮,包含重启 Vizzy 和编辑 Vizzy. 从下次飞行起生效.</s>
+   <s id="VizzyStudio.Settings.ArrangeMfd.Description">在飞行按钮中添加排列 MFD: 移动,调整大小和旋转自定义 MFD 程序的控件,然后将数值保存到程序中.保存时也会更改载具文件,并先进行备份.从下次飞行起生效.</s>
+   <s id="VizzyStudio.Settings.FunkSyntaxHighlight.Description">为 Funk 字段着色,并用红色标出错误,在设计器和飞行中都有效.</s>
+   <s id="VizzyStudio.Settings.FunkAutoFill.Description">在 Funk 字段中输入时提示 Funk 名称,在设计器和飞行中都有效.上下键选择,Enter 确认,Esc 关闭列表.</s>
+   <s id="VizzyStudio.Settings.Modifier.Alt">Option / Alt</s>
+   <s id="VizzyStudio.Settings.Modifier.Alt.Description">Mac 上为 Option.</s>
+   <s id="VizzyStudio.Settings.Modifier.Control">Ctrl</s>
+   <s id="VizzyStudio.Settings.Modifier.Control.Description">同时会降低节流阀.</s>
+   <s id="VizzyStudio.Settings.Modifier.Shift">Shift</s>
+   <s id="VizzyStudio.Settings.Modifier.Shift.Description">同时会提高节流阀.</s>
+</Strings>

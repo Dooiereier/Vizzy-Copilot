@@ -47,7 +47,8 @@ namespace Assets.Scripts.Mfd
 
         public override string ToString()
         {
-            return this.Widget + " " + this.Property.ToString().ToLowerInvariant() + (this.Axis != null ? " " + this.Axis : string.Empty) + ": " + this.Detail;
+            var what = Text.Get("VizzyStudio.Mfd.Property." + this.Property) + (this.Axis != null ? " " + this.Axis : string.Empty);
+            return Text.Get("VizzyStudio.Mfd.Line", this.Widget, what, this.Detail);
         }
     }
 
@@ -213,7 +214,7 @@ namespace Assets.Scripts.Mfd
 
         private sealed class Run
         {
-            private const string Moved = "Something else moves this widget: the block doesn't give where it was when the panel opened, for example after a Set Parent or another block that sets it.";
+            private static string Moved => Text.Get("VizzyStudio.Mfd.Moved");
 
             private readonly XElement _program;
             private readonly bool _allowShared;
@@ -265,11 +266,11 @@ namespace Assets.Scripts.Mfd
 
                 if (direct.Count > 0 && calls.Count > 0)
                 {
-                    this.Refuse(change, null, "Both a block and a custom instruction call set this, so there's no single one to change.");
+                    this.Refuse(change, null, Text.Get("VizzyStudio.Mfd.BlockAndCall"));
                 }
                 else if (direct.Count > 1 && !AllSameValue(direct))
                 {
-                    this.Refuse(change, null, direct.Count + " blocks set this to different values, so there's no single one to change.");
+                    this.Refuse(change, null, Text.Get("VizzyStudio.Mfd.DifferentValues", direct.Count));
                 }
                 else if (direct.Count > 0)
                 {
@@ -283,20 +284,20 @@ namespace Assets.Scripts.Mfd
                     }
 
                     plans.ForEach(this.Write);
-                    this.Done(change, null, string.Join(", ", plans[0].Parts) + (direct.Count > 1 ? " (in all " + direct.Count + " blocks that set it)" : string.Empty), plans[0].Shared);
+                    this.Done(change, null, string.Join(Text.Get("VizzyStudio.Mfd.LimitSeparator"), plans[0].Parts) + (direct.Count > 1 ? " " + Text.Get("VizzyStudio.Mfd.InAllBlocks", direct.Count) : string.Empty), plans[0].Shared);
                 }
                 else if (calls.Count == 0)
                 {
-                    this.Refuse(change, null, "No block sets this by the widget's name.");
+                    this.Refuse(change, null, Text.Get("VizzyStudio.Mfd.NoBlock"));
                 }
                 else if (calls.Count > 1)
                 {
-                    this.Refuse(change, null, calls.Count + " custom instruction calls set this, so there's no single one to change.");
+                    this.Refuse(change, null, Text.Get("VizzyStudio.Mfd.SeveralCalls", calls.Count));
                 }
                 else if (calls[0].Helper.ValueParameter >= 0)
                 {
                     var plan = this.PlanValue(axes, calls[0].Call.Elements().ElementAtOrDefault(calls[0].Helper.ValueParameter));
-                    this.Finish(change, null, plan, " (in the call to " + calls[0].Helper.Name + ")");
+                    this.Finish(change, null, plan, " " + Text.Get("VizzyStudio.Mfd.InCall", calls[0].Helper.Name));
                 }
                 else
                 {
@@ -512,7 +513,7 @@ namespace Assets.Scripts.Mfd
                 var rotation = axes[0].IsRotation;
                 if (value == null)
                 {
-                    return plan.Fail("The block has no value.");
+                    return plan.Fail(Text.Get("VizzyStudio.Mfd.NoValue"));
                 }
 
                 if (value.Name == "EvaluateExpression")
@@ -529,7 +530,7 @@ namespace Assets.Scripts.Mfd
                     var parts = value.Elements().Take(2).ToList();
                     if (parts.Count < 2)
                     {
-                        return plan.Fail("The vector has fewer than 2 parts.");
+                        return plan.Fail(Text.Get("VizzyStudio.Mfd.VectorTooShort"));
                     }
 
                     foreach (var axis in axes)
@@ -539,12 +540,12 @@ namespace Assets.Scripts.Mfd
                 }
                 else
                 {
-                    plan.Fail("The value is built from " + value.Name + " blocks, which can't be rewritten. Numbers, + - * / blocks and Funk formulas can.");
+                    plan.Fail(Text.Get("VizzyStudio.Mfd.UnsupportedBlocks", value.Name));
                 }
 
                 if (plan.Ok && plan.Shared)
                 {
-                    plan.Parts.Add("shared variable: everything else reading it changes too");
+                    plan.Parts.Add(Text.Get("VizzyStudio.Mfd.SharedNote"));
                 }
 
                 return plan;
@@ -554,7 +555,7 @@ namespace Assets.Scripts.Mfd
             {
                 if (!this.TryEvaluateBlocks(node, out var current))
                 {
-                    plan.Fail(axis.Name + ": only numbers, + - * / blocks and the screen's size can be worked out.");
+                    plan.Fail(AxisName(axis) + ": " + Text.Get("VizzyStudio.Mfd.CantWorkOutBlocks"));
                     return;
                 }
 
@@ -570,13 +571,18 @@ namespace Assets.Scripts.Mfd
                     return;
                 }
 
-                plan.Parts.Add(Label(axis) + NumberText(number) + " becomes " + Format(solved));
+                plan.Parts.Add(Label(axis) + Text.Get("VizzyStudio.Mfd.Becomes", NumberText(number), Format(solved)));
                 plan.Writes.Add(() => SetNumber(number, solved));
             }
 
             private static string Label(Axis axis)
             {
                 return axis.IsRotation ? string.Empty : axis.Name + ": ";
+            }
+
+            private static string AxisName(Axis axis)
+            {
+                return axis.IsRotation ? Text.Get("VizzyStudio.Mfd.Property.Rotation") : axis.Name;
             }
 
             /// <summary>Whether blocks hold the same value, whatever their ids, places in the editor and indents.</summary>
@@ -613,7 +619,7 @@ namespace Assets.Scripts.Mfd
                 var numbers = value.DescendantsAndSelf("Constant").Where(IsPlainNumber).ToList();
                 if (numbers.Count != 1)
                 {
-                    failure = "It needs exactly one number to change, and this has " + numbers.Count + ".";
+                    failure = Text.Get("VizzyStudio.Mfd.NeedsOneNumber", numbers.Count);
                     return false;
                 }
 
@@ -621,7 +627,7 @@ namespace Assets.Scripts.Mfd
                 var result = this.SolveFor(value, number, target);
                 if (result == null || double.IsNaN(result.Value) || double.IsInfinity(result.Value))
                 {
-                    failure = "Only + - * / blocks, numbers and known sizes can be solved.";
+                    failure = Text.Get("VizzyStudio.Mfd.CantSolveBlocks");
                     return false;
                 }
 
@@ -750,7 +756,7 @@ namespace Assets.Scripts.Mfd
                 var text = (string)constant?.Attribute("text");
                 if (text == null)
                 {
-                    plan.Fail("The Funk block's text is built by other blocks.");
+                    plan.Fail(Text.Get("VizzyStudio.Mfd.FunkBuilt"));
                     return;
                 }
 
@@ -761,7 +767,7 @@ namespace Assets.Scripts.Mfd
                 }
                 catch (FormatException e)
                 {
-                    plan.Fail("Couldn't read the formula (" + e.Message + "): " + text);
+                    plan.Fail(Text.Get("VizzyStudio.Mfd.CantReadFormula", e.Message, text));
                     return;
                 }
 
@@ -776,7 +782,7 @@ namespace Assets.Scripts.Mfd
                     var vec = root as VizzyExpressionSolver.FuncCallNode;
                     if (vec == null || vec.Name != "vec" || vec.Args.Count < 2)
                     {
-                        plan.Fail("The formula isn't a plain vec(x, y, z): " + text);
+                        plan.Fail(Text.Get("VizzyStudio.Mfd.NotVec", text));
                         return;
                     }
 
@@ -788,7 +794,7 @@ namespace Assets.Scripts.Mfd
                 {
                     if (!VizzyExpressionSolver.TryEvaluate(span.Node, _globals.TryResolve, out var current))
                     {
-                        plan.Fail(span.Axis.Name + ": the formula's value can't be worked out: " + text);
+                        plan.Fail(AxisName(span.Axis) + ": " + Text.Get("VizzyStudio.Mfd.CantWorkOutFormula", text));
                         return;
                     }
 
@@ -802,14 +808,14 @@ namespace Assets.Scripts.Mfd
                     var result = VizzyExpressionSolver.TrySolve(part, span.Axis.Target(current), _globals.TryResolve);
                     if (!result.Success)
                     {
-                        plan.Fail(span.Axis.Name + ": " + result.FailureReason + ". Formula: " + text);
+                        plan.Fail(AxisName(span.Axis) + ": " + Text.Get("VizzyStudio.Mfd.SolveFailed", result.FailureReason, text));
                         return;
                     }
 
                     rewritten = rewritten.Substring(0, span.Start) + result.RewrittenText + rewritten.Substring(span.End);
                 }
 
-                plan.Parts.Add(text + " becomes " + rewritten);
+                plan.Parts.Add(Text.Get("VizzyStudio.Mfd.Becomes", text, rewritten));
                 plan.Writes.Add(() => constant.SetAttributeValue("text", rewritten));
             }
 
@@ -827,7 +833,7 @@ namespace Assets.Scripts.Mfd
                 }
                 catch (FormatException e)
                 {
-                    this.Refuse(change, null, "Couldn't read " + helper.Name + "'s formula (" + e.Message + "): " + text);
+                    this.Refuse(change, null, Text.Get("VizzyStudio.Mfd.CantReadHelper", helper.Name, e.Message, text));
                     return;
                 }
 
@@ -866,7 +872,7 @@ namespace Assets.Scripts.Mfd
 
                     if (offset == null)
                     {
-                        this.Refuse(change, null, helper.Name + "'s formula isn't vec(x, y, z) or offset + vec(x, y, z): " + text);
+                        this.Refuse(change, null, Text.Get("VizzyStudio.Mfd.HelperNotVec", helper.Name, text));
                         return;
                     }
 
@@ -875,14 +881,14 @@ namespace Assets.Scripts.Mfd
                     if (!VizzyExpressionSolver.TryEvaluate(offsetXCall, _globals.TryResolve, out offsetX)
                         || !VizzyExpressionSolver.TryEvaluate(offsetYCall, _globals.TryResolve, out offsetY))
                     {
-                        this.Refuse(change, null, "The offset in " + helper.Name + "'s formula can't be worked out: " + text);
+                        this.Refuse(change, null, Text.Get("VizzyStudio.Mfd.HelperOffset", helper.Name, text));
                         return;
                     }
                 }
 
                 if (vec.Args.Count < 2)
                 {
-                    this.Refuse(change, null, "The vec in " + helper.Name + "'s formula has fewer than 2 parts: " + text);
+                    this.Refuse(change, null, Text.Get("VizzyStudio.Mfd.HelperVecShort", helper.Name, text));
                     return;
                 }
 
@@ -899,7 +905,7 @@ namespace Assets.Scripts.Mfd
                 var plan = new Plan();
                 if (!VizzyExpressionSolver.TryEvaluate(node, _globals.TryResolve, argument, out var value))
                 {
-                    return plan.Fail(helper.Name + "'s value for this call can't be worked out.");
+                    return plan.Fail(Text.Get("VizzyStudio.Mfd.HelperValue", helper.Name));
                 }
 
                 var current = value + offset;
@@ -911,23 +917,23 @@ namespace Assets.Scripts.Mfd
                 var result = VizzyExpressionSolver.TrySolve(text, axis.Target(current) - offset, _globals.TryResolve);
                 if (result.Success)
                 {
-                    return plan.Fail(axis.Name + " is fixed inside " + helper.Name + ", which every caller shares.");
+                    return plan.Fail(Text.Get("VizzyStudio.Mfd.FixedInHelper", AxisName(axis), helper.Name));
                 }
 
                 if (result.PendingLocalParameterName == null)
                 {
-                    return plan.Fail(axis.Name + ": " + result.FailureReason + ": " + text);
+                    return plan.Fail(AxisName(axis) + ": " + Text.Get("VizzyStudio.Mfd.HelperSolveFailed", result.FailureReason, text));
                 }
 
                 var index = helper.Parameters.IndexOf(result.PendingLocalParameterName);
                 var target = index < 0 ? null : arguments.ElementAtOrDefault(index);
                 if (target == null || !IsPlainNumber(target))
                 {
-                    return plan.Fail(axis.Name + ": the call's " + result.PendingLocalParameterName + " isn't a plain number.");
+                    return plan.Fail(AxisName(axis) + ": " + Text.Get("VizzyStudio.Mfd.ArgumentNotNumber", result.PendingLocalParameterName));
                 }
 
                 var solved = result.NewValue;
-                plan.Parts.Add(helper.Name + "'s " + result.PendingLocalParameterName + ": " + NumberText(target) + " becomes " + Format(solved));
+                plan.Parts.Add(Text.Get("VizzyStudio.Mfd.ArgumentBecomes", helper.Name, result.PendingLocalParameterName, NumberText(target), Format(solved)));
                 plan.Writes.Add(() => SetNumber(target, solved));
                 return plan;
             }
@@ -1028,13 +1034,13 @@ namespace Assets.Scripts.Mfd
                 var name = (string)variable.Attribute("variableName");
                 if ((string)variable.Attribute("local") == "true")
                 {
-                    failure = "The value comes from the local variable " + name + ".";
+                    failure = Text.Get("VizzyStudio.Mfd.LocalVariable", name);
                     return false;
                 }
 
                 if (depth > MaxVariableChain)
                 {
-                    failure = "Too many variables lead to this value.";
+                    failure = Text.Get("VizzyStudio.Mfd.VariableChain");
                     return false;
                 }
 
@@ -1046,7 +1052,7 @@ namespace Assets.Scripts.Mfd
                 // Change Variable and User Input write to it too, so its value isn't just what one block sets.
                 if (OtherWrites(_program, name))
                 {
-                    failure = "The variable " + name + " is also changed by another kind of block, so its value can't be worked out.";
+                    failure = Text.Get("VizzyStudio.Mfd.VariableOtherWrites", name);
                     return false;
                 }
 
@@ -1065,7 +1071,7 @@ namespace Assets.Scripts.Mfd
 
                 if (sets.Count != 1)
                 {
-                    failure = "The variable " + name + " is set by " + sets.Count + " blocks, so there's no single value to change.";
+                    failure = Text.Get("VizzyStudio.Mfd.VariableSetTwice", name, sets.Count);
                     return false;
                 }
 
@@ -1073,7 +1079,7 @@ namespace Assets.Scripts.Mfd
                 {
                     if (!_allowShared)
                     {
-                        failure = "The variable " + name + " is also read elsewhere, so changing it moves those too.";
+                        failure = Text.Get("VizzyStudio.Mfd.VariableShared", name);
                         needsOverride = true;
                         return false;
                     }

@@ -34,7 +34,7 @@ namespace Assets.Scripts
             if (script.FlightProgram == null)
             {
                 EditorLog.Error("The new program didn't load: restoring the old one.");
-                message = "The edited Vizzy program didn't load: the old one is still running.";
+                message = Text.Get("VizzyStudio.Editor.EditDidntLoad");
                 data.FlightProgramXml = oldProgram;
                 data.ProcessXml = oldProcess;
                 script.StartProgram();
@@ -141,7 +141,7 @@ namespace Assets.Scripts
                 EditorLog.Debug(note);
             }
 
-            return remapped.ThreadsEnded > 0 ? remapped.ThreadsEnded + " Vizzy thread(s) ended: their blocks were deleted." : null;
+            return remapped.ThreadsEnded > 0 ? Text.Count("VizzyStudio.Editor.ThreadsEnded", remapped.ThreadsEnded) : null;
         }
 
         private static Dictionary<int, string> BlocksById(XElement program)

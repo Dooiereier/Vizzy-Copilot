@@ -27,7 +27,7 @@ namespace Assets.Scripts.VizzyOrganizer
         private const string RowsId = "vizzy-studio-jump-rows";
         private const string TemplateId = "vizzy-studio-jump-row";
         private const float IndentPerDepth = 16f;
-        private const string Help = "Jump To: moves the view to tagged blocks. Tag them with a comment starting with //, such as //Launch, or //Launch/Pitch Program to nest it.";
+        private static string Help => global::Assets.Scripts.Text.Get("VizzyStudio.JumpTo.Tooltip");
 
         private static readonly Color SelectedRow = new Color(0.16f, 0.42f, 0.72f, 1f);
 
@@ -69,7 +69,7 @@ namespace Assets.Scripts.VizzyOrganizer
                     new XAttribute("active", "false"),
                     new XElement(ns + "Panel",
                         new XAttribute("class", "flyout-header"),
-                        new XElement(ns + "TextMeshPro", new XAttribute("text", "JUMP TO"), new XAttribute("tooltip", Help)),
+                        new XElement(ns + "TextMeshPro", new XAttribute("text", global::Assets.Scripts.Text.Get("VizzyStudio.JumpTo.Title")), new XAttribute("tooltip", Help)),
                         new XElement(ns + "Image",
                             new XAttribute("id", CloseId),
                             new XAttribute("class", "flyout-close-button audio-btn-back"),

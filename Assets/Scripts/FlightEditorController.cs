@@ -162,7 +162,7 @@ namespace Assets.Scripts
                 var programs = CraftPrograms.Editable(scene.CraftNode.CraftScript).Where(CraftPrograms.IsMfd).ToList();
                 if (programs.Count == 0)
                 {
-                    scene.FlightSceneUI.ShowMessage("No custom MFD program on this craft.");
+                    scene.FlightSceneUI.ShowMessage(Text.Get("VizzyStudio.Flight.NoMfdProgram"));
                 }
                 else if (programs.Count == 1)
                 {
@@ -215,7 +215,7 @@ namespace Assets.Scripts
                 var programs = CraftPrograms.Editable(scene.CraftNode.CraftScript);
                 if (programs.Count == 0)
                 {
-                    scene.FlightSceneUI.ShowMessage("No Vizzy program to restart on this craft.");
+                    scene.FlightSceneUI.ShowMessage(Text.Get("VizzyStudio.Flight.NoProgramToRestart"));
                 }
                 else if (programs.Count == 1)
                 {
@@ -236,7 +236,7 @@ namespace Assets.Scripts
             if (data.Script == null)
             {
                 FlightPause.Release();
-                scene.FlightSceneUI.ShowMessage("The part with this Vizzy program is gone.");
+                scene.FlightSceneUI.ShowMessage(Text.Get("VizzyStudio.Flight.PartGone"));
                 return;
             }
 
@@ -245,7 +245,7 @@ namespace Assets.Scripts
             dialog.UseDangerButtonStyle = true;
             dialog.MessageText = CraftPrograms.IsMfd(data)
                 ? MfdRestart.Question(data)
-                : "Restart " + data.Part.DisplayName + "'s Vizzy program from the top? Its threads and variables reset. Other programs keep running.";
+                : Text.Get("VizzyStudio.Flight.RestartQuestion", data.Part.DisplayName);
             dialog.Closed += _ => FlightPause.Release();
             dialog.OkayClicked += _ =>
             {
@@ -254,7 +254,7 @@ namespace Assets.Scripts
                 {
                     if (!(CraftPrograms.IsMfd(data) ? MfdRestart.Run(data) : ProgramSwapper.Restart(data)))
                     {
-                        scene.FlightSceneUI.ShowMessage("The Vizzy program didn't load: see Player.log.");
+                        scene.FlightSceneUI.ShowMessage(Text.Get("VizzyStudio.Flight.ProgramDidntLoad"));
                     }
                 });
             };
@@ -272,7 +272,7 @@ namespace Assets.Scripts
             var scene = Game.Instance.FlightScene;
             if (scene.TimeManager.CurrentMode.WarpMode)
             {
-                scene.FlightSceneUI.ShowMessage("Leave time warp before changing a Vizzy program.");
+                scene.FlightSceneUI.ShowMessage(Text.Get("VizzyStudio.Flight.LeaveWarp"));
                 return false;
             }
 
@@ -296,7 +296,7 @@ namespace Assets.Scripts
             var programs = CraftPrograms.Editable(scene.CraftNode.CraftScript);
             if (programs.Count == 0)
             {
-                scene.FlightSceneUI.ShowMessage("No editable Vizzy program on this craft.");
+                scene.FlightSceneUI.ShowMessage(Text.Get("VizzyStudio.Flight.NoEditableProgram"));
             }
             else if (programs.Count == 1)
             {
@@ -317,7 +317,7 @@ namespace Assets.Scripts
             if (data.Script == null)
             {
                 FlightPause.Release();
-                Game.Instance.FlightScene.FlightSceneUI.ShowMessage("The part with this Vizzy program is gone.");
+                Game.Instance.FlightScene.FlightSceneUI.ShowMessage(Text.Get("VizzyStudio.Flight.PartGone"));
             }
             else
             {
@@ -369,7 +369,7 @@ namespace Assets.Scripts
                     message = ProgramSwapper.Prepare(data, latest);
                 }
 
-                _restoreMessage = message ?? "Kept your latest Vizzy edit. " + ModSettings.Instance.RevertShortcutText + " goes back to the quicksave's program.";
+                _restoreMessage = message ?? Text.Get("VizzyStudio.Flight.KeptLatestEdit", ModSettings.Instance.RevertShortcutText);
             }
         }
 
@@ -383,7 +383,7 @@ namespace Assets.Scripts
 
             if (scene.TimeManager.CurrentMode.WarpMode)
             {
-                scene.FlightSceneUI.ShowMessage("Leave time warp before changing a Vizzy program.");
+                scene.FlightSceneUI.ShowMessage(Text.Get("VizzyStudio.Flight.LeaveWarp"));
                 return;
             }
 
@@ -406,7 +406,7 @@ namespace Assets.Scripts
             }
 
             scene.FlightSceneUI.ShowMessage(message
-                ?? (reverted == 0 ? "No kept Vizzy edit to undo: load a quicksave first." : "Back to the quicksave's Vizzy program."));
+                ?? (reverted == 0 ? Text.Get("VizzyStudio.Flight.NothingToRevert") : Text.Get("VizzyStudio.Flight.Reverted")));
         }
     }
 }
