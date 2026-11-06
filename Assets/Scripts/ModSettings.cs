@@ -120,11 +120,7 @@ namespace Assets.Scripts
 
         public BoolSetting ShowFlightButtons { get; private set; }
 
-        public BoolSetting ExportMenu { get; private set; }
-
         public BoolSetting CheckForUpdates { get; private set; }
-
-        public BoolSetting BlockSearch { get; private set; }
 
         public BoolSetting ArrangeMfd { get; private set; }
 
@@ -175,6 +171,14 @@ namespace Assets.Scripts
         // XML names are given explicitly: the game derives them from the display name otherwise.
         protected override void InitializeSettings()
         {
+            this.CheckForUpdates = this.CreateBool("Check For Updates", "CheckForUpdates")
+                .SetDescription("At game start, reads the latest version from the mod's SimpleRockets.com page and, if it's newer, offers to open the page. Nothing is downloaded automatically.")
+                .SetDefault(true);
+
+            this.DebugLogging = this.CreateBool("Debug Logging", "DebugLogging")
+                .SetDescription("Writes thread positions and other details to Player.log.")
+                .SetDefault(false);
+
             this.Key = this.CreateEnum<EditorKey>("Editor Key", "Key")
                 .SetDescription("With the Editor Key Modifier, opens the Vizzy editor in flight. In the editor it applies the edit and returns to flight. Adding Shift, or Option / Alt when Shift is the modifier, returns to the quicksave's program.")
                 .SetDefault(EditorKey.A);
@@ -183,24 +187,8 @@ namespace Assets.Scripts
                 .SetDescription("The key held with the Editor Key. In the game's flight controls Shift and Ctrl change the throttle, so pressing them also moves it.")
                 .SetDefault(EditorModifier.Alt);
 
-            this.DebugLogging = this.CreateBool("Debug Logging", "DebugLogging")
-                .SetDescription("Writes thread positions and other details to Player.log.")
-                .SetDefault(false);
-
             this.ShowFlightButtons = this.CreateBool("Show Flight Buttons", "ShowFlightButtons")
                 .SetDescription("Shows a Vizzy button on the flight nav panel, with Restart Vizzy and Edit Vizzy. Applies from the next flight.")
-                .SetDefault(true);
-
-            this.ExportMenu = this.CreateBool("Export Block", "ExportMenu")
-                .SetDescription("Adds an Export Block button to the Vizzy menu, which copies the clicked block, with the variables and custom blocks it needs, to another saved program.")
-                .SetDefault(true);
-
-            this.CheckForUpdates = this.CreateBool("Check For Updates", "CheckForUpdates")
-                .SetDescription("At game start, reads the latest version from the mod's SimpleRockets.com page and, if it's newer, offers to open the page. Nothing is downloaded automatically.")
-                .SetDefault(true);
-
-            this.BlockSearch = this.CreateBool("Block Search", "BlockSearch")
-                .SetDescription("Shift+F or a search button in the Vizzy editor opens a search box: type part of a block's name, then drag it out of the results.")
                 .SetDefault(true);
 
             this.ArrangeMfd = this.CreateBool("Arrange MFD", "ArrangeMfd")

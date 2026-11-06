@@ -75,7 +75,7 @@ namespace Assets.Scripts.Exporter
                 || (eventData.position - eventData.pressPosition).magnitude > MaxClickMovement)
                 return;
 
-            if (__instance is BlockElementScript block && ModSettings.Instance.ExportMenu.Value)
+            if (__instance is BlockElementScript block)
             {
                 ExportBlock.Select(block);
             }

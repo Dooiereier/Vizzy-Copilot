@@ -73,11 +73,6 @@ namespace Assets.Scripts
         /// <summary>Adds the flyout to the editor's XML, then connects it once it's built.</summary>
         public static void AddTo(BuildUserInterfaceXmlRequest request)
         {
-            if (!ModSettings.Instance.BlockSearch.Value)
-            {
-                return;
-            }
-
             XNamespace ns = XmlLayoutConstants.XmlNamespace;
             var panels = request.XmlDocument.Descendants(ns + "Panel").ToList();
             panels.First(panel => (string)panel.Attribute("id") == "menu-button").Parent.Add(
@@ -179,7 +174,7 @@ namespace Assets.Scripts
         {
             try
             {
-                if (_flyout == null || LoadNodes == null || !ModSettings.Instance.BlockSearch.Value)
+                if (_flyout == null || LoadNodes == null)
                 {
                     return;
                 }

@@ -111,15 +111,12 @@ namespace Assets.Scripts
                         new XAttribute("class", "btn"),
                         new XAttribute("tooltip", "Removes global variables this program doesn't use, after asking. Another part's program or an InputController could still read them by name."),
                         new XElement(ns + "TextMeshPro", new XAttribute("text", "CLEAN VARIABLES"))));
-                if (ModSettings.Instance.ExportMenu.Value)
-                {
-                    gridRow.Parent.Elements().First(e => (string)e.Attribute("id") == CleanButtonId).AddAfterSelf(
-                        new XElement(ns + "Button",
-                            new XAttribute("id", ExportButtonId),
-                            new XAttribute("class", "btn"),
-                            new XAttribute("tooltip", "Click a block on the canvas, then this, to copy it to another saved program. An instruction brings the blocks below it."),
-                            new XElement(ns + "TextMeshPro", new XAttribute("text", "EXPORT BLOCK"))));
-                }
+                gridRow.Parent.Elements().First(e => (string)e.Attribute("id") == CleanButtonId).AddAfterSelf(
+                    new XElement(ns + "Button",
+                        new XAttribute("id", ExportButtonId),
+                        new XAttribute("class", "btn"),
+                        new XAttribute("tooltip", "Click a block on the canvas, then this, to copy it to another saved program. An instruction brings the blocks below it."),
+                        new XElement(ns + "TextMeshPro", new XAttribute("text", "EXPORT BLOCK"))));
 
                 request.AddOnLayoutRebuiltAction(controller =>
                 {
@@ -130,16 +127,13 @@ namespace Assets.Scripts
                             VizzyVariableCleaner.AskAndClean(vizzy.VizzyUI);
                         }
                     });
-                    if (ModSettings.Instance.ExportMenu.Value)
+                    Listen(controller, ExportButtonId, () =>
                     {
-                        Listen(controller, ExportButtonId, () =>
+                        if (controller is VizzyUIController vizzy)
                         {
-                            if (controller is VizzyUIController vizzy)
-                            {
-                                Exporter.ExportBlock.Run(vizzy.VizzyUI);
-                            }
-                        });
-                    }
+                            Exporter.ExportBlock.Run(vizzy.VizzyUI);
+                        }
+                    });
                 });
             }
             catch (Exception e)

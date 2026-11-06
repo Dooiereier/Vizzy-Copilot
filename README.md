@@ -50,7 +50,7 @@ These work in the designer and in flight.
 
 ## Settings
 
-In the game's mod settings: the editor key, the flight buttons, Export Block, the update check, Funk coloring, auto-fill and debug logging.
+In the game's mod settings: the update check, debug logging, the editor key and its modifier, the flight buttons, Arrange MFD, Funk coloring and auto-fill. Export Block and Block Search are always on.
 
 The update check reads the latest version from the mod's page once per game start and offers to open the page. Nothing is downloaded automatically.
 
