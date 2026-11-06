@@ -6,82 +6,56 @@ namespace Assets.Scripts
     /// <summary>The letter keys the editor shortcut can use, with the chosen modifier.</summary>
     public enum EditorKey
     {
-        [EnumOption("A")]
         A,
 
-        [EnumOption("B")]
         B,
 
-        [EnumOption("C")]
         C,
 
-        [EnumOption("D")]
         D,
 
-        [EnumOption("E")]
         E,
 
-        [EnumOption("F")]
         F,
 
-        [EnumOption("G")]
         G,
 
-        [EnumOption("H")]
         H,
 
-        [EnumOption("I")]
         I,
 
-        [EnumOption("J")]
         J,
 
-        [EnumOption("K")]
         K,
 
-        [EnumOption("L")]
         L,
 
-        [EnumOption("M")]
         M,
 
-        [EnumOption("N")]
         N,
 
-        [EnumOption("O")]
         O,
 
-        [EnumOption("P")]
         P,
 
-        [EnumOption("Q")]
         Q,
 
-        [EnumOption("R")]
         R,
 
-        [EnumOption("S")]
         S,
 
-        [EnumOption("T")]
         T,
 
-        [EnumOption("U")]
         U,
 
-        [EnumOption("V")]
         V,
 
-        [EnumOption("W")]
         W,
 
-        [EnumOption("X")]
         X,
 
-        [EnumOption("Y")]
         Y,
 
-        [EnumOption("Z")]
         Z,
     }
 
@@ -91,13 +65,13 @@ namespace Assets.Scripts
     /// </summary>
     public enum EditorModifier
     {
-        [EnumOption("Option / Alt")]
+        [EnumOption("Option / Alt", "Option on a Mac, Alt on Windows. The game's controls don't use it with a letter.")]
         Alt,
 
-        [EnumOption("Ctrl")]
+        [EnumOption("Ctrl", "Ctrl also lowers the throttle in flight.")]
         Control,
 
-        [EnumOption("Shift")]
+        [EnumOption("Shift", "Shift also raises the throttle in flight.")]
         Shift,
     }
 
