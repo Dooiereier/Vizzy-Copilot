@@ -65,13 +65,13 @@ namespace Assets.Scripts
     /// </summary>
     public enum EditorModifier
     {
-        [EnumOption("Option / Alt", "Option on a Mac, Alt on Windows. The game's controls don't use it with a letter.")]
+        [EnumOption("Option / Alt", "Option on a Mac.")]
         Alt,
 
-        [EnumOption("Ctrl", "Ctrl also lowers the throttle in flight.")]
+        [EnumOption("Ctrl", "Also lowers the throttle.")]
         Control,
 
-        [EnumOption("Shift", "Shift also raises the throttle in flight.")]
+        [EnumOption("Shift", "Also raises the throttle.")]
         Shift,
     }
 
@@ -154,11 +154,11 @@ namespace Assets.Scripts
                 .SetDefault(false);
 
             this.Key = this.CreateEnum<EditorKey>("Editor Key", "Key")
-                .SetDescription("With the Editor Key Modifier, opens the Vizzy editor in flight. In the editor it applies the edit and returns to flight. Adding Shift, or Option / Alt when Shift is the modifier, returns to the quicksave's program.")
+                .SetDescription("With the modifier below, opens the Vizzy editor in flight. Pressed again, it applies the edit.")
                 .SetDefault(EditorKey.A);
 
             this.Modifier = this.CreateEnum<EditorModifier>("Editor Key Modifier", "Modifier")
-                .SetDescription("The key held with the Editor Key. In the game's flight controls Shift and Ctrl change the throttle, so pressing them also moves it.")
+                .SetDescription("Held with the editor key.")
                 .SetDefault(EditorModifier.Alt);
 
             this.ShowFlightButtons = this.CreateBool("Show Flight Buttons", "ShowFlightButtons")
